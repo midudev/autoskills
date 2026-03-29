@@ -91,5 +91,64 @@ describe("CLI", () => {
 
       assert.ok(output.includes("Next.js"));
     });
+
+    it("detects Astro from package.json", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          dependencies: { astro: "^5" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Astro"));
+      assert.ok(output.includes("astro"));
+    });
+
+    it("detects Astro from config file", () => {
+      writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+      writeFileSync(join(tmpDir, "astro.config.mjs"), "export default {}");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Astro"));
+    });
+
+    it("detects oxlint from package.json", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          devDependencies: { oxlint: "^0.16" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("oxlint"));
+    });
+
+    it("detects oxlint from config file", () => {
+      writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+      writeFileSync(join(tmpDir, ".oxlintrc.json"), "{}");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("oxlint"));
+    });
+
+    it("detects Pinia from package.json", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          dependencies: { pinia: "^2" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Pinia"));
+      assert.ok(output.includes("vue-pinia-best-practices"));
+    });
   });
 });

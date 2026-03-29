@@ -51,6 +51,14 @@ export const SKILLS_MAP = [
     skills: ["antfu/skills/nuxt"],
   },
   {
+    id: "pinia",
+    name: "Pinia",
+    detect: {
+      packages: ["pinia"],
+    },
+    skills: ["vuejs-ai/skills/vue-pinia-best-practices"],
+  },
+  {
     id: "svelte",
     name: "Svelte",
     detect: {
@@ -75,7 +83,7 @@ export const SKILLS_MAP = [
       packages: ["astro"],
       configFiles: ["astro.config.mjs", "astro.config.js", "astro.config.ts"],
     },
-    skills: [],
+    skills: ["astrolicious/agent-skills/astro"],
   },
   {
     id: "tailwind",
@@ -255,6 +263,15 @@ export const SKILLS_MAP = [
       configFiles: ["Package.swift"],
     },
     skills: ["avdlee/swiftui-agent-skill/swiftui-expert-skill"],
+  },
+  {
+    id: "oxlint",
+    name: "oxlint",
+    detect: {
+      packages: ["oxlint"],
+      configFiles: [".oxlintrc.json", "oxlint.config.ts"],
+    },
+    skills: ["delexw/claude-code-misc/oxlint"],
   },
 ];
 
