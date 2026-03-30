@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { getAllPackageNames, readPackageJson, detectTechnologies, detectCombos } from "../lib.mjs";
@@ -242,6 +242,161 @@ describe("detectTechnologies", () => {
     const { combos } = detectTechnologies(tmpDir);
     const comboIds = combos.map((c) => c.id);
     assert.ok(!comboIds.includes("expo-tailwind"));
+  });
+});
+
+// ── detectTechnologies (monorepo) ─────────────────────────────
+
+describe("detectTechnologies (monorepo)", () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "autoskills-mono-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("detects technologies from workspace subpackages", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ workspaces: ["packages/*"] }),
+    );
+    mkdirSync(join(tmpDir, "packages", "web"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "web", "package.json"),
+      JSON.stringify({ dependencies: { next: "^15", react: "^19" } }),
+    );
+
+    const { detected } = detectTechnologies(tmpDir);
+    const ids = detected.map((t) => t.id);
+    assert.ok(ids.includes("nextjs"));
+    assert.ok(ids.includes("react"));
+  });
+
+  it("merges root and workspace technologies", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({
+        devDependencies: { typescript: "^5" },
+        workspaces: ["packages/*"],
+      }),
+    );
+    writeFileSync(join(tmpDir, "tsconfig.json"), "{}");
+    mkdirSync(join(tmpDir, "packages", "api"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "api", "package.json"),
+      JSON.stringify({ dependencies: { express: "^4" } }),
+    );
+
+    const { detected } = detectTechnologies(tmpDir);
+    const ids = detected.map((t) => t.id);
+    assert.ok(ids.includes("typescript"), "root tech should be detected");
+    assert.ok(ids.includes("express"), "workspace tech should be detected");
+  });
+
+  it("deduplicates technologies across workspaces", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ workspaces: ["packages/*"] }),
+    );
+    mkdirSync(join(tmpDir, "packages", "ui"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "ui", "package.json"),
+      JSON.stringify({ dependencies: { react: "^19" } }),
+    );
+    mkdirSync(join(tmpDir, "packages", "app"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "app", "package.json"),
+      JSON.stringify({ dependencies: { react: "^19" } }),
+    );
+
+    const { detected } = detectTechnologies(tmpDir);
+    const reactCount = detected.filter((t) => t.id === "react").length;
+    assert.strictEqual(reactCount, 1, "react should appear only once");
+  });
+
+  it("detects config files in workspace directories", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ workspaces: ["apps/*"] }),
+    );
+    mkdirSync(join(tmpDir, "apps", "web"), { recursive: true });
+    writeFileSync(join(tmpDir, "apps", "web", "package.json"), "{}");
+    writeFileSync(join(tmpDir, "apps", "web", "next.config.mjs"), "export default {}");
+
+    const { detected } = detectTechnologies(tmpDir);
+    const ids = detected.map((t) => t.id);
+    assert.ok(ids.includes("nextjs"));
+  });
+
+  it("detects frontend from any workspace", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({
+        dependencies: { express: "^4" },
+        workspaces: ["packages/*"],
+      }),
+    );
+    mkdirSync(join(tmpDir, "packages", "ui"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "ui", "package.json"),
+      JSON.stringify({ dependencies: { react: "^19" } }),
+    );
+
+    const { isFrontend } = detectTechnologies(tmpDir);
+    assert.strictEqual(isFrontend, true);
+  });
+
+  it("detects combos across workspaces", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({
+        dependencies: { next: "^15" },
+        workspaces: ["packages/*"],
+      }),
+    );
+    mkdirSync(join(tmpDir, "packages", "db"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "db", "package.json"),
+      JSON.stringify({ dependencies: { "@supabase/supabase-js": "^2" } }),
+    );
+
+    const { combos } = detectTechnologies(tmpDir);
+    const ids = combos.map((c) => c.id);
+    assert.ok(ids.includes("nextjs-supabase"), "cross-workspace combo should be detected");
+  });
+
+  it("works with pnpm-workspace.yaml", () => {
+    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+    writeFileSync(join(tmpDir, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+    mkdirSync(join(tmpDir, "packages", "app"), { recursive: true });
+    writeFileSync(
+      join(tmpDir, "packages", "app", "package.json"),
+      JSON.stringify({ dependencies: { vue: "^3" } }),
+    );
+
+    const { detected } = detectTechnologies(tmpDir);
+    const ids = detected.map((t) => t.id);
+    assert.ok(ids.includes("vue"));
+  });
+
+  it("detects config file content in workspaces", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ workspaces: ["workers/*"] }),
+    );
+    mkdirSync(join(tmpDir, "workers", "do-worker"), { recursive: true });
+    writeFileSync(join(tmpDir, "workers", "do-worker", "package.json"), "{}");
+    writeFileSync(
+      join(tmpDir, "workers", "do-worker", "wrangler.json"),
+      JSON.stringify({ durable_objects: { bindings: [] } }),
+    );
+
+    const { detected } = detectTechnologies(tmpDir);
+    const ids = detected.map((t) => t.id);
+    assert.ok(ids.includes("cloudflare-durable-objects"));
   });
 });
 

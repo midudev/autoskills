@@ -493,6 +493,54 @@ describe("CLI", () => {
       assert.ok(output.includes("No supported technologies"));
     });
 
+    it("detects technologies from monorepo workspaces with --dry-run", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          devDependencies: { typescript: "^5" },
+          workspaces: ["packages/*", "apps/*"],
+        }),
+      );
+      writeFileSync(join(tmpDir, "tsconfig.json"), "{}");
+
+      mkdirSync(join(tmpDir, "packages", "ui"), { recursive: true });
+      writeFileSync(
+        join(tmpDir, "packages", "ui", "package.json"),
+        JSON.stringify({ dependencies: { react: "^19", tailwindcss: "^4" } }),
+      );
+
+      mkdirSync(join(tmpDir, "apps", "web"), { recursive: true });
+      writeFileSync(
+        join(tmpDir, "apps", "web", "package.json"),
+        JSON.stringify({ dependencies: { next: "^15" } }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("TypeScript"), "root tech detected");
+      assert.ok(output.includes("React"), "workspace tech detected");
+      assert.ok(output.includes("Next.js"), "workspace tech detected");
+      assert.ok(output.includes("Tailwind"), "workspace tech detected");
+      assert.ok(output.includes("nothing was installed"));
+    });
+
+    it("detects technologies from pnpm monorepo with --dry-run", () => {
+      writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+      writeFileSync(join(tmpDir, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+
+      mkdirSync(join(tmpDir, "packages", "api"), { recursive: true });
+      writeFileSync(
+        join(tmpDir, "packages", "api", "package.json"),
+        JSON.stringify({ dependencies: { express: "^4" } }),
+      );
+      writeFileSync(join(tmpDir, "package-lock.json"), "{}");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Express"), "workspace tech detected via pnpm");
+      assert.ok(output.includes("Node.js"));
+    });
+
     it("adds web fundamentals when npm frontend is detected too", () => {
       writeFileSync(
         join(tmpDir, "package.json"),

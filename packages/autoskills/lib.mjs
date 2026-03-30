@@ -1,5 +1,5 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 // ── Skills Map ────────────────────────────────────────────────
 
@@ -525,6 +525,89 @@ export function hasWebFrontendFiles(projectDir, maxDepth = 3) {
   return scan(projectDir, 0);
 }
 
+// ── Workspace Resolution ──────────────────────────────────────
+
+function parsePnpmWorkspaceYaml(content) {
+  const lines = content.split("\n");
+  const patterns = [];
+  let inPackages = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line === "packages:" || line === "packages :") {
+      inPackages = true;
+      continue;
+    }
+    if (inPackages) {
+      if (line.startsWith("- ")) {
+        patterns.push(line.slice(2).trim().replace(/^['"]|['"]$/g, ""));
+      } else if (line !== "" && !line.startsWith("#")) {
+        break;
+      }
+    }
+  }
+
+  return patterns;
+}
+
+function expandWorkspacePatterns(projectDir, patterns) {
+  const dirs = [];
+
+  for (const pattern of patterns) {
+    if (pattern.includes("*")) {
+      const parent = join(projectDir, pattern.replace(/\/?\*.*$/, ""));
+      let entries;
+      try {
+        entries = readdirSync(parent, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const entry of entries) {
+        if (!entry.isDirectory() || SCAN_SKIP_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
+        const wsDir = join(parent, entry.name);
+        if (existsSync(join(wsDir, "package.json"))) {
+          dirs.push(wsDir);
+        }
+      }
+    } else {
+      const wsDir = join(projectDir, pattern);
+      if (existsSync(join(wsDir, "package.json"))) {
+        dirs.push(wsDir);
+      }
+    }
+  }
+
+  return dirs;
+}
+
+export function resolveWorkspaces(projectDir) {
+  const pnpmPath = join(projectDir, "pnpm-workspace.yaml");
+  if (existsSync(pnpmPath)) {
+    try {
+      const content = readFileSync(pnpmPath, "utf-8");
+      const patterns = parsePnpmWorkspaceYaml(content);
+      if (patterns.length > 0) {
+        return expandWorkspacePatterns(projectDir, patterns).filter(
+          (d) => resolve(d) !== resolve(projectDir),
+        );
+      }
+    } catch {}
+  }
+
+  const pkg = readPackageJson(projectDir);
+  if (pkg) {
+    const ws = pkg.workspaces;
+    const patterns = Array.isArray(ws) ? ws : Array.isArray(ws?.packages) ? ws.packages : null;
+    if (patterns && patterns.length > 0) {
+      return expandWorkspacePatterns(projectDir, patterns).filter(
+        (d) => resolve(d) !== resolve(projectDir),
+      );
+    }
+  }
+
+  return [];
+}
+
 // ── Detection ─────────────────────────────────────────────────
 
 export function readPackageJson(dir) {
@@ -542,8 +625,8 @@ export function getAllPackageNames(pkg) {
   return [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})];
 }
 
-export function detectTechnologies(projectDir) {
-  const pkg = readPackageJson(projectDir);
+function detectTechnologiesInDir(dir) {
+  const pkg = readPackageJson(dir);
   const allPackages = getAllPackageNames(pkg);
   const detected = [];
 
@@ -561,13 +644,13 @@ export function detectTechnologies(projectDir) {
     }
 
     if (!found && tech.detect.configFiles) {
-      found = tech.detect.configFiles.some((f) => existsSync(join(projectDir, f)));
+      found = tech.detect.configFiles.some((f) => existsSync(join(dir, f)));
     }
 
     if (!found && tech.detect.configFileContent) {
       const { files, patterns } = tech.detect.configFileContent;
       for (const f of files) {
-        const filePath = join(projectDir, f);
+        const filePath = join(dir, f);
         if (existsSync(filePath)) {
           try {
             const content = readFileSync(filePath, "utf-8");
@@ -584,9 +667,30 @@ export function detectTechnologies(projectDir) {
   }
 
   const isFrontendByPackages = allPackages.some((p) => FRONTEND_PACKAGES.includes(p));
-  const isFrontendByFiles = hasWebFrontendFiles(projectDir);
-  const isFrontend = isFrontendByPackages || isFrontendByFiles;
+  const isFrontendByFiles = hasWebFrontendFiles(dir);
 
+  return { detected, isFrontendByPackages, isFrontendByFiles };
+}
+
+export function detectTechnologies(projectDir) {
+  const root = detectTechnologiesInDir(projectDir);
+  const seenIds = new Map(root.detected.map((t) => [t.id, t]));
+  let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
+
+  const workspaceDirs = resolveWorkspaces(projectDir);
+  for (const wsDir of workspaceDirs) {
+    const ws = detectTechnologiesInDir(wsDir);
+    for (const tech of ws.detected) {
+      if (!seenIds.has(tech.id)) {
+        seenIds.set(tech.id, tech);
+      }
+    }
+    if (ws.isFrontendByPackages || ws.isFrontendByFiles) {
+      isFrontend = true;
+    }
+  }
+
+  const detected = [...seenIds.values()];
   const detectedIds = detected.map((t) => t.id);
   const combos = detectCombos(detectedIds);
 
