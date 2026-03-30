@@ -380,5 +380,133 @@ describe("CLI", () => {
       assert.ok(output.includes("Node.js + Express"));
       assert.ok(output.includes("nodejs-express-server"));
     });
+
+    it("detects WordPress from wp-config.php", () => {
+      writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+      writeFileSync(join(tmpDir, "wp-config.php"), "<?php // WP config");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("WordPress"));
+      assert.ok(output.includes("wp-plugin-development"));
+      assert.ok(output.includes("wp-rest-api"));
+      assert.ok(output.includes("wp-performance"));
+    });
+
+    it("detects WordPress from @wordpress npm packages", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          devDependencies: { "@wordpress/scripts": "^30" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("WordPress"));
+      assert.ok(output.includes("wp-block-development"));
+    });
+
+    it("detects WordPress from composer.json with wpackagist", () => {
+      writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+      writeFileSync(
+        join(tmpDir, "composer.json"),
+        JSON.stringify({
+          require: { "wpackagist-plugin/advanced-custom-fields": "^6" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("WordPress"));
+    });
+
+    it("detects WordPress from style.css theme header", () => {
+      writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
+      writeFileSync(
+        join(tmpDir, "style.css"),
+        "/*\nTheme Name: My Theme\nAuthor: Test\n*/",
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("WordPress"));
+      assert.ok(output.includes("wp-block-themes"));
+    });
+
+    it("detects web frontend from .html files and installs web fundamentals", () => {
+      mkdirSync(join(tmpDir, "public"));
+      writeFileSync(join(tmpDir, "public", "index.html"), "<html></html>");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Web frontend detected"));
+      assert.ok(output.includes("frontend-design"));
+      assert.ok(output.includes("accessibility"));
+      assert.ok(output.includes("seo"));
+    });
+
+    it("detects web frontend from .tpl files (PrestaShop)", () => {
+      mkdirSync(join(tmpDir, "themes", "classic", "templates"), { recursive: true });
+      writeFileSync(join(tmpDir, "themes", "classic", "templates", "index.tpl"), "{block name='content'}{/block}");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Web frontend detected"));
+      assert.ok(output.includes("frontend-design"));
+    });
+
+    it("detects web frontend from .twig files (Symfony/PHP)", () => {
+      mkdirSync(join(tmpDir, "templates"));
+      writeFileSync(join(tmpDir, "templates", "base.html.twig"), "{% block body %}{% endblock %}");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Web frontend detected"));
+    });
+
+    it("detects web frontend from .blade.php files (Laravel)", () => {
+      mkdirSync(join(tmpDir, "resources", "views"), { recursive: true });
+      writeFileSync(join(tmpDir, "resources", "views", "app.blade.php"), "@yield('content')");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Web frontend detected"));
+    });
+
+    it("detects web frontend from .css files", () => {
+      mkdirSync(join(tmpDir, "assets"));
+      writeFileSync(join(tmpDir, "assets", "main.css"), "body { margin: 0 }");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Web frontend detected"));
+    });
+
+    it("does NOT detect web frontend from .php files alone", () => {
+      mkdirSync(join(tmpDir, "src"));
+      writeFileSync(join(tmpDir, "src", "index.php"), "<?php echo 'hello';");
+      writeFileSync(join(tmpDir, "src", "controller.php"), "<?php class Controller {}");
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("No supported technologies"));
+    });
+
+    it("adds web fundamentals when npm frontend is detected too", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          dependencies: { react: "^19", next: "^15" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("React"));
+      assert.ok(output.includes("frontend-design"));
+      assert.ok(output.includes("accessibility"));
+      assert.ok(output.includes("seo"));
+    });
   });
 });

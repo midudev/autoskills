@@ -363,7 +363,7 @@ async function main() {
   const { detected, isFrontend, combos } = detectTechnologies(projectDir);
   process.stdout.write("\x1b[K");
 
-  if (detected.length === 0) {
+  if (detected.length === 0 && !isFrontend) {
     console.log(yellow("   ⚠ No supported technologies detected."));
     console.log(dim("   Make sure you run this in a project directory."));
     console.log();
@@ -371,42 +371,49 @@ async function main() {
   }
 
   // ── Show detected technologies
-  const withSkills = detected.filter((t) => t.skills.length > 0);
-  const withoutSkills = detected.filter((t) => t.skills.length === 0);
-  const allTech = [...withSkills, ...withoutSkills];
+  if (detected.length > 0) {
+    const withSkills = detected.filter((t) => t.skills.length > 0);
+    const withoutSkills = detected.filter((t) => t.skills.length === 0);
+    const allTech = [...withSkills, ...withoutSkills];
 
-  console.log(cyan("   ▸ ") + bold("Detected technologies:"));
-  console.log();
+    console.log(cyan("   ▸ ") + bold("Detected technologies:"));
+    console.log();
 
-  const COLS = 3;
-  const maxNameLen = Math.max(...allTech.map((t) => t.name.length));
-  const colWidth = maxNameLen + 3;
-  const rows = Math.ceil(allTech.length / COLS);
+    const COLS = 3;
+    const maxNameLen = Math.max(...allTech.map((t) => t.name.length));
+    const colWidth = maxNameLen + 3;
+    const rows = Math.ceil(allTech.length / COLS);
 
-  for (let r = 0; r < rows; r++) {
-    let line = "     ";
-    for (let c = 0; c < COLS; c++) {
-      const idx = r * COLS + c;
-      if (idx < allTech.length) {
-        const tech = allTech[idx];
-        const hasSkills = tech.skills.length > 0;
-        const icon = hasSkills ? green("✔") : dim("●");
-        const padded = tech.name.padEnd(colWidth);
-        line += `${icon} ${hasSkills ? padded : dim(padded)}`;
+    for (let r = 0; r < rows; r++) {
+      let line = "     ";
+      for (let c = 0; c < COLS; c++) {
+        const idx = r * COLS + c;
+        if (idx < allTech.length) {
+          const tech = allTech[idx];
+          const hasSkills = tech.skills.length > 0;
+          const icon = hasSkills ? green("✔") : dim("●");
+          const padded = tech.name.padEnd(colWidth);
+          line += `${icon} ${hasSkills ? padded : dim(padded)}`;
+        }
+      }
+      console.log(line);
+    }
+
+    if (combos.length > 0) {
+      console.log();
+      console.log(magenta("   ▸ ") + bold("Detected combos:"));
+      console.log();
+      for (const combo of combos) {
+        console.log(magenta(`     ⚡ `) + combo.name);
       }
     }
-    console.log(line);
+    console.log();
   }
 
-  if (combos.length > 0) {
+  if (isFrontend && detected.length === 0) {
+    console.log(cyan("   ▸ ") + bold("Web frontend detected ") + dim("(from project files)"));
     console.log();
-    console.log(magenta("   ▸ ") + bold("Detected combos:"));
-    console.log();
-    for (const combo of combos) {
-      console.log(magenta(`     ⚡ `) + combo.name);
-    }
   }
-  console.log();
 
   // ── Collect unique skills
   const skills = collectSkills(detected, isFrontend, combos);

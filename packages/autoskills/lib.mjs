@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 // ── Skills Map ────────────────────────────────────────────────
@@ -372,6 +372,28 @@ export const SKILLS_MAP = [
       "mindrally/skills/deno-typescript",
     ],
   },
+  {
+    id: "wordpress",
+    name: "WordPress",
+    detect: {
+      configFiles: ["wp-config.php", "wp-login.php"],
+      packagePatterns: [/^@wordpress\//],
+      configFileContent: {
+        files: ["composer.json", "style.css"],
+        patterns: ["johnpbloch/wordpress", "wpackagist", "Theme Name:"],
+      },
+    },
+    skills: [
+      "wordpress/agent-skills/wp-plugin-development",
+      "wordpress/agent-skills/wp-rest-api",
+      "wordpress/agent-skills/wp-block-themes",
+      "wordpress/agent-skills/wp-block-development",
+      "wordpress/agent-skills/wp-performance",
+      "wordpress/agent-skills/wordpress-router",
+      "wordpress/agent-skills/wp-project-triage",
+      "wordpress/agent-skills/wp-wpcli-and-ops",
+    ],
+  },
 ];
 
 // ── Combo Skills Map (cross-technology) ──────────────────────
@@ -456,7 +478,52 @@ export const FRONTEND_PACKAGES = [
   "@sveltejs/kit",
 ];
 
-export const FRONTEND_BONUS_SKILLS = ["anthropics/skills/frontend-design"];
+export const FRONTEND_BONUS_SKILLS = [
+  "anthropics/skills/frontend-design",
+  "addyosmani/web-quality-skills/accessibility",
+  "addyosmani/web-quality-skills/seo",
+];
+
+// Extensions that signal a web frontend (excludes .php — too generic for backend-only projects)
+export const WEB_FRONTEND_EXTENSIONS = new Set([
+  ".html", ".htm",
+  ".css", ".scss", ".sass", ".less",
+  ".vue", ".svelte", ".jsx", ".tsx",
+  ".twig", ".tpl", ".ejs", ".hbs", ".pug", ".njk",
+]);
+
+const SCAN_SKIP_DIRS = new Set([
+  "node_modules", ".git", "vendor", ".next", "dist", "build",
+  ".output", ".nuxt", ".svelte-kit", "__pycache__", ".cache",
+  "coverage", ".turbo", "var",
+]);
+
+export function hasWebFrontendFiles(projectDir, maxDepth = 3) {
+  function scan(dir, depth) {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        const name = entry.name;
+        if (name.endsWith(".blade.php")) return true;
+        const dot = name.lastIndexOf(".");
+        if (dot !== -1 && WEB_FRONTEND_EXTENSIONS.has(name.slice(dot))) return true;
+      } else if (entry.isDirectory() && depth < maxDepth) {
+        if (SCAN_SKIP_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
+        if (scan(join(dir, entry.name), depth + 1)) return true;
+      }
+    }
+
+    return false;
+  }
+
+  return scan(projectDir, 0);
+}
 
 // ── Detection ─────────────────────────────────────────────────
 
@@ -516,7 +583,9 @@ export function detectTechnologies(projectDir) {
     }
   }
 
-  const isFrontend = allPackages.some((p) => FRONTEND_PACKAGES.includes(p));
+  const isFrontendByPackages = allPackages.some((p) => FRONTEND_PACKAGES.includes(p));
+  const isFrontendByFiles = hasWebFrontendFiles(projectDir);
+  const isFrontend = isFrontendByPackages || isFrontendByFiles;
 
   const detectedIds = detected.map((t) => t.id);
   const combos = detectCombos(detectedIds);
