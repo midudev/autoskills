@@ -19,16 +19,19 @@ interface Sponsor {
 }
 
 const featuredSponsors: Sponsor[] = [
-  { login: 'x1xhlol', id: 185671340 },
-  { login: 'matiascariboni', id: 63000097 },
-  { login: 'ferdotgg', id: 29582347 },
-  { login: 'santiagohernandezs', id: 68081080 },
-  { login: 'SergioAcostaTer', id: 98357160 },
-  { login: 'soy-daniel-hidalgo', id: 257511372 },
+  { login: 'crisvegadev', id: 17342446 },
   { login: 'pmNiko', id: 18277737 },
-  { login: 'ChristianUtria', id: 164814299 },
+  { login: 'santiagohernandezs', id: 68081080 },
   { login: 'joelguizado', id: 71227026 },
+  { login: 'SergioAcostaTer', id: 98357160 },
   { login: 'Bykhe', id: 141531098 },
+  { login: 'ChristianUtria', id: 164814299 },
+  { login: 'x1xhlol', id: 185671340 },
+  { login: 'Gjusev', id: 71157156 },
+  { login: 'meogiegieuax', id: 207284467 },
+  { login: 'sneugoeanxuer', id: 212690065 },
+  { login: 'cereauaioer', id: 264738581 },
+  { login: 'architest8', id: 264739452 },
 ];
 
 let sponsors: Sponsor[] = featuredSponsors;
@@ -70,44 +73,8 @@ try {
   // Falls back to featuredSponsors
 }
 
-const skillsMap = [
-  { name: 'React', skills: ['vercel-labs/agent-skills/vercel-react-best-practices', 'vercel-labs/agent-skills/vercel-composition-patterns'] },
-  { name: 'Next.js', skills: ['vercel-labs/next-skills/next-best-practices', 'vercel-labs/next-skills/next-cache-components', 'vercel-labs/next-skills/next-upgrade'] },
-  { name: 'Vue', skills: ['hyf0/vue-skills/vue-best-practices', 'hyf0/vue-skills/vue-debug-guides', 'antfu/skills/vue', 'antfu/skills/vue-best-practices'] },
-  { name: 'Nuxt', skills: ['antfu/skills/nuxt'] },
-  { name: 'Pinia', skills: ['vuejs-ai/skills/vue-pinia-best-practices'] },
-  { name: 'Astro', skills: ['astrolicious/agent-skills/astro'] },
-  { name: 'Svelte', skills: [] },
-  { name: 'Angular', skills: [] },
-  { name: 'Tailwind CSS', skills: ['giuseppe-trisciuoglio/developer-kit/tailwind-css-patterns'] },
-  { name: 'shadcn/ui', skills: ['shadcn/ui/shadcn'] },
-  { name: 'TypeScript', skills: ['wshobson/agents/typescript-advanced-types'] },
-  { name: 'Playwright', skills: ['currents-dev/playwright-best-practices-skill/playwright-best-practices'] },
-  { name: 'Supabase', skills: ['supabase/agent-skills/supabase-postgres-best-practices'] },
-  { name: 'Neon', skills: ['neondatabase/agent-skills/neon-postgres'] },
-  { name: 'Expo', skills: ['expo/skills/building-native-ui', 'expo/skills/native-data-fetching', 'expo/skills/upgrading-expo', 'expo/skills/expo-tailwind-setup', 'expo/skills/expo-dev-client', 'expo/skills/expo-deployment', 'expo/skills/expo-cicd-workflows', 'expo/skills/expo-api-routes', 'expo/skills/use-dom'] },
-  { name: 'React Native', skills: ['sleekdotdesign/agent-skills/sleek-design-mobile-apps'] },
-  { name: 'Remotion', skills: ['remotion-dev/skills/remotion-best-practices'] },
-  { name: 'Better Auth', skills: ['better-auth/skills/better-auth-best-practices', 'better-auth/skills/email-and-password-best-practices', 'better-auth/skills/organization-best-practices', 'better-auth/skills/two-factor-authentication-best-practices'] },
-  { name: 'Turborepo', skills: ['vercel/turborepo/turborepo'] },
-  { name: 'Vite', skills: ['antfu/skills/vite'] },
-  { name: 'Azure', skills: ['microsoft/github-copilot-for-azure/azure-deploy', 'microsoft/github-copilot-for-azure/azure-ai', 'microsoft/github-copilot-for-azure/azure-cost-optimization', 'microsoft/github-copilot-for-azure/azure-diagnostics'] },
-  { name: 'Vercel AI SDK', skills: ['vercel/ai/ai-sdk'] },
-  { name: 'Vercel', skills: ['vercel-labs/agent-skills/deploy-to-vercel'] },
-  { name: 'ElevenLabs', skills: ['inferen-sh/skills/elevenlabs-tts', 'inferen-sh/skills/elevenlabs-music'] },
-  { name: 'Cloudflare', skills: ['cloudflare/skills/cloudflare', 'cloudflare/skills/wrangler', 'cloudflare/skills/workers-best-practices', 'cloudflare/skills/web-perf', 'openai/skills/cloudflare-deploy'] },
-  { name: 'Durable Objects', skills: ['cloudflare/skills/durable-objects'] },
-  { name: 'Cloudflare Agents', skills: ['cloudflare/skills/agents-sdk', 'cloudflare/skills/building-mcp-server-on-cloudflare', 'cloudflare/skills/sandbox-sdk'] },
-  { name: 'Cloudflare AI', skills: ['cloudflare/skills/building-ai-agent-on-cloudflare'] },
-  { name: 'AWS', skills: [] },
-  { name: 'SwiftUI', skills: ['avdlee/swiftui-agent-skill/swiftui-expert-skill'] },
-  { name: 'oxlint', skills: ['delexw/claude-code-misc/oxlint'] },
-  { name: 'GSAP', skills: ['greensock/gsap-skills/gsap-core', 'greensock/gsap-skills/gsap-scrolltrigger', 'greensock/gsap-skills/gsap-performance', 'greensock/gsap-skills/gsap-plugins', 'greensock/gsap-skills/gsap-timeline', 'greensock/gsap-skills/gsap-utils', 'greensock/gsap-skills/gsap-frameworks'] },
-  { name: 'Node.js', skills: ['wshobson/agents/nodejs-backend-patterns', 'sickn33/antigravity-awesome-skills/nodejs-best-practices'] },
-  { name: 'Express', skills: [] },
-  { name: 'Bun', skills: ['https://bun.sh/docs'] },
-  { name: 'Deno', skills: ['denoland/skills/deno-expert', 'denoland/skills/deno-guidance', 'denoland/skills/deno-frontend', 'denoland/skills/deno-deploy', 'denoland/skills/deno-sandbox', 'mindrally/skills/deno-typescript'] },
-];
+const { SKILLS_MAP } = await import('../../packages/autoskills/skills-map.mjs');
+const skillsMap = SKILLS_MAP;
 
 ---
 
