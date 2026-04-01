@@ -631,7 +631,7 @@ export const SKILLS_MAP = [
         patterns: ["pytest", "Pytest"],
       },
     },
-    skills: ["wshobson/agents/python-testing-patterns", "anthropics/skills/python-pytest-expert"],
+    skills: ["wshobson/agents/python-testing-patterns"],
   },
   {
     id: "pandas",
@@ -657,7 +657,7 @@ export const SKILLS_MAP = [
       },
     },
     skills: [
-      "davila7/claude-code-templates/numpy",
+      "pluginagentmarketplace/custom-plugin-python/machine-learning",
       "pluginagentmarketplace/custom-plugin-python/pandas-data-analysis",
     ],
   },
@@ -684,7 +684,7 @@ export const SKILLS_MAP = [
         patterns: ["celery", "Celery"],
       },
     },
-    skills: ["wshobson/agents/celery-best-practices"],
+    skills: ["wshobson/agents/python-background-jobs"],
   },
   {
     id: "requests",
@@ -695,7 +695,7 @@ export const SKILLS_MAP = [
         patterns: ["requests", "Requests"],
       },
     },
-    skills: ["wshobson/agents/python-requests-patterns"],
+    skills: ["affaan-m/everything-claude-code/python-patterns"],
   },
 ];
 
