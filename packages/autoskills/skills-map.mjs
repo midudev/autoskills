@@ -631,7 +631,7 @@ export const SKILLS_MAP = [
         patterns: ["pytest", "Pytest"],
       },
     },
-    skills: ["wshobson/agents/python-testing-patterns"],
+    skills: ["wshobson/agents/python-testing-patterns", "anthropics/skills/python-pytest-expert"],
   },
   {
     id: "pandas",
@@ -642,7 +642,10 @@ export const SKILLS_MAP = [
         patterns: ["pandas", "Pandas"],
       },
     },
-    skills: [],
+    skills: [
+      "jeffallan/claude-skills/pandas-pro",
+      "pluginagentmarketplace/custom-plugin-python/pandas-data-analysis",
+    ],
   },
   {
     id: "numpy",
@@ -653,7 +656,10 @@ export const SKILLS_MAP = [
         patterns: ["numpy", "NumPy", "numpy"],
       },
     },
-    skills: [],
+    skills: [
+      "davila7/claude-code-templates/numpy",
+      "pluginagentmarketplace/custom-plugin-python/pandas-data-analysis",
+    ],
   },
   {
     id: "scikit-learn",
@@ -664,7 +670,10 @@ export const SKILLS_MAP = [
         patterns: ["scikit-learn", "scikit_learn", "sklearn"],
       },
     },
-    skills: [],
+    skills: [
+      "davila7/claude-code-templates/scikit-learn",
+      "davila7/claude-code-templates/senior-data-scientist",
+    ],
   },
   {
     id: "celery",
@@ -675,7 +684,7 @@ export const SKILLS_MAP = [
         patterns: ["celery", "Celery"],
       },
     },
-    skills: [],
+    skills: ["wshobson/agents/celery-best-practices"],
   },
   {
     id: "requests",
@@ -686,7 +695,7 @@ export const SKILLS_MAP = [
         patterns: ["requests", "Requests"],
       },
     },
-    skills: [],
+    skills: ["wshobson/agents/python-requests-patterns"],
   },
 ];
 
