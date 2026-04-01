@@ -5,7 +5,18 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { detectTechnologies, collectSkills, detectAgents } from "./lib.mjs";
-import { bold, dim, green, yellow, cyan, magenta, red, pink, gray, SHOW_CURSOR } from "./colors.mjs";
+import {
+  bold,
+  dim,
+  green,
+  yellow,
+  cyan,
+  magenta,
+  red,
+  pink,
+  gray,
+  SHOW_CURSOR,
+} from "./colors.mjs";
 import { printBanner, multiSelect, formatTime } from "./ui.mjs";
 import { installAll } from "./installer.mjs";
 

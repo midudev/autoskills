@@ -44,6 +44,124 @@ npx autoskills --dry-run
 | `-v`, `--verbose` | Show error details if any installation fails          |
 | `-h`, `--help`    | Show help message                                     |
 
+## Custom Skill Configuration
+
+You can override or extend the built-in technology map with your own config files.
+
+### Config locations
+
+`autoskills` loads config from these locations and applies this priority:
+
+1. **Built-in map**
+2. **Global config**: first match in parent directories (starting one level above your current directory) using `.autoskillsrc.json|js|mjs|cjs` or `autoskills.config.js|mjs|cjs`
+3. **Local config**: match in your current directory using `.autoskillsrc.json|js|mjs|cjs` or `autoskills.config.js|mjs|cjs`
+
+If the same `id` appears multiple times, the last source wins. In practice:
+**Local overrides Global, Global overrides Built-in**.
+
+### Supported formats
+
+- `.json` files with an array
+- `.js` / `.mjs` / `.cjs` files exporting an array (`export default [...]` or `module.exports = [...]`)
+
+### Supported filenames
+
+Local (project directory):
+
+- `.autoskillsrc.json`
+- `.autoskillsrc.js`
+- `.autoskillsrc.mjs`
+- `.autoskillsrc.cjs`
+- `autoskills.config.js`
+- `autoskills.config.mjs`
+- `autoskills.config.cjs`
+
+Global (parent directories):
+
+- `.autoskillsrc.json`
+- `.autoskillsrc.js`
+- `.autoskillsrc.mjs`
+- `.autoskillsrc.cjs`
+- `autoskills.config.js`
+- `autoskills.config.mjs`
+- `autoskills.config.cjs`
+
+### Skill object schema
+
+Your config file must export an **array** of objects with this shape:
+
+| Field                                       | Type                   | Required | Notes                                                                              |
+| ------------------------------------------- | ---------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `id`                                        | `string`               | Yes      | Unique key. If it matches a built-in tech, it fully replaces that tech definition. |
+| `name`                                      | `string`               | Yes      | Display name in CLI output.                                                        |
+| `detect`                                    | `object`               | Yes      | Detection rules used to detect the technology in a project.                        |
+| `detect.packages`                           | `string[]`             | No       | Exact package names to match in dependencies/devDependencies.                      |
+| `detect.packagePatterns`                    | `(string \| RegExp)[]` | No       | Package regex patterns. In JSON, use strings like `"^@my-org/"`.                   |
+| `detect.configFiles`                        | `string[]`             | No       | File names that trigger detection.                                                 |
+| `detect.configFileContent`                  | `object`               | No       | Content-based detection block.                                                     |
+| `detect.configFileContent.patterns`         | `string[]`             | Yes\*    | Required if `configFileContent` is present.                                        |
+| `detect.configFileContent.files`            | `string[]`             | No       | Files to inspect for `patterns`.                                                   |
+| `detect.configFileContent.scanGradleLayout` | `boolean`              | No       | Enables Gradle layout scanning.                                                    |
+| `skills`                                    | `string[]`             | Yes      | Skills to suggest/install for this technology.                                     |
+
+\* Required when using `detect.configFileContent`.
+
+### Example: local `.autoskillsrc.json`
+
+```json
+[
+  {
+    "id": "my-company-sdk",
+    "name": "My Company SDK",
+    "detect": {
+      "packages": ["@my-company/sdk"],
+      "configFiles": ["my-company.config.ts"]
+    },
+    "skills": ["my-company/agent-skills/sdk-best-practices"]
+  },
+  {
+    "id": "react",
+    "name": "React (Internal Standards)",
+    "detect": {
+      "packages": ["react", "react-dom"]
+    },
+    "skills": ["my-company/agent-skills/react-internal-standards"]
+  }
+]
+```
+
+### Example: global `autoskills.config.mjs` in a parent directory
+
+```js
+export default [
+  {
+    id: "acme-cloud",
+    name: "Acme Cloud",
+    detect: {
+      packagePatterns: [/^@acme-cloud\//],
+      configFiles: ["acme.config.json"],
+    },
+    skills: ["acme/agent-skills/cloud-platform"],
+  },
+];
+```
+
+### Merge behavior
+
+- Matching is done by `id`
+- Merge is **replace**, not deep-merge
+- If `id: "react"` is defined in your config, your object replaces the built-in React object completely
+
+### Error handling
+
+If a config file is invalid (bad JSON, import error, validation error, permission issue), `autoskills`:
+
+- logs a warning
+- skips that config source
+- continues detection with remaining valid sources
+
+Use `--verbose` for richer CLI diagnostics when troubleshooting.
+
 ## Supported Technologies
 
 `autoskills` detects **46+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:

@@ -1,6 +1,7 @@
-import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join, resolve, dirname, extname } from "node:path";
 import { homedir } from "node:os";
+import { pathToFileURL } from "node:url";
 
 export {
   SKILLS_MAP,
@@ -88,6 +89,148 @@ function resolveConfigFileContentPaths(projectDir, config) {
     return gradleLayoutCandidatePaths(projectDir);
   }
   return (config.files || []).map((f) => join(projectDir, f));
+}
+
+const LOCAL_CONFIG_FILES = [
+  ".autoskillsrc.json",
+  ".autoskillsrc.js",
+  ".autoskillsrc.mjs",
+  ".autoskillsrc.cjs",
+  "autoskills.config.js",
+  "autoskills.config.mjs",
+  "autoskills.config.cjs",
+];
+
+const GLOBAL_CONFIG_FILES = [...LOCAL_CONFIG_FILES];
+
+function findConfigInDir(dir, names) {
+  for (const name of names) {
+    const filePath = join(dir, name);
+    if (existsSync(filePath)) {
+      return filePath;
+    }
+  }
+  return null;
+}
+
+export function findLocalConfig(startDir = process.cwd()) {
+  return findConfigInDir(resolve(startDir), LOCAL_CONFIG_FILES);
+}
+
+export function findGlobalConfig(startDir = process.cwd()) {
+  let current = dirname(resolve(startDir));
+  while (true) {
+    const found = findConfigInDir(current, GLOBAL_CONFIG_FILES);
+    if (found) {
+      return found;
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    current = parent;
+  }
+}
+
+export async function loadConfigFile(filePath) {
+  const ext = extname(filePath);
+  if (ext === ".json") {
+    return JSON.parse(readFileSync(filePath, "utf-8"));
+  }
+  if (ext === ".js" || ext === ".mjs" || ext === ".cjs") {
+    const fileUrl = pathToFileURL(filePath).href;
+    const cacheBuster = `v=${statSync(filePath).mtimeMs}`;
+    const mod = await import(`${fileUrl}?${cacheBuster}`);
+    return mod.default ?? mod;
+  }
+  throw new Error(`Unsupported config file extension: ${ext || "unknown"}`);
+}
+
+function isPlainObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function validateSkillConfig(config) {
+  if (!Array.isArray(config)) {
+    throw new Error("Config must export an array");
+  }
+  for (let i = 0; i < config.length; i++) {
+    const skill = config[i];
+    if (!isPlainObject(skill)) {
+      throw new Error(`Item at index ${i} must be an object`);
+    }
+    if (typeof skill.id !== "string" || skill.id.trim() === "") {
+      throw new Error(`Item at index ${i} must include a non-empty string id`);
+    }
+    if (typeof skill.name !== "string" || skill.name.trim() === "") {
+      throw new Error(`Item at index ${i} must include a non-empty string name`);
+    }
+    if (!isPlainObject(skill.detect)) {
+      throw new Error(`Item "${skill.id}" must include a detect object`);
+    }
+    if (!Array.isArray(skill.skills) || skill.skills.some((entry) => typeof entry !== "string")) {
+      throw new Error(`Item "${skill.id}" must include a skills string[]`);
+    }
+    if (
+      skill.detect.packages &&
+      (!Array.isArray(skill.detect.packages) ||
+        skill.detect.packages.some((entry) => typeof entry !== "string"))
+    ) {
+      throw new Error(`Item "${skill.id}" detect.packages must be string[]`);
+    }
+    if (skill.detect.packagePatterns) {
+      if (!Array.isArray(skill.detect.packagePatterns)) {
+        throw new Error(`Item "${skill.id}" detect.packagePatterns must be an array`);
+      }
+      for (const pattern of skill.detect.packagePatterns) {
+        if (pattern instanceof RegExp) {
+          continue;
+        }
+        if (typeof pattern !== "string") {
+          throw new Error(
+            `Item "${skill.id}" detect.packagePatterns must contain strings or RegExp`,
+          );
+        }
+        try {
+          new RegExp(pattern);
+        } catch {
+          throw new Error(`Item "${skill.id}" has an invalid regex in detect.packagePatterns`);
+        }
+      }
+    }
+    if (
+      skill.detect.configFiles &&
+      (!Array.isArray(skill.detect.configFiles) ||
+        skill.detect.configFiles.some((entry) => typeof entry !== "string"))
+    ) {
+      throw new Error(`Item "${skill.id}" detect.configFiles must be string[]`);
+    }
+    if (skill.detect.configFileContent) {
+      if (!isPlainObject(skill.detect.configFileContent)) {
+        throw new Error(`Item "${skill.id}" detect.configFileContent must be an object`);
+      }
+      const { patterns, files } = skill.detect.configFileContent;
+      if (!Array.isArray(patterns) || patterns.some((entry) => typeof entry !== "string")) {
+        throw new Error(`Item "${skill.id}" detect.configFileContent.patterns must be string[]`);
+      }
+      if (files && (!Array.isArray(files) || files.some((entry) => typeof entry !== "string"))) {
+        throw new Error(`Item "${skill.id}" detect.configFileContent.files must be string[]`);
+      }
+    }
+  }
+}
+
+export function mergeSkillsMap(baseMap, overrides) {
+  const merged = [...baseMap];
+  for (const override of overrides) {
+    const idx = merged.findIndex((entry) => entry.id === override.id);
+    if (idx === -1) {
+      merged.push(override);
+    } else {
+      merged[idx] = override;
+    }
+  }
+  return merged;
 }
 
 // ── Frontend File Scanning ───────────────────────────────────
@@ -270,12 +413,12 @@ export function getAllPackageNames(pkg) {
  * @param {string} dir - Directory to scan.
  * @returns {{ detected: object[], isFrontendByPackages: boolean, isFrontendByFiles: boolean }}
  */
-function detectTechnologiesInDir(dir) {
+function detectTechnologiesInDir(dir, skillsMap) {
   const pkg = readPackageJson(dir);
   const allPackages = getAllPackageNames(pkg);
   const detected = [];
 
-  for (const tech of SKILLS_MAP) {
+  for (const tech of skillsMap) {
     let found = false;
 
     if (tech.detect.packages) {
@@ -283,9 +426,10 @@ function detectTechnologiesInDir(dir) {
     }
 
     if (!found && tech.detect.packagePatterns) {
-      found = tech.detect.packagePatterns.some((pattern) =>
-        allPackages.some((p) => pattern.test(p)),
-      );
+      found = tech.detect.packagePatterns.some((pattern) => {
+        const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
+        return allPackages.some((p) => regex.test(p));
+      });
     }
 
     if (!found && tech.detect.configFiles) {
@@ -325,14 +469,14 @@ function detectTechnologiesInDir(dir) {
  * @param {string} projectDir - Absolute path to the project root.
  * @returns {{ detected: object[], isFrontend: boolean, combos: object[] }}
  */
-export function detectTechnologies(projectDir) {
-  const root = detectTechnologiesInDir(projectDir);
+function detectTechnologiesWithSkillsMap(projectDir, skillsMap) {
+  const root = detectTechnologiesInDir(projectDir, skillsMap);
   const seenIds = new Map(root.detected.map((t) => [t.id, t]));
   let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
 
   const workspaceDirs = resolveWorkspaces(projectDir);
   for (const wsDir of workspaceDirs) {
-    const ws = detectTechnologiesInDir(wsDir);
+    const ws = detectTechnologiesInDir(wsDir, skillsMap);
 
     for (const tech of ws.detected) {
       if (!seenIds.has(tech.id)) {
@@ -350,6 +494,60 @@ export function detectTechnologies(projectDir) {
   const combos = detectCombos(detectedIds);
 
   return { detected, isFrontend, combos };
+}
+
+function normalizeErrorMessage(error) {
+  if (!error || typeof error !== "object") {
+    return "Unknown error";
+  }
+  const code = typeof error.code === "string" ? error.code : null;
+  const message = typeof error.message === "string" ? error.message : "Unknown error";
+  if (code === "EACCES") {
+    return "Permission denied";
+  }
+  if (code === "ENOENT") {
+    return "File not found";
+  }
+  return message;
+}
+
+function warnConfigError(scope, filePath, error) {
+  console.warn(
+    `[autoskills] Skipping ${scope} config (${filePath}): ${normalizeErrorMessage(error)}`,
+  );
+}
+
+async function detectTechnologiesAsync(projectDir) {
+  let mergedSkillsMap = SKILLS_MAP;
+  const globalConfigPath = findGlobalConfig(projectDir);
+  if (globalConfigPath) {
+    try {
+      const globalConfig = await loadConfigFile(globalConfigPath);
+      validateSkillConfig(globalConfig);
+      mergedSkillsMap = mergeSkillsMap(mergedSkillsMap, globalConfig);
+    } catch (error) {
+      warnConfigError("global", globalConfigPath, error);
+    }
+  }
+
+  const localConfigPath = findLocalConfig(projectDir);
+  if (localConfigPath) {
+    try {
+      const localConfig = await loadConfigFile(localConfigPath);
+      validateSkillConfig(localConfig);
+      mergedSkillsMap = mergeSkillsMap(mergedSkillsMap, localConfig);
+    } catch (error) {
+      warnConfigError("local", localConfigPath, error);
+    }
+  }
+
+  return detectTechnologiesWithSkillsMap(projectDir, mergedSkillsMap);
+}
+
+export function detectTechnologies(projectDir) {
+  const fallback = detectTechnologiesWithSkillsMap(projectDir, SKILLS_MAP);
+  const promise = detectTechnologiesAsync(projectDir);
+  return Object.assign(promise, fallback);
 }
 
 /**
