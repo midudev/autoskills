@@ -687,6 +687,8 @@ export const AGENT_FOLDER_MAP = {
   ".supermaven": "supermaven",
   ".codebuddy": "codebuddy",
   ".continue": "continue",
+  ".opencode": "opencode", // for IDE
+  ".config/.opencode": "opencode", // For cli
 };
 
 export const WEB_FRONTEND_EXTENSIONS = new Set([

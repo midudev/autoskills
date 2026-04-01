@@ -19,6 +19,8 @@ import {
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
 } from "./skills-map.mjs";
+import { multiSelect } from "./ui.mjs";
+import { bold, cyan, dim, magenta } from "./colors.mjs";
 
 // ── Internal Constants ───────────────────────────────────────
 
@@ -449,4 +451,39 @@ export function collectSkills(detected, isFrontend, combos = []) {
   }
 
   return skills;
+}
+
+
+/**
+ * Prompts the user to select which AI agents to target.
+ * @param {string[]} available - Detected agents in the system.
+ * @param {boolean} autoYes - Skip confirmation and select all.
+ * @returns {Promise<string[]>} Selected agents.
+ */
+export async function selectAgents(available, autoYes) {
+  if (autoYes) return available;
+
+  // Auto select if only one agent is detected
+  if (available.length === 1) {
+    console.log(magenta("   ◆ ") + `Target agent: ${bold(cyan(available[0]))} ` + dim("(auto-detected)"));
+    console.log();
+    return available;
+  }
+
+  console.log(magenta("   ◆ ") + bold(`Select target AI agents `) + dim(`(${available.length} found)`));
+  console.log();
+
+  const selected = await multiSelect(available.map(a => ({ name: a })), {
+    labelFn: (a) => cyan(bold(a.name)),
+    hintFn: () => dim("agent"),
+  });
+
+
+  if (selected.length === 0) {
+    console.log();
+    console.log(yellow("   ⚠ No agents selected. Installation aborted."));
+    console.log();
+    process.exit(0);
+  }
+  return selected.map(s => s.name);
 }

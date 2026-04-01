@@ -3,8 +3,7 @@
 import { resolve, dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
-import { detectTechnologies, collectSkills, detectAgents } from "./lib.mjs";
+import { detectTechnologies, collectSkills, detectAgents, selectAgents } from "./lib.mjs";
 import {
   bold,
   dim,
@@ -277,6 +276,18 @@ async function main() {
 
   printBanner(VERSION);
 
+  let resolvedAgents = agents.length > 0 ? agents : detectAgents();
+
+  // First detect agents for selection step
+  if (resolvedAgents.length === 0) {
+    console.log(red("   ✘ No AI agents detected ") + dim("(Cursor, Claude Code, Windsurf, etc.)"));
+    console.log(dim("     Please install an AI agent before running autoskills."));
+    console.log();
+    process.exit(1);
+  } else {
+    resolvedAgents = await selectAgents(resolvedAgents, autoYes);
+  }
+
   const projectDir = resolve(".");
 
   process.stdout.write(dim("   Scanning project...\r"));
@@ -293,7 +304,6 @@ async function main() {
   printDetected(detected, combos, isFrontend);
 
   const skills = collectSkills(detected, isFrontend, combos);
-  const resolvedAgents = agents.length > 0 ? agents : detectAgents();
 
   if (skills.length === 0) {
     console.log(yellow("   No skills available for your stack yet."));
