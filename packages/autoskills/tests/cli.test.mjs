@@ -424,10 +424,7 @@ describe("CLI", () => {
 
     it("detects WordPress from style.css theme header", () => {
       writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
-      writeFileSync(
-        join(tmpDir, "style.css"),
-        "/*\nTheme Name: My Theme\nAuthor: Test\n*/",
-      );
+      writeFileSync(join(tmpDir, "style.css"), "/*\nTheme Name: My Theme\nAuthor: Test\n*/");
 
       const output = run(["--dry-run"], tmpDir);
 
@@ -449,7 +446,10 @@ describe("CLI", () => {
 
     it("detects web frontend from .tpl files (PrestaShop)", () => {
       mkdirSync(join(tmpDir, "themes", "classic", "templates"), { recursive: true });
-      writeFileSync(join(tmpDir, "themes", "classic", "templates", "index.tpl"), "{block name='content'}{/block}");
+      writeFileSync(
+        join(tmpDir, "themes", "classic", "templates", "index.tpl"),
+        "{block name='content'}{/block}",
+      );
 
       const output = run(["--dry-run"], tmpDir);
 
@@ -556,6 +556,34 @@ describe("CLI", () => {
       assert.ok(output.includes("frontend-design"));
       assert.ok(output.includes("accessibility"));
       assert.ok(output.includes("seo"));
+    });
+
+    it("shows auto-detected agents in dry-run output", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          dependencies: { react: "^19" },
+        }),
+      );
+
+      const output = run(["--dry-run"], tmpDir);
+
+      assert.ok(output.includes("Agents:"));
+      assert.ok(output.includes("universal"));
+    });
+
+    it("shows user-specified agents instead of auto-detected", () => {
+      writeFileSync(
+        join(tmpDir, "package.json"),
+        JSON.stringify({
+          dependencies: { react: "^19" },
+        }),
+      );
+
+      const output = run(["--dry-run", "-a", "cursor"], tmpDir);
+
+      assert.ok(output.includes("Agents: cursor"));
+      assert.ok(!output.includes("universal"));
     });
   });
 });

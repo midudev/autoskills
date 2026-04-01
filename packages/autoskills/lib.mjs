@@ -1,5 +1,6 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 
 export {
   SKILLS_MAP,
@@ -7,6 +8,7 @@ export {
   FRONTEND_PACKAGES,
   FRONTEND_BONUS_SKILLS,
   WEB_FRONTEND_EXTENSIONS,
+  AGENT_FOLDER_MAP,
 } from "./skills-map.mjs";
 
 import {
@@ -15,14 +17,26 @@ import {
   FRONTEND_PACKAGES,
   FRONTEND_BONUS_SKILLS,
   WEB_FRONTEND_EXTENSIONS,
+  AGENT_FOLDER_MAP,
 } from "./skills-map.mjs";
 
 // ── Internal Constants ───────────────────────────────────────
 
 const SCAN_SKIP_DIRS = new Set([
-  "node_modules", ".git", "vendor", ".next", "dist", "build",
-  ".output", ".nuxt", ".svelte-kit", "__pycache__", ".cache",
-  "coverage", ".turbo", "var",
+  "node_modules",
+  ".git",
+  "vendor",
+  ".next",
+  "dist",
+  "build",
+  ".output",
+  ".nuxt",
+  ".svelte-kit",
+  "__pycache__",
+  ".cache",
+  "coverage",
+  ".turbo",
+  "var",
 ]);
 
 const GRADLE_SCAN_ROOT_FILES = [
@@ -134,7 +148,12 @@ function parsePnpmWorkspaceYaml(content) {
     }
     if (inPackages) {
       if (line.startsWith("- ")) {
-        patterns.push(line.slice(2).trim().replace(/^['"]|['"]$/g, ""));
+        patterns.push(
+          line
+            .slice(2)
+            .trim()
+            .replace(/^['"]|['"]$/g, ""),
+        );
       } else if (line !== "" && !line.startsWith("#")) {
         break;
       }
@@ -164,7 +183,8 @@ function expandWorkspacePatterns(projectDir, patterns) {
         continue;
       }
       for (const entry of entries) {
-        if (!entry.isDirectory() || SCAN_SKIP_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
+        if (!entry.isDirectory() || SCAN_SKIP_DIRS.has(entry.name) || entry.name.startsWith("."))
+          continue;
         const wsDir = join(parent, entry.name);
         if (existsSync(join(wsDir, "package.json"))) {
           dirs.push(wsDir);
@@ -339,6 +359,27 @@ export function detectTechnologies(projectDir) {
  */
 export function detectCombos(detectedIds) {
   return COMBO_SKILLS_MAP.filter((combo) => combo.requires.every((id) => detectedIds.includes(id)));
+}
+
+// ── Agent Detection ─────────────────────────────────────────
+
+/**
+ * Detects which AI coding agents are installed by checking for `skills/` subdirectories
+ * inside known agent folders in the user's home directory.
+ * Always includes `"universal"` as the first entry.
+ * @param {string} [home=os.homedir()] - Home directory to scan (injectable for testing).
+ * @returns {string[]} Agent identifiers suitable for `npx skills add -a ...`.
+ */
+export function detectAgents(home = homedir()) {
+  const agents = ["universal"];
+
+  for (const [folder, agentName] of Object.entries(AGENT_FOLDER_MAP)) {
+    if (existsSync(join(home, folder, "skills"))) {
+      agents.push(agentName);
+    }
+  }
+
+  return agents;
 }
 
 // ── Helpers ──────────────────────────────────────────────────

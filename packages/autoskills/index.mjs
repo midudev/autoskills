@@ -4,7 +4,7 @@ import { resolve, dirname, join } from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { detectTechnologies, collectSkills } from "./lib.mjs";
+import { detectTechnologies, collectSkills, detectAgents } from "./lib.mjs";
 import { bold, dim, green, yellow, cyan, magenta, red, pink, SHOW_CURSOR } from "./colors.mjs";
 import { printBanner, multiSelect, formatTime } from "./ui.mjs";
 import { installAll } from "./installer.mjs";
@@ -91,7 +91,10 @@ function printDetected(detected, combos, isFrontend) {
     };
 
     for (let i = 0; i < allTech.length; i += COLS) {
-      const row = allTech.slice(i, i + COLS).map(formatTech).join("");
+      const row = allTech
+        .slice(i, i + COLS)
+        .map(formatTech)
+        .join("");
       console.log(`     ${row}`);
     }
 
@@ -170,7 +173,9 @@ function printSummary({ installed, failed, errors, elapsed, verbose }) {
     }
   }
   console.log();
-  console.log(pink("   Enjoyed autoskills? Consider sponsoring → https://github.com/sponsors/midudev"));
+  console.log(
+    pink("   Enjoyed autoskills? Consider sponsoring → https://github.com/sponsors/midudev"),
+  );
   console.log();
 }
 
@@ -191,9 +196,7 @@ async function selectSkills(skills, autoYes) {
     return skills;
   }
 
-  console.log(
-    cyan("   ▸ ") + bold(`Select skills to install `) + dim(`(${skills.length} found)`),
-  );
+  console.log(cyan("   ▸ ") + bold(`Select skills to install `) + dim(`(${skills.length} found)`));
   console.log();
 
   const selected = await multiSelect(skills, {
@@ -244,6 +247,7 @@ async function main() {
   printDetected(detected, combos, isFrontend);
 
   const skills = collectSkills(detected, isFrontend, combos);
+  const resolvedAgents = agents.length > 0 ? agents : detectAgents();
 
   if (skills.length === 0) {
     console.log(yellow("   No skills available for your stack yet."));
@@ -254,6 +258,7 @@ async function main() {
 
   if (dryRun) {
     printSkillsList(skills);
+    console.log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
     console.log(dim("   --dry-run: nothing was installed."));
     console.log();
     process.exit(0);
@@ -269,13 +274,11 @@ async function main() {
   }
 
   console.log(cyan("   ▸ ") + bold("Installing skills..."));
-  if (agents.length > 0) {
-    console.log(dim(`   Agents: ${agents.join(", ")}`));
-  }
+  console.log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
   console.log();
 
   const startTime = Date.now();
-  const { installed, failed, errors } = await installAll(selectedSkills, agents);
+  const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents);
   const elapsed = Date.now() - startTime;
 
   if (process.stdout.isTTY) {

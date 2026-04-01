@@ -480,15 +480,10 @@ export const SKILLS_MAP = [
       ],
       configFileContent: {
         files: ["pom.xml"],
-        patterns: [
-          "spring-boot-starter",
-          "org.springframework.boot",
-        ],
+        patterns: ["spring-boot-starter", "org.springframework.boot"],
       },
     },
-    skills: [
-      "github/awesome-copilot/java-springboot",
-    ],
+    skills: ["github/awesome-copilot/java-springboot"],
   },
   {
     id: "prisma",
@@ -658,9 +653,43 @@ export const FRONTEND_BONUS_SKILLS = [
   "addyosmani/web-quality-skills/seo",
 ];
 
+// ── Agent Folder Map ─────────────────────────────────────────
+
+/**
+ * Maps well-known agent home directory folder names to their `skills` CLI agent identifiers.
+ * Only the most common agents are included; `.agents` (universal) is handled separately.
+ */
+export const AGENT_FOLDER_MAP = {
+  ".claude": "claude-code",
+  ".cursor": "cursor",
+  ".cline": "cline",
+  ".codex": "codex",
+  ".antigravity": "antigravity",
+  ".augment": "augment",
+  ".copilot": "github-copilot",
+  ".gemini": "gemini-cli",
+  ".junie": "junie",
+  ".amp": "amp",
+  ".supermaven": "supermaven",
+  ".codebuddy": "codebuddy",
+  ".continue": "continue",
+};
+
 export const WEB_FRONTEND_EXTENSIONS = new Set([
-  ".html", ".htm",
-  ".css", ".scss", ".sass", ".less",
-  ".vue", ".svelte", ".jsx", ".tsx",
-  ".twig", ".tpl", ".ejs", ".hbs", ".pug", ".njk",
+  ".html",
+  ".htm",
+  ".css",
+  ".scss",
+  ".sass",
+  ".less",
+  ".vue",
+  ".svelte",
+  ".jsx",
+  ".tsx",
+  ".twig",
+  ".tpl",
+  ".ejs",
+  ".hbs",
+  ".pug",
+  ".njk",
 ]);
