@@ -223,6 +223,23 @@ export const SKILLS_MAP = [
     skills: ["remotion-dev/skills/remotion-best-practices"],
   },
   {
+    id: "clerk",
+    name: "Clerk",
+    detect: {
+      packages: ["@clerk/nextjs", "@clerk/remix", "@clerk/astro", "@clerk/express", "@clerk/fastify", "@clerk/nuxt", "@clerk/vue", "@clerk/react", "@clerk/expo", "@clerk/tanstack-react-start", "@clerk/react-router", "@clerk/chrome-extension", "@clerk/backend"],
+      packagePatterns: [/^@clerk\//],
+    },
+    skills: [
+      "clerk/skills/clerk",
+      "clerk/skills/clerk-setup",
+      "clerk/skills/clerk-custom-ui",
+      "clerk/skills/clerk-nextjs-patterns",
+      "clerk/skills/clerk-orgs",
+      "clerk/skills/clerk-webhooks",
+      "clerk/skills/clerk-testing",
+    ],
+  },
+  {
     id: "better-auth",
     name: "Better Auth",
     detect: {
@@ -615,6 +632,16 @@ export const COMBO_SKILLS_MAP = [
     name: "Node.js + Express",
     requires: ["node", "express"],
     skills: ["aj-geddes/useful-ai-prompts/nodejs-express-server"],
+  },
+  {
+    id: "nextjs-clerk",
+    name: "Next.js + Clerk",
+    requires: ["nextjs", "clerk"],
+    skills: [
+      "clerk/skills/clerk-nextjs-patterns",
+      "clerk/skills/clerk-setup",
+      "clerk/skills/clerk",
+    ],
   },
 ];
 
