@@ -853,4 +853,19 @@ describe("detectCombos", () => {
     const combos = detectCombos(["nextjs"]);
     assert.ok(!combos.some((c) => c.id === "nextjs-clerk"));
   });
+
+  it("detects rails-rspec combo", () => {
+    const combos = detectCombos(["rails", "rspec"]);
+    assert.ok(combos.some((c) => c.id === "rails-rspec"));
+  });
+
+  it("detects rails-sidekiq combo", () => {
+    const combos = detectCombos(["rails", "sidekiq"]);
+    assert.ok(combos.some((c) => c.id === "rails-sidekiq"));
+  });
+
+  it("does not detect rails-rspec combo without rspec", () => {
+    const combos = detectCombos(["rails"]);
+    assert.ok(!combos.some((c) => c.id === "rails-rspec"));
+  });
 });

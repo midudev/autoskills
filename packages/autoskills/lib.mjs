@@ -297,7 +297,7 @@ export function getAllPackageNames(pkg) {
 function detectTechnologiesInDir(dir) {
   const pkg = readPackageJson(dir);
   const allPackages = getAllPackageNames(pkg);
-  const gemNames = readGemfile(dir);
+  let gemNames;
   const detected = [];
 
   for (const tech of SKILLS_MAP) {
@@ -313,12 +313,13 @@ function detectTechnologiesInDir(dir) {
       );
     }
 
-    if (!found && tech.detect.gems) {
-      found = tech.detect.gems.some((g) => gemNames.includes(g));
-    }
-
     if (!found && tech.detect.configFiles) {
       found = tech.detect.configFiles.some((f) => existsSync(join(dir, f)));
+    }
+
+    if (!found && tech.detect.gems) {
+      if (gemNames === undefined) gemNames = readGemfile(dir);
+      found = tech.detect.gems.some((g) => gemNames.includes(g));
     }
 
     if (!found && tech.detect.configFileContent) {
