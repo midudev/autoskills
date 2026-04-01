@@ -565,6 +565,111 @@ export const SKILLS_MAP = [
     },
     skills: ["nodnarbnitram/claude-code-extensions/tauri-v2"],
   },
+  {
+    id: "ruby",
+    name: "Ruby",
+    detect: {
+      configFiles: ["Gemfile", "Gemfile.lock", ".ruby-version", ".ruby-gemset"],
+    },
+    skills: [
+      "lucianghinda/superpowers-ruby/ruby",
+    ],
+  },
+  {
+    id: "rails",
+    name: "Ruby on Rails",
+    detect: {
+      gems: ["rails"],
+      configFiles: ["config/routes.rb", "config/application.rb", "bin/rails"],
+    },
+    skills: [
+      "sergiodxa/agent-skills/ruby-on-rails-best-practices",
+      "lucianghinda/superpowers-ruby/rails-guides",
+      "igmarin/rails-agent-skills/rails-stack-conventions",
+      "igmarin/rails-agent-skills/rails-code-review",
+      "igmarin/rails-agent-skills/rails-migration-safety",
+      "igmarin/rails-agent-skills/rails-security-review",
+      "ombulabs/claude-code_rails-upgrade-skill/rails-upgrade",
+    ],
+  },
+  {
+    id: "redis-ruby",
+    name: "Redis",
+    detect: {
+      gems: ["redis", "sidekiq", "resque", "redis-rails"],
+    },
+    skills: [
+      "redis/agent-skills/redis-development",
+    ],
+  },
+  {
+    id: "postgres-ruby",
+    name: "PostgreSQL",
+    detect: {
+      gems: ["pg"],
+    },
+    skills: [],
+  },
+  {
+    id: "sorbet",
+    name: "Sorbet",
+    detect: {
+      gems: ["sorbet", "sorbet-runtime"],
+      configFiles: ["sorbet/config"],
+    },
+    skills: [
+      "DmitryPogrebnoy/ruby-agent-skills/generating-sorbet",
+      "DmitryPogrebnoy/ruby-agent-skills/generating-sorbet-inline",
+    ],
+  },
+  {
+    id: "activeadmin",
+    name: "ActiveAdmin",
+    detect: {
+      gems: ["activeadmin"],
+    },
+    skills: [],
+  },
+  {
+    id: "devise",
+    name: "Devise",
+    detect: {
+      gems: ["devise"],
+    },
+    skills: [],
+  },
+  {
+    id: "sidekiq",
+    name: "Sidekiq",
+    detect: {
+      gems: ["sidekiq"],
+    },
+    skills: [
+      "igmarin/rails-agent-skills/rails-background-jobs",
+    ],
+  },
+  {
+    id: "rspec",
+    name: "RSpec",
+    detect: {
+      gems: ["rspec", "rspec-rails"],
+      configFiles: [".rspec"],
+    },
+    skills: [
+      "igmarin/rails-agent-skills/rspec-best-practices",
+      "igmarin/rails-agent-skills/rspec-service-testing",
+      "lucianghinda/superpowers-ruby/test-driven-development",
+    ],
+  },
+  {
+    id: "rubocop",
+    name: "RuboCop",
+    detect: {
+      gems: ["rubocop", "rubocop-rails"],
+      configFiles: [".rubocop.yml"],
+    },
+    skills: [],
+  },
 ];
 
 // ── Combo Skills Map (cross-technology) ──────────────────────
@@ -641,6 +746,23 @@ export const COMBO_SKILLS_MAP = [
       "clerk/skills/clerk-nextjs-patterns",
       "clerk/skills/clerk-setup",
       "clerk/skills/clerk",
+    ],
+  },
+  {
+    id: "rails-rspec",
+    name: "Ruby on Rails + RSpec",
+    requires: ["rails", "rspec"],
+    skills: [
+      "igmarin/rails-agent-skills/rails-tdd-slices",
+      "igmarin/rails-agent-skills/rails-bug-triage",
+    ],
+  },
+  {
+    id: "rails-sidekiq",
+    name: "Ruby on Rails + Sidekiq",
+    requires: ["rails", "sidekiq"],
+    skills: [
+      "igmarin/rails-agent-skills/rails-background-jobs",
     ],
   },
 ];

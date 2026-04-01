@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { getAllPackageNames, readPackageJson, detectTechnologies, detectCombos } from "../lib.mjs";
+import { getAllPackageNames, readPackageJson, readGemfile, detectTechnologies, detectCombos } from "../lib.mjs";
 
 // ── getAllPackageNames ─────────────────────────────────────────
 
@@ -64,6 +64,44 @@ describe("readPackageJson", () => {
   it("returns null for invalid JSON", () => {
     writeFileSync(join(tmpDir, "package.json"), "{ not valid json }}}");
     assert.strictEqual(readPackageJson(tmpDir), null);
+  });
+});
+
+// ── readGemfile ──────────────────────────────────────────────
+
+describe("readGemfile", () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "autoskills-test-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns empty array when no Gemfile exists", () => {
+    assert.deepStrictEqual(readGemfile(tmpDir), []);
+  });
+
+  it("parses gem names with single quotes", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'rails', '~> 7.0'\ngem 'pg'\n");
+    assert.deepStrictEqual(readGemfile(tmpDir), ["rails", "pg"]);
+  });
+
+  it("parses gem names with double quotes", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), 'gem "rails"\ngem "sidekiq"\n');
+    assert.deepStrictEqual(readGemfile(tmpDir), ["rails", "sidekiq"]);
+  });
+
+  it("ignores comments", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "# gem 'unused'\ngem 'rails'\n");
+    assert.deepStrictEqual(readGemfile(tmpDir), ["rails"]);
+  });
+
+  it("handles indented gems (inside groups)", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "group :development do\n  gem 'rspec'\nend\n");
+    assert.deepStrictEqual(readGemfile(tmpDir), ["rspec"]);
   });
 });
 
@@ -541,6 +579,90 @@ plugins {
     assert.ok(clerk.skills.includes("clerk/skills/clerk-orgs"));
     assert.ok(clerk.skills.includes("clerk/skills/clerk-webhooks"));
     assert.ok(clerk.skills.includes("clerk/skills/clerk-testing"));
+  });
+
+  it("detects Ruby from Gemfile", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "source 'https://rubygems.org'\ngem 'rails'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "ruby"));
+  });
+
+  it("detects Ruby on Rails from Gemfile", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'rails', '~> 7.1'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "rails"));
+  });
+
+  it("detects Rails from config/routes.rb", () => {
+    mkdirSync(join(tmpDir, "config"), { recursive: true });
+    writeFileSync(join(tmpDir, "config", "routes.rb"), "Rails.application.routes.draw do\nend\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "rails"));
+  });
+
+  it("detects PostgreSQL from pg gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'pg'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "postgres-ruby"));
+  });
+
+  it("detects Redis from redis gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'redis'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "redis-ruby"));
+  });
+
+  it("detects Redis from sidekiq gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'sidekiq'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "redis-ruby"));
+    assert.ok(detected.some((t) => t.id === "sidekiq"));
+  });
+
+  it("detects Sorbet from sorbet gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'sorbet'\ngem 'sorbet-runtime'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "sorbet"));
+  });
+
+  it("detects ActiveAdmin from activeadmin gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'activeadmin'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "activeadmin"));
+  });
+
+  it("detects Devise from devise gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'devise'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "devise"));
+  });
+
+  it("detects RSpec from rspec-rails gem", () => {
+    writeFileSync(join(tmpDir, "Gemfile"), "gem 'rspec-rails'\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "rspec"));
+  });
+
+  it("detects RuboCop from .rubocop.yml", () => {
+    writeFileSync(join(tmpDir, ".rubocop.yml"), "AllCops:\n  TargetRubyVersion: 3.2\n");
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "rubocop"));
+  });
+
+  it("detects multiple Ruby technologies from a single Gemfile", () => {
+    writeFileSync(
+      join(tmpDir, "Gemfile"),
+      "gem 'rails', '~> 7.1'\ngem 'pg'\ngem 'redis'\ngem 'sidekiq'\ngem 'devise'\ngem 'sorbet-runtime'\n",
+    );
+    const { detected } = detectTechnologies(tmpDir);
+    const ids = detected.map((t) => t.id);
+    assert.ok(ids.includes("ruby"));
+    assert.ok(ids.includes("rails"));
+    assert.ok(ids.includes("postgres-ruby"));
+    assert.ok(ids.includes("redis-ruby"));
+    assert.ok(ids.includes("sidekiq"));
+    assert.ok(ids.includes("devise"));
+    assert.ok(ids.includes("sorbet"));
   });
 });
 
