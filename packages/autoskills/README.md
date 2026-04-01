@@ -130,7 +130,7 @@ npx autoskills --dry-run
 
 ### Web Frontend Detection
 
-Even without a framework, `autoskills` scans your file tree for web frontend signals (`.html`, `.css`, `.scss`, `.vue`, `.svelte`, `.jsx`, `.tsx`, `.twig`, `.blade.php`, etc.) and installs skills for frontend design, accessibility, and SEO.
+Even without a framework, `autoskills` scans your file tree for web frontend signals (`.html`, `.css`, `.scss`, `.vue`, `.svelte`, `.jsx`, `.tsx`, `.twig`, `.blade.php`, etc.) and installs skills for frontend design, interface design, accessibility, SEO, and UI-focused debugging/brainstorming.
 
 ## Combo Detection
 

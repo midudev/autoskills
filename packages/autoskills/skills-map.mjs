@@ -416,6 +416,9 @@ export const SKILLS_MAP = [
     skills: [
       "wshobson/agents/nodejs-backend-patterns",
       "sickn33/antigravity-awesome-skills/nodejs-best-practices",
+      "wshobson/agents/api-design-principles",
+      "wshobson/agents/error-handling-patterns",
+      "obra/superpowers/systematic-debugging",
     ],
   },
   {
@@ -665,6 +668,9 @@ export const FRONTEND_BONUS_SKILLS = [
   "anthropics/skills/frontend-design",
   "addyosmani/web-quality-skills/accessibility",
   "addyosmani/web-quality-skills/seo",
+  "dammyjay93/interface-design/interface-design",
+  "obra/superpowers/brainstorming",
+  "obra/superpowers/systematic-debugging",
 ];
 
 // ── Agent Folder Map ─────────────────────────────────────────
