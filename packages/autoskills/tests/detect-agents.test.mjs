@@ -34,6 +34,12 @@ describe("detectAgents", () => {
     assert.ok(agents.includes("cursor"));
   });
 
+  it("detects kiro from .kiro/skills", () => {
+    mkdirSync(join(tmpHome, ".kiro", "skills"), { recursive: true });
+    const agents = detectAgents(tmpHome);
+    assert.ok(agents.includes("kiro"));
+  });
+
   it("detects multiple agents", () => {
     mkdirSync(join(tmpHome, ".claude", "skills"), { recursive: true });
     mkdirSync(join(tmpHome, ".cline", "skills"), { recursive: true });

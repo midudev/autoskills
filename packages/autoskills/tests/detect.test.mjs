@@ -499,6 +499,49 @@ plugins {
     const { detected } = detectTechnologies(tmpDir);
     assert.ok(detected.some((t) => t.id === "tauri"));
   });
+
+  it("detects Clerk from @clerk/nextjs package", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { "@clerk/nextjs": "^6.0.0" } }),
+    );
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "clerk"));
+  });
+
+  it("detects Clerk from @clerk/react package", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { "@clerk/react": "^5.0.0" } }),
+    );
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "clerk"));
+  });
+
+  it("detects Clerk from any @clerk/* scoped package", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { "@clerk/expo": "^2.0.0" } }),
+    );
+    const { detected } = detectTechnologies(tmpDir);
+    assert.ok(detected.some((t) => t.id === "clerk"));
+  });
+
+  it("returns correct skills for Clerk detection", () => {
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { "@clerk/nextjs": "^6.0.0" } }),
+    );
+    const { detected } = detectTechnologies(tmpDir);
+    const clerk = detected.find((t) => t.id === "clerk");
+    assert.ok(clerk);
+    assert.ok(clerk.skills.includes("clerk/skills/clerk"));
+    assert.ok(clerk.skills.includes("clerk/skills/clerk-setup"));
+    assert.ok(clerk.skills.includes("clerk/skills/clerk-nextjs-patterns"));
+    assert.ok(clerk.skills.includes("clerk/skills/clerk-orgs"));
+    assert.ok(clerk.skills.includes("clerk/skills/clerk-webhooks"));
+    assert.ok(clerk.skills.includes("clerk/skills/clerk-testing"));
+  });
 });
 
 // ── detectTechnologies (monorepo) ─────────────────────────────
@@ -677,5 +720,15 @@ describe("detectCombos", () => {
   it("does not detect combo when only one requirement is met", () => {
     const combos = detectCombos(["nextjs"]);
     assert.ok(!combos.some((c) => c.id === "nextjs-supabase"));
+  });
+
+  it("detects nextjs-clerk combo", () => {
+    const combos = detectCombos(["nextjs", "clerk"]);
+    assert.ok(combos.some((c) => c.id === "nextjs-clerk"));
+  });
+
+  it("does not detect nextjs-clerk combo without clerk", () => {
+    const combos = detectCombos(["nextjs"]);
+    assert.ok(!combos.some((c) => c.id === "nextjs-clerk"));
   });
 });

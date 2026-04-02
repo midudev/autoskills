@@ -23,16 +23,19 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
         working-directory: packages/autoskills
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
         working-directory: packages/autoskills
 
       - name: E2E — install skills in fake project
