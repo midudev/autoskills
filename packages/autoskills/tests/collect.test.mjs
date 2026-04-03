@@ -137,7 +137,7 @@ describe("collectSkills", () => {
       {
         id: "expo-tailwind",
         name: "Expo + Tailwind CSS",
-        skills: ["expo/skills/expo-tailwind-setup"],
+        add: ["expo/skills/expo-tailwind-setup"],
       },
     ];
     const skills = collectSkills(detected, false, combos);
@@ -153,7 +153,7 @@ describe("collectSkills", () => {
       {
         id: "expo-tailwind",
         name: "Expo + Tailwind CSS",
-        skills: ["expo/skills/expo-tailwind-setup"],
+        add: ["expo/skills/expo-tailwind-setup"],
       },
     ];
     const skills = collectSkills(detected, false, combos);
@@ -173,7 +173,7 @@ describe("collectSkills", () => {
       },
     ];
     const combos = [
-      { id: "react-custom", name: "React + Custom", skills: ["custom/repo/combo-skill"] },
+      { id: "react-custom", name: "React + Custom", add: ["custom/repo/combo-skill"] },
     ];
     const skills = collectSkills(detected, false, combos);
 
@@ -191,7 +191,7 @@ describe("collectSkills", () => {
         skills: ["vercel-labs/agent-skills/vercel-react-best-practices"],
       },
     ];
-    const combos = [{ id: "test-combo", name: "Test Combo", skills: ["combo/repo/combo-skill"] }];
+    const combos = [{ id: "test-combo", name: "Test Combo", add: ["combo/repo/combo-skill"] }];
     const skills = collectSkills(detected, true, combos);
 
     assert.ok(
