@@ -10,6 +10,14 @@ export {
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
 } from "./skills-map.mjs";
+export {
+  RUNTIME_REGISTRY,
+  NORMALIZED_COMBO_SKILLS_MAP,
+  PACKAGE_TO_TECH_IDS,
+  CONFIG_FILE_TO_TECH_IDS,
+  CONTENT_MATCHERS_BY_FILE,
+  GRADLE_CONTENT_MATCHERS,
+} from "./runtime-registry.mjs";
 
 import {
   SKILLS_MAP,
@@ -19,6 +27,14 @@ import {
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
 } from "./skills-map.mjs";
+import {
+  RUNTIME_REGISTRY,
+  NORMALIZED_COMBO_SKILLS_MAP,
+  PACKAGE_TO_TECH_IDS,
+  CONFIG_FILE_TO_TECH_IDS,
+  CONTENT_MATCHERS_BY_FILE,
+  GRADLE_CONTENT_MATCHERS,
+} from "./runtime-registry.mjs";
 
 // ── Internal Constants ───────────────────────────────────────
 
@@ -273,45 +289,65 @@ export function getAllPackageNames(pkg) {
 function detectTechnologiesInDir(dir) {
   const pkg = readPackageJson(dir);
   const allPackages = getAllPackageNames(pkg);
-  const detected = [];
+  const detectedIds = new Set();
+
+  for (const pkgName of allPackages) {
+    for (const techId of PACKAGE_TO_TECH_IDS[pkgName] || []) {
+      detectedIds.add(techId);
+    }
+  }
+
+  for (const [configFile, techIds] of Object.entries(CONFIG_FILE_TO_TECH_IDS)) {
+    if (!existsSync(join(dir, configFile))) continue;
+    for (const techId of techIds) {
+      detectedIds.add(techId);
+    }
+  }
+
+  for (const [configFile, matchers] of Object.entries(CONTENT_MATCHERS_BY_FILE)) {
+    const filePath = join(dir, configFile);
+    if (!existsSync(filePath)) continue;
+    try {
+      const content = readFileSync(filePath, "utf-8");
+      for (const matcher of matchers) {
+        if (matcher.patterns.some((pattern) => content.includes(pattern))) {
+          detectedIds.add(matcher.techId);
+        }
+      }
+    } catch {}
+  }
+
+  if (GRADLE_CONTENT_MATCHERS.length > 0) {
+    const candidatePaths = gradleLayoutCandidatePaths(dir);
+    for (const filePath of candidatePaths) {
+      if (!existsSync(filePath)) continue;
+      try {
+        const content = readFileSync(filePath, "utf-8");
+        for (const matcher of GRADLE_CONTENT_MATCHERS) {
+          if (matcher.patterns.some((pattern) => content.includes(pattern))) {
+            detectedIds.add(matcher.techId);
+          }
+        }
+      } catch {}
+    }
+  }
 
   for (const tech of SKILLS_MAP) {
-    let found = false;
+    if (detectedIds.has(tech.id)) continue;
 
-    if (tech.detect.packages) {
-      found = tech.detect.packages.some((p) => allPackages.includes(p));
-    }
-
-    if (!found && tech.detect.packagePatterns) {
-      found = tech.detect.packagePatterns.some((pattern) =>
+    let foundByPattern = false;
+    if (tech.detect.packagePatterns) {
+      foundByPattern = tech.detect.packagePatterns.some((pattern) =>
         allPackages.some((p) => pattern.test(p)),
       );
     }
 
-    if (!found && tech.detect.configFiles) {
-      found = tech.detect.configFiles.some((f) => existsSync(join(dir, f)));
-    }
-
-    if (!found && tech.detect.configFileContent) {
-      const cfg = tech.detect.configFileContent;
-      const paths = resolveConfigFileContentPaths(dir, cfg);
-      const { patterns } = cfg;
-      for (const filePath of paths) {
-        if (!existsSync(filePath)) continue;
-        try {
-          const content = readFileSync(filePath, "utf-8");
-          if (patterns.some((p) => content.includes(p))) {
-            found = true;
-            break;
-          }
-        } catch {}
-      }
-    }
-
-    if (found) {
-      detected.push(tech);
+    if (foundByPattern) {
+      detectedIds.add(tech.id);
     }
   }
+
+  const detected = SKILLS_MAP.filter((tech) => detectedIds.has(tech.id));
 
   const isFrontendByPackages = allPackages.some((p) => FRONTEND_PACKAGES.includes(p));
   const isFrontendByFiles = hasWebFrontendFiles(dir);
@@ -358,7 +394,7 @@ export function detectTechnologies(projectDir) {
  * @returns {object[]} Matching entries from COMBO_SKILLS_MAP.
  */
 export function detectCombos(detectedIds) {
-  return COMBO_SKILLS_MAP.filter((combo) => combo.requires.every((id) => detectedIds.includes(id)));
+  return NORMALIZED_COMBO_SKILLS_MAP.filter((combo) => combo.requires.every((id) => detectedIds.includes(id)));
 }
 
 // ── Agent Detection ─────────────────────────────────────────
@@ -437,7 +473,7 @@ export function collectSkills(detected, isFrontend, combos = []) {
   }
 
   for (const combo of combos) {
-    for (const skill of combo.skills) {
+    for (const skill of combo.addSkills ?? combo.skills ?? []) {
       addSkill(skill, combo.name);
     }
   }

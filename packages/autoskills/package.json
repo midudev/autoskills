@@ -26,6 +26,7 @@
   "files": [
     "index.mjs",
     "lib.mjs",
+    "runtime-registry.mjs",
     "skills-map.mjs",
     "colors.mjs",
     "ui.mjs",
