@@ -21,10 +21,10 @@ describe("detectAgents", () => {
   });
 
   it("detects opencode from .opencode/skills", () => {
-    mkdirSync(join(tmpHome, ".opencode", "skills"), { recursive: true });
-    const agents = detectAgents(tmpHome);
-    assert.ok(agents.includes("universal"));
-    assert.ok(agents.includes("opencode"));
+    mkdirSync(join(tmp.path, ".opencode", "skills"), { recursive: true });
+    const agents = detectAgents(tmp.path);
+    ok(agents.includes("universal"));
+    ok(agents.includes("opencode"));
   });
 
   it("detects cursor from .cursor/skills", () => {
