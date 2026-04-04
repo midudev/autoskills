@@ -734,6 +734,8 @@ export const AGENT_FOLDER_MAP = {
   ".supermaven": "supermaven",
   ".codebuddy": "codebuddy",
   ".continue": "continue",
+  ".opencode": "opencode",
+  ".config/.opencode": "opencode",
   ".kiro": "kiro",
 };
 

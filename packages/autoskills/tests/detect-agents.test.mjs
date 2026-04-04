@@ -20,6 +20,13 @@ describe("detectAgents", () => {
     ok(agents.includes("claude-code"));
   });
 
+  it("detects opencode from .opencode/skills", () => {
+    mkdirSync(join(tmp.path, ".opencode", "skills"), { recursive: true });
+    const agents = detectAgents(tmp.path);
+    ok(agents.includes("universal"));
+    ok(agents.includes("opencode"));
+  });
+
   it("detects cursor from .cursor/skills", () => {
     mkdirSync(join(tmp.path, ".cursor", "skills"), { recursive: true });
     const agents = detectAgents(tmp.path);
