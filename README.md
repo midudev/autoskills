@@ -48,7 +48,7 @@ Full schema, options, and examples are documented in [packages/autoskills/README
 
 ## Supported technologies
 
-React · Next.js · Vue · Nuxt · Pinia · Svelte · Angular · Astro · Tailwind CSS · shadcn/ui · TypeScript · Supabase · Neon · Playwright · Expo · React Native · Kotlin Multiplatform · Android · Remotion · Better Auth · Turborepo · Vite · Azure · Vercel · Vercel AI SDK · ElevenLabs · Cloudflare · Durable Objects · Cloudflare Agents · Cloudflare AI · AWS · SwiftUI · oxlint · GSAP · Node.js · Express · Bun · Deno · Prisma · Stripe · Hono · Vitest · Drizzle ORM · NestJS · Tauri
+React · Next.js · Vue · Nuxt · Pinia · Svelte · Angular · Astro · Tailwind CSS · shadcn/ui · TypeScript · Supabase · Neon · Playwright · Expo · React Native · Kotlin Multiplatform · Android · Remotion · Better Auth · Clerk · Turborepo · Vite · Azure · Vercel · Vercel AI SDK · ElevenLabs · Cloudflare · Durable Objects · Cloudflare Agents · Cloudflare AI · AWS · SwiftUI · oxlint · GSAP · Three.js · Node.js · Express · Bun · Deno · Prisma · Stripe · Hono · Vitest · Drizzle ORM · NestJS · Tauri · Spring Boot
 
 ## Requirements
 
