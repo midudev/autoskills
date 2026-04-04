@@ -259,6 +259,30 @@ export function resolveWorkspaces(projectDir, preloaded) {
 // ── Detection ─────────────────────────────────────────────────
 
 /**
+ * Reads a Gemfile and extracts gem names.
+ * Returns an array of gem name strings, or an empty array if the file is missing or malformed.
+ * @param {string} dir - Directory containing the Gemfile.
+ * @returns {string[]}
+ */
+export function readGemfile(dir) {
+  const gemfilePath = join(dir, "Gemfile");
+  if (!existsSync(gemfilePath)) return [];
+
+  try {
+    const content = readFileSync(gemfilePath, "utf-8");
+    const gems = [];
+    const gemRegex = /^\s*gem\s+['"]([^'"]+)['"]/gm;
+    let match;
+    while ((match = gemRegex.exec(content)) !== null) {
+      gems.push(match[1]);
+    }
+    return gems;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Reads and parses the package.json from the given directory.
  * Returns the parsed object, or null if the file is missing or malformed.
  */
@@ -326,6 +350,7 @@ export function getAllPackageNames(pkg) {
 function detectTechnologiesInDir(dir, { skipFrontendFiles = false, pkg: preloadedPkg, denoJson: preloadedDeno } = {}) {
   const pkg = preloadedPkg !== undefined ? preloadedPkg : readPackageJson(dir);
   const allPackages = getAllPackageNames(pkg);
+  let gemNames;
   const deno = preloadedDeno !== undefined ? preloadedDeno : readDenoJson(dir);
   const denoImports = getDenoImportNames(deno);
   const allDepsSet = denoImports.length > 0
@@ -369,6 +394,11 @@ function detectTechnologiesInDir(dir, { skipFrontendFiles = false, pkg: preloade
 
     if (!found && tech.detect.configFiles) {
       found = tech.detect.configFiles.some((f) => cachedExists(join(dir, f)));
+    }
+
+    if (!found && tech.detect.gems) {
+      if (gemNames === undefined) gemNames = readGemfile(dir);
+      found = tech.detect.gems.some((g) => gemNames.includes(g));
     }
 
     if (!found && tech.detect.configFileContent) {
