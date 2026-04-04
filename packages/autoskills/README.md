@@ -46,7 +46,7 @@ npx autoskills --dry-run
 
 ## Supported Technologies
 
-`autoskills` detects **48+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:
+`autoskills` detects **49+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:
 
 ### Frameworks & Libraries
 
@@ -65,6 +65,7 @@ npx autoskills --dry-run
 | Android              | Gradle with `com.android.application`, `com.android.library`, or `com.android.kotlin.multiplatform.library`                                       |
 | Remotion             | `remotion`, `@remotion/cli`                                                                                                                       |
 | GSAP                 | `gsap` package                                                                                                                                    |
+| Three.js             | `three`, `@react-three/fiber`, `@react-three/drei`                                                                                                |
 | Express              | `express` package                                                                                                                                 |
 | Hono                 | `hono` package                                                                                                                                    |
 | NestJS               | `@nestjs/core` package                                                                                                                            |
