@@ -579,6 +579,33 @@ export const SKILLS_MAP = [
     },
     skills: ["nodnarbnitram/claude-code-extensions/tauri-v2"],
   },
+  {
+    id: "dotnet",
+    name: ".NET / C#",
+    detect: {
+      fileExtensions: [".csproj", ".sln", ".slnx"],
+    },
+    skills: ["iamBrzDev/enterprise-agent-skills/dotnet-clean-architecture"],
+  },
+  {
+    id: "laravel",
+    name: "Laravel",
+    detect: {
+      configFiles: ["artisan"],
+    },
+    skills: ["iamBrzDev/enterprise-agent-skills/laravel-enterprise"],
+  },
+  {
+    id: "sqlserver",
+    name: "SQL Server",
+    detect: {
+      configFileContent: {
+        files: [".env", "appsettings.json", "appsettings.Development.json", "config/database.php"],
+        patterns: ["Server=", "Data Source=", "sqlserver", "mssql"],
+      },
+    },
+    skills: ["iamBrzDev/enterprise-agent-skills/sqlserver-query-patterns"],
+  },
 ];
 
 // ── Combo Skills Map (cross-technology) ──────────────────────

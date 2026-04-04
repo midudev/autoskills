@@ -292,6 +292,15 @@ function detectTechnologiesInDir(dir) {
       found = tech.detect.configFiles.some((f) => existsSync(join(dir, f)));
     }
 
+    if (!found && tech.detect.fileExtensions) {
+      try {
+        const entries = readdirSync(dir, { withFileTypes: true });
+        found = entries.some(
+          (e) => e.isFile() && tech.detect.fileExtensions.some((ext) => e.name.endsWith(ext)),
+        );
+      } catch {}
+    }
+
     if (!found && tech.detect.configFileContent) {
       const cfg = tech.detect.configFileContent;
       const paths = resolveConfigFileContentPaths(dir, cfg);
