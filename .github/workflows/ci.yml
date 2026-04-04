@@ -20,18 +20,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Check linting
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Check formatting
-        run: npm run fmt:check
+        run: pnpm run fmt:check
 
   test:
     name: Tests
@@ -40,14 +43,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
         working-directory: packages/autoskills
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
         working-directory: packages/autoskills
