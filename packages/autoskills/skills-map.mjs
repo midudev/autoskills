@@ -606,6 +606,155 @@ export const SKILLS_MAP = [
     },
     skills: ["nodnarbnitram/claude-code-extensions/tauri-v2"],
   },
+  {
+    id: "python",
+    name: "Python",
+    detect: {
+      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+    },
+    skills: ["inferen-sh/skills/python-executor", "wshobson/agents/python-testing-patterns"],
+  },
+  {
+    id: "fastapi",
+    name: "FastAPI",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["fastapi", "FastAPI"],
+      },
+    },
+    skills: [
+      "wshobson/agents/fastapi-templates",
+      "mindrally/skills/fastapi-python",
+      "jezweb/claude-skills/fastapi",
+    ],
+  },
+  {
+    id: "django",
+    name: "Django",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["django", "Django"],
+      },
+    },
+    skills: [
+      "vintasoftware/django-ai-plugins/django-expert",
+      "affaan-m/everything-claude-code/django-patterns",
+      "affaan-m/everything-claude-code/django-security",
+    ],
+  },
+  {
+    id: "flask",
+    name: "Flask",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["flask", "Flask"],
+      },
+    },
+    skills: ["jezweb/claude-skills/flask", "aj-geddes/useful-ai-prompts/flask-api-development"],
+  },
+  {
+    id: "pydantic",
+    name: "Pydantic",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["pydantic", "Pydantic"],
+      },
+    },
+    skills: ["bobmatnyc/claude-mpm-skills/pydantic"],
+  },
+  {
+    id: "sqlalchemy",
+    name: "SQLAlchemy",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["sqlalchemy", "SQLAlchemy"],
+      },
+    },
+    skills: [
+      "bobmatnyc/claude-mpm-skills/sqlalchemy-orm",
+      "wispbit-ai/skills/sqlalchemy-alembic-expert-best-practices-code-review",
+    ],
+  },
+  {
+    id: "pytest",
+    name: "Pytest",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["pytest", "Pytest"],
+      },
+    },
+    skills: ["wshobson/agents/python-testing-patterns"],
+  },
+  {
+    id: "pandas",
+    name: "Pandas",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["pandas", "Pandas"],
+      },
+    },
+    skills: [
+      "jeffallan/claude-skills/pandas-pro",
+      "pluginagentmarketplace/custom-plugin-python/pandas-data-analysis",
+    ],
+  },
+  {
+    id: "numpy",
+    name: "NumPy",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["numpy", "NumPy", "numpy"],
+      },
+    },
+    skills: [
+      "pluginagentmarketplace/custom-plugin-python/machine-learning",
+      "pluginagentmarketplace/custom-plugin-python/pandas-data-analysis",
+    ],
+  },
+  {
+    id: "scikit-learn",
+    name: "Scikit-Learn",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["scikit-learn", "scikit_learn", "sklearn"],
+      },
+    },
+    skills: [
+      "davila7/claude-code-templates/scikit-learn",
+      "davila7/claude-code-templates/senior-data-scientist",
+    ],
+  },
+  {
+    id: "celery",
+    name: "Celery",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["celery", "Celery"],
+      },
+    },
+    skills: ["wshobson/agents/python-background-jobs"],
+  },
+  {
+    id: "requests",
+    name: "Requests",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        patterns: ["requests", "Requests"],
+      },
+    },
+    skills: ["affaan-m/everything-claude-code/python-patterns"],
+  },
 ];
 
 // ── Combo Skills Map (cross-technology) ──────────────────────

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="20" fill="#306998" />
+  <path d="M40 64 L60 84 L90 44" stroke="#FFE873" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="64" y="110" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFE873" text-anchor="middle">Requests</text>
+</svg>
