@@ -1,4 +1,6 @@
 import {
+  log,
+  write,
   bold,
   dim,
   green,
@@ -35,17 +37,13 @@ export function printBanner(version) {
   const title = "   autoskills";
   const gap = " ".repeat(39 - title.length - ver.length - 3);
 
-  console.log();
-  console.log(bold(cyan("   ╔═══════════════════════════════════════╗")));
-  console.log(bold(cyan("   ║")) + bold(yellow(title)) + gap + gray(ver) + "   " + bold(cyan("║")));
-  console.log(
-    bold(cyan("   ║")) + dim("   Auto-install the best AI skills     ") + bold(cyan("║")),
-  );
-  console.log(
-    bold(cyan("   ║")) + dim("   for your project                    ") + bold(cyan("║")),
-  );
-  console.log(bold(cyan("   ╚═══════════════════════════════════════╝")));
-  console.log();
+  log();
+  log(bold(cyan("   ╔═══════════════════════════════════════╗")));
+  log(bold(cyan("   ║")) + bold(yellow(title)) + gap + gray(ver) + "   " + bold(cyan("║")));
+  log(bold(cyan("   ║")) + dim("   Auto-install the best AI skills     ") + bold(cyan("║")));
+  log(bold(cyan("   ║")) + dim("   for your project                    ") + bold(cyan("║")));
+  log(bold(cyan("   ╚═══════════════════════════════════════╝")));
+  log();
 }
 
 /**
@@ -76,10 +74,10 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
 
     function render() {
       if (rendered) {
-        process.stdout.write(`\x1b[${items.length + groupCount + separatorCount + 1}A\r`);
+        write(`\x1b[${items.length + groupCount + separatorCount + 1}A\r`);
       }
       rendered = true;
-      process.stdout.write("\x1b[J");
+      write("\x1b[J");
       draw();
     }
 
@@ -92,10 +90,10 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
         if (groupFn) {
           const group = groupFn(items[i]);
           if (group !== lastGroup) {
-            if (!isFirstGroup) process.stdout.write("\n");
+            if (!isFirstGroup) write("\n");
             isFirstGroup = false;
             lastGroup = group;
-            process.stdout.write(`   ${bold(yellow(group))}\n`);
+            write(`   ${bold(yellow(group))}\n`);
           }
         }
         const pointer = i === cursor ? cyan("❯") : " ";
@@ -103,10 +101,10 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
         const label = labelFn(items[i], i);
         const hint = hintFn ? hintFn(items[i], i) : "";
         const line = selected[i] ? label : dim(label);
-        process.stdout.write(`     ${pointer} ${check} ${line}${hint ? "  " + dim(hint) : ""}\n`);
+        write(`     ${pointer} ${check} ${line}${hint ? "  " + dim(hint) : ""}\n`);
       }
-      process.stdout.write("\n");
-      process.stdout.write(
+      write("\n");
+      write(
         dim("   ") +
           white(bold("[↑↓]")) +
           dim(" move · ") +
@@ -119,7 +117,7 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
       );
     }
 
-    process.stdout.write(HIDE_CURSOR);
+    write(HIDE_CURSOR);
     render();
 
     const { stdin } = process;
@@ -130,14 +128,14 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
     function onData(key) {
       if (key === "\x03") {
         cleanup();
-        process.stdout.write(SHOW_CURSOR + "\n");
+        write(SHOW_CURSOR + "\n");
         process.exit(0);
       }
 
       if (key === "\r" || key === "\n") {
         cleanup();
-        process.stdout.write("\x1b[1A\r\x1b[J");
-        process.stdout.write(SHOW_CURSOR);
+        write("\x1b[1A\r\x1b[J");
+        write(SHOW_CURSOR);
         resolve(items.filter((_, i) => selected[i]));
         return;
       }

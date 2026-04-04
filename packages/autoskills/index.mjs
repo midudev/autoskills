@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import { detectTechnologies, collectSkills, detectAgents } from "./lib.mjs";
 import {
+  log,
+  write,
   bold,
   dim,
   green,
@@ -18,13 +20,13 @@ import {
   SHOW_CURSOR,
 } from "./colors.mjs";
 import { printBanner, multiSelect, formatTime } from "./ui.mjs";
-import { installAll } from "./installer.mjs";
+import { installAll, resolveSkillsBin } from "./installer.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VERSION = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf-8")).version;
 
 process.on("SIGINT", () => {
-  process.stdout.write(SHOW_CURSOR + "\n");
+  write(SHOW_CURSOR + "\n");
   process.exit(130);
 });
 
@@ -55,7 +57,7 @@ function parseArgs() {
 
 /** Prints usage information and available flags to stdout. */
 function showHelp() {
-  console.log(`
+  log(`
   ${bold("autoskills")} — Auto-install the best AI skills for your project
 
   ${bold("Usage:")}
@@ -88,8 +90,8 @@ function printDetected(detected, combos, isFrontend) {
     const withoutSkills = detected.filter((t) => t.skills.length === 0);
     const allTech = [...withSkills, ...withoutSkills];
 
-    console.log(cyan("   ◆ ") + bold("Detected technologies:"));
-    console.log();
+    log(cyan("   ◆ ") + bold("Detected technologies:"));
+    log();
 
     const COLS = 3;
     const colWidth = Math.max(...allTech.map((t) => t.name.length)) + 3;
@@ -106,23 +108,23 @@ function printDetected(detected, combos, isFrontend) {
         .slice(i, i + COLS)
         .map(formatTech)
         .join("");
-      console.log(`     ${row}`);
+      log(`     ${row}`);
     }
 
     if (combos.length > 0) {
-      console.log();
-      console.log(magenta("   ◆ ") + bold("Detected combos:"));
-      console.log();
+      log();
+      log(magenta("   ◆ ") + bold("Detected combos:"));
+      log();
       for (const combo of combos) {
-        console.log(magenta(`     ⚡ `) + combo.name);
+        log(magenta(`     ⚡ `) + combo.name);
       }
     }
-    console.log();
+    log();
   }
 
   if (isFrontend && detected.length === 0) {
-    console.log(cyan("   ◆ ") + bold("Web frontend detected ") + dim("(from project files)"));
-    console.log();
+    log(cyan("   ◆ ") + bold("Web frontend detected ") + dim("(from project files)"));
+    log();
   }
 }
 
@@ -158,21 +160,23 @@ function formatSkillLabel(skill, { styled = false } = {}) {
  * @param {{ skill: string, sources: string[] }[]} skills
  */
 function printSkillsList(skills) {
-  const visibleLabels = skills.map((s) => formatSkillLabel(s.skill));
-  const maxLen = Math.max(...visibleLabels.map((label) => label.length));
-  console.log(cyan("   ◆ ") + bold(`Skills to install `) + dim(`(${skills.length})`));
-  console.log();
-  for (let i = 0; i < skills.length; i++) {
-    const { skill, sources } = skills[i];
-    const label = formatSkillLabel(skill);
-    const styledLabel = formatSkillLabel(skill, { styled: true });
+  const entries = skills.map((s) => ({
+    ...s,
+    label: formatSkillLabel(s.skill),
+    styledLabel: formatSkillLabel(s.skill, { styled: true }),
+  }));
+  const maxLen = Math.max(...entries.map((e) => e.label.length));
+  log(cyan("   ◆ ") + bold(`Skills to install `) + dim(`(${skills.length})`));
+  log();
+  for (let i = 0; i < entries.length; i++) {
+    const { label, styledLabel, sources } = entries[i];
     const techSources = sources.filter((s) => !s.includes(" + "));
     const pad = " ".repeat(maxLen - label.length);
     const num = String(i + 1).padStart(2, " ");
     const suffix = techSources.length > 0 ? `  ${dim(`← ${techSources.join(", ")}`)}` : "";
-    console.log(dim(`   ${num}.`) + ` ${styledLabel}${pad}${suffix}`);
+    log(dim(`   ${num}.`) + ` ${styledLabel}${pad}${suffix}`);
   }
-  console.log();
+  log();
 }
 
 /**
@@ -180,9 +184,10 @@ function printSkillsList(skills) {
  * @param {{ installed: number, failed: number, errors: { name: string, output: string }[], elapsed: number, verbose: boolean }} opts
  */
 function printSummary({ installed, failed, errors, elapsed, verbose }) {
-  console.log();
+  log();
+
   if (failed === 0) {
-    console.log(
+    log(
       green(
         bold(
           `   ✔ Done! ${installed} skill${installed !== 1 ? "s" : ""} installed in ${formatTime(elapsed)}.`,
@@ -190,34 +195,35 @@ function printSummary({ installed, failed, errors, elapsed, verbose }) {
       ),
     );
   } else {
-    console.log(
+    log(
       yellow(
         `   Done: ${green(`${installed} installed`)}, ${red(`${failed} failed`)} in ${formatTime(elapsed)}.`,
       ),
     );
 
     if (errors.length > 0) {
-      console.log();
-      console.log(bold(red("   Errors:")));
+      log();
+      log(bold(red("   Errors:")));
       for (const { name, output } of errors) {
-        console.log(red(`     ✘ ${name}`));
+        log(red(`     ✘ ${name}`));
         if (verbose && output) {
           const lines = output.trim().split("\n").slice(-5);
           for (const line of lines) {
-            console.log(dim(`       ${line}`));
+            log(dim(`       ${line}`));
           }
         }
       }
       if (!verbose) {
-        console.log(dim("   Run with --verbose to see error details."));
+        log(dim("   Run with --verbose to see error details."));
       }
     }
   }
-  console.log();
-  console.log(
+
+  log();
+  log(
     pink("   Enjoyed autoskills? Consider sponsoring → https://github.com/sponsors/midudev"),
   );
-  console.log();
+  log();
 }
 
 // ── Skill Selection ──────────────────────────────────────────
@@ -230,21 +236,26 @@ function printSummary({ installed, failed, errors, elapsed, verbose }) {
  * @returns {Promise<{ skill: string, sources: string[] }[]>} Selected skills.
  */
 async function selectSkills(skills, autoYes) {
-  const visibleLabels = skills.map((s) => formatSkillLabel(s.skill));
-  const maxLen = Math.max(...visibleLabels.map((label) => label.length));
-
   if (autoYes) {
     printSkillsList(skills);
     return skills;
   }
 
-  console.log(cyan("   ◆ ") + bold(`Select skills to install `) + dim(`(${skills.length} found)`));
-  console.log();
+  const labelCache = new Map();
+  for (const s of skills) {
+    labelCache.set(s.skill, {
+      label: formatSkillLabel(s.skill),
+      styledLabel: formatSkillLabel(s.skill, { styled: true }),
+    });
+  }
+  const maxLen = Math.max(...[...labelCache.values()].map((v) => v.label.length));
+
+  log(cyan("   ◆ ") + bold(`Select skills to install `) + dim(`(${skills.length} found)`));
+  log();
 
   const selected = await multiSelect(skills, {
     labelFn: (s) => {
-      const label = formatSkillLabel(s.skill);
-      const styledLabel = formatSkillLabel(s.skill, { styled: true });
+      const { label, styledLabel } = labelCache.get(s.skill);
       return styledLabel + " ".repeat(maxLen - label.length);
     },
     hintFn: (s) => {
@@ -255,9 +266,9 @@ async function selectSkills(skills, autoYes) {
   });
 
   if (selected.length === 0) {
-    console.log();
-    console.log(dim("   Nothing selected."));
-    console.log();
+    log();
+    log(dim("   Nothing selected."));
+    log();
     process.exit(0);
   }
 
@@ -279,14 +290,14 @@ async function main() {
 
   const projectDir = resolve(".");
 
-  process.stdout.write(dim("   Scanning project...\r"));
+  write(dim("   Scanning project...\r"));
   const { detected, isFrontend, combos } = detectTechnologies(projectDir);
-  process.stdout.write("\x1b[K");
+  write("\x1b[K");
 
   if (detected.length === 0 && !isFrontend) {
-    console.log(yellow("   ⚠ No supported technologies detected."));
-    console.log(dim("   Make sure you run this in a project directory."));
-    console.log();
+    log(yellow("   ⚠ No supported technologies detected."));
+    log(dim("   Make sure you run this in a project directory."));
+    log();
     process.exit(0);
   }
 
@@ -296,32 +307,36 @@ async function main() {
   const resolvedAgents = agents.length > 0 ? agents : detectAgents();
 
   if (skills.length === 0) {
-    console.log(yellow("   No skills available for your stack yet."));
-    console.log(dim("   Check https://skills.sh for the latest."));
-    console.log();
+    log(yellow("   No skills available for your stack yet."));
+    log(dim("   Check https://skills.sh for the latest."));
+    log();
     process.exit(0);
+  }
+
+  if (!dryRun) {
+    setImmediate(resolveSkillsBin);
   }
 
   if (dryRun) {
     printSkillsList(skills);
-    console.log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
-    console.log(dim("   --dry-run: nothing was installed."));
-    console.log();
+    log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
+    log(dim("   --dry-run: nothing was installed."));
+    log();
     process.exit(0);
   }
 
   const selectedSkills = await selectSkills(skills, autoYes);
 
   if (!autoYes && process.stdout.isTTY) {
-    process.stdout.write("\x1b[H\x1b[2J\x1b[3J");
+    write("\x1b[H\x1b[2J\x1b[3J");
     printBanner(VERSION);
   } else {
-    console.log();
+    log();
   }
 
-  console.log(cyan("   ◆ ") + bold("Installing skills..."));
-  console.log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
-  console.log();
+  log(cyan("   ◆ ") + bold("Installing skills..."));
+  log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
+  log();
 
   const startTime = Date.now();
   const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents);
@@ -329,9 +344,9 @@ async function main() {
 
   if (process.stdout.isTTY) {
     const up = selectedSkills.length + 2;
-    process.stdout.write(`\x1b[${up}A\r\x1b[K`);
-    console.log(green("   ◆ ") + bold("Done!"));
-    process.stdout.write(`\x1b[${selectedSkills.length + 1}B`);
+    write(`\x1b[${up}A\r\x1b[K`);
+    log(green("   ◆ ") + bold("Done!"));
+    write(`\x1b[${selectedSkills.length + 1}B`);
   }
 
   printSummary({ installed, failed, errors, elapsed, verbose });
