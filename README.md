@@ -34,6 +34,18 @@ That's it. No config needed.
 -h, --help      Show help message
 ```
 
+## Custom config
+
+You can customize detection and skill mapping with config files:
+
+- Local: `.autoskillsrc.json|js|mjs|cjs` in the current directory
+- Local also supports `autoskills.config.js|mjs|cjs`
+- Global: first match in parent directories using `.autoskillsrc.*` or `autoskills.config.*`
+- Priority: `Local > Global > Built-in`
+- Merge rule: if `id` matches, the custom entry fully replaces the existing one
+
+Full schema, options, and examples are documented in [packages/autoskills/README.md](./packages/autoskills/README.md#custom-skill-configuration).
+
 ## Supported technologies
 
 React · Next.js · Vue · Nuxt · Pinia · Svelte · Angular · Astro · Tailwind CSS · shadcn/ui · TypeScript · Supabase · Neon · Playwright · Expo · React Native · Kotlin Multiplatform · Android · Remotion · Better Auth · Clerk · Turborepo · Vite · Azure · Vercel · Vercel AI SDK · ElevenLabs · Cloudflare · Durable Objects · Cloudflare Agents · Cloudflare AI · AWS · SwiftUI · oxlint · GSAP · Three.js · Node.js · Express · Bun · Deno · Prisma · Stripe · Hono · Vitest · Drizzle ORM · NestJS · Tauri · Spring Boot
