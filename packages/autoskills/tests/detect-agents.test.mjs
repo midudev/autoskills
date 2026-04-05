@@ -26,10 +26,10 @@ describe("detectAgents", () => {
     ok(agents.includes("cursor"));
   });
 
-  it("detects kiro from .kiro/skills", () => {
+  it("detects kiro-cli from .kiro/skills", () => {
     mkdirSync(join(tmp.path, ".kiro", "skills"), { recursive: true });
     const agents = detectAgents(tmp.path);
-    ok(agents.includes("kiro"));
+    ok(agents.includes("kiro-cli"));
   });
 
   it("detects multiple agents", () => {
