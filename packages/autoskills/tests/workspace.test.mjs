@@ -1,158 +1,160 @@
-import { describe, it, beforeEach, afterEach } from "node:test";
-import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it } from "node:test";
+import { ok, strictEqual, deepStrictEqual } from "node:assert/strict";
 import { resolveWorkspaces } from "../lib.mjs";
+import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.mjs";
 
 describe("resolveWorkspaces", () => {
-  let tmpDir;
-
-  beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "autoskills-ws-"));
-  });
-
-  afterEach(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
+  const tmp = useTmpDir();
 
   it("returns empty array for non-monorepo project", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ name: "single" }));
-    assert.deepStrictEqual(resolveWorkspaces(tmpDir), []);
+    writePackageJson(tmp.path, { name: "single" });
+    deepStrictEqual(resolveWorkspaces(tmp.path), []);
   });
 
   it("returns empty array when no package.json exists", () => {
-    assert.deepStrictEqual(resolveWorkspaces(tmpDir), []);
+    deepStrictEqual(resolveWorkspaces(tmp.path), []);
   });
 
   it("detects npm/yarn workspaces (array format)", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
-    mkdirSync(join(tmpDir, "packages", "app-a"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "app-a", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "packages", "app-b"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "app-b", "package.json"), "{}");
+    writePackageJson(tmp.path, { workspaces: ["packages/*"] });
+    addWorkspace(tmp.path, "packages/app-a");
+    addWorkspace(tmp.path, "packages/app-b");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 2);
-    assert.ok(result.some((d) => d.includes("app-a")));
-    assert.ok(result.some((d) => d.includes("app-b")));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 2);
+    ok(result.some((d) => d.includes("app-a")));
+    ok(result.some((d) => d.includes("app-b")));
   });
 
   it("detects npm/yarn workspaces (object format with packages key)", () => {
-    writeFileSync(
-      join(tmpDir, "package.json"),
-      JSON.stringify({ workspaces: { packages: ["packages/*"] } }),
-    );
-    mkdirSync(join(tmpDir, "packages", "lib"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "lib", "package.json"), "{}");
+    writePackageJson(tmp.path, { workspaces: { packages: ["packages/*"] } });
+    addWorkspace(tmp.path, "packages/lib");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 1);
-    assert.ok(result[0].includes("lib"));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("lib"));
   });
 
   it("detects pnpm-workspace.yaml", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({}));
-    writeFileSync(join(tmpDir, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n  - apps/*\n");
-    mkdirSync(join(tmpDir, "packages", "ui"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "ui", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "apps", "web"), { recursive: true });
-    writeFileSync(join(tmpDir, "apps", "web", "package.json"), "{}");
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n  - apps/*\n");
+    addWorkspace(tmp.path, "packages/ui");
+    addWorkspace(tmp.path, "apps/web");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 2);
-    assert.ok(result.some((d) => d.includes("ui")));
-    assert.ok(result.some((d) => d.includes("web")));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 2);
+    ok(result.some((d) => d.includes("ui")));
+    ok(result.some((d) => d.includes("web")));
   });
 
   it("pnpm-workspace.yaml takes precedence over package.json workspaces", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ workspaces: ["other/*"] }));
-    writeFileSync(join(tmpDir, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
-    mkdirSync(join(tmpDir, "packages", "core"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "core", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "other", "ignored"), { recursive: true });
-    writeFileSync(join(tmpDir, "other", "ignored", "package.json"), "{}");
+    writePackageJson(tmp.path, { workspaces: ["other/*"] });
+    writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
+    addWorkspace(tmp.path, "packages/core");
+    addWorkspace(tmp.path, "other/ignored");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 1);
-    assert.ok(result[0].includes("core"));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("core"));
   });
 
   it("skips directories without package.json", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
-    mkdirSync(join(tmpDir, "packages", "has-pkg"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "has-pkg", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "packages", "no-pkg"), { recursive: true });
+    writePackageJson(tmp.path, { workspaces: ["packages/*"] });
+    addWorkspace(tmp.path, "packages/has-pkg");
+    writeFile(tmp.path, "packages/no-pkg/.gitkeep");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 1);
-    assert.ok(result[0].includes("has-pkg"));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("has-pkg"));
   });
 
   it("skips SCAN_SKIP_DIRS like node_modules", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
-    mkdirSync(join(tmpDir, "packages", "node_modules"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "node_modules", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "packages", "real-pkg"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "real-pkg", "package.json"), "{}");
+    writePackageJson(tmp.path, { workspaces: ["packages/*"] });
+    addWorkspace(tmp.path, "packages/node_modules");
+    addWorkspace(tmp.path, "packages/real-pkg");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 1);
-    assert.ok(result[0].includes("real-pkg"));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("real-pkg"));
   });
 
   it("handles multiple patterns", () => {
-    writeFileSync(
-      join(tmpDir, "package.json"),
-      JSON.stringify({ workspaces: ["packages/*", "apps/*", "tools/*"] }),
-    );
-    mkdirSync(join(tmpDir, "packages", "ui"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "ui", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "apps", "web"), { recursive: true });
-    writeFileSync(join(tmpDir, "apps", "web", "package.json"), "{}");
-    // tools/ dir doesn't exist — should not error
+    writePackageJson(tmp.path, { workspaces: ["packages/*", "apps/*", "tools/*"] });
+    addWorkspace(tmp.path, "packages/ui");
+    addWorkspace(tmp.path, "apps/web");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 2);
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 2);
   });
 
   it("handles exact directory references (no glob)", () => {
-    writeFileSync(
-      join(tmpDir, "package.json"),
-      JSON.stringify({ workspaces: ["tools/special-tool"] }),
-    );
-    mkdirSync(join(tmpDir, "tools", "special-tool"), { recursive: true });
-    writeFileSync(join(tmpDir, "tools", "special-tool", "package.json"), "{}");
+    writePackageJson(tmp.path, { workspaces: ["tools/special-tool"] });
+    addWorkspace(tmp.path, "tools/special-tool");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 1);
-    assert.ok(result[0].includes("special-tool"));
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("special-tool"));
   });
 
   it("handles pnpm-workspace.yaml with quoted patterns", () => {
-    writeFileSync(
-      join(tmpDir, "pnpm-workspace.yaml"),
-      "packages:\n  - 'packages/*'\n  - \"apps/*\"\n",
-    );
-    mkdirSync(join(tmpDir, "packages", "a"), { recursive: true });
-    writeFileSync(join(tmpDir, "packages", "a", "package.json"), "{}");
-    mkdirSync(join(tmpDir, "apps", "b"), { recursive: true });
-    writeFileSync(join(tmpDir, "apps", "b", "package.json"), "{}");
+    writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - 'packages/*'\n  - \"apps/*\"\n");
+    addWorkspace(tmp.path, "packages/a");
+    addWorkspace(tmp.path, "apps/b");
 
-    const result = resolveWorkspaces(tmpDir);
-    assert.strictEqual(result.length, 2);
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 2);
   });
 
   it("returns empty for pnpm-workspace.yaml without packages key", () => {
-    writeFileSync(
-      join(tmpDir, "pnpm-workspace.yaml"),
-      "# empty config\nsome_other_key:\n  - foo\n",
-    );
-    assert.deepStrictEqual(resolveWorkspaces(tmpDir), []);
+    writeFile(tmp.path, "pnpm-workspace.yaml", "# empty config\nsome_other_key:\n  - foo\n");
+    deepStrictEqual(resolveWorkspaces(tmp.path), []);
   });
 
   it("returns empty for empty workspaces array", () => {
-    writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ workspaces: [] }));
-    assert.deepStrictEqual(resolveWorkspaces(tmpDir), []);
+    writePackageJson(tmp.path, { workspaces: [] });
+    deepStrictEqual(resolveWorkspaces(tmp.path), []);
+  });
+
+  it("detects Deno workspace members from deno.json", () => {
+    writeJson(tmp.path, "deno.json", { workspace: ["./api", "./shared"] });
+    writeJson(tmp.path, "api/deno.json", {});
+    writeJson(tmp.path, "shared/deno.json", {});
+
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 2);
+    ok(result.some((d) => d.includes("api")));
+    ok(result.some((d) => d.includes("shared")));
+  });
+
+  it("Deno workspace members with deno.jsonc are detected", () => {
+    writeJson(tmp.path, "deno.json", { workspace: ["./lib"] });
+    writeJson(tmp.path, "lib/deno.jsonc", {});
+
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("lib"));
+  });
+
+  it("pnpm-workspace.yaml takes precedence over deno.json workspace", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
+    writeJson(tmp.path, "deno.json", { workspace: ["./deno-member"] });
+    addWorkspace(tmp.path, "packages/core");
+    writeJson(tmp.path, "deno-member/deno.json", {});
+
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("core"));
+  });
+
+  it("package.json workspaces take precedence over deno.json workspace", () => {
+    writePackageJson(tmp.path, { workspaces: ["packages/*"] });
+    writeJson(tmp.path, "deno.json", { workspace: ["./deno-member"] });
+    addWorkspace(tmp.path, "packages/ui");
+    writeJson(tmp.path, "deno-member/deno.json", {});
+
+    const result = resolveWorkspaces(tmp.path);
+    strictEqual(result.length, 1);
+    ok(result[0].includes("ui"));
   });
 });

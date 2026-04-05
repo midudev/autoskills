@@ -49,14 +49,9 @@ function fail(msg) {
  */
 function bumpVersion(version, type) {
   const [major, minor, patch] = version.split(".").map(Number);
-  switch (type) {
-    case "major":
-      return `${major + 1}.0.0`;
-    case "minor":
-      return `${major}.${minor + 1}.0`;
-    case "patch":
-      return `${major}.${minor}.${patch + 1}`;
-  }
+  if (type === "major") return `${major + 1}.0.0`;
+  if (type === "minor") return `${major}.${minor + 1}.0`;
+  if (type === "patch") return `${major}.${minor}.${patch + 1}`;
 }
 
 /**
@@ -337,7 +332,7 @@ try {
     { cwd: ROOT },
   );
   console.log(`✅ Release v${newVersion} creada en GitHub`);
-} catch (e) {
+} catch {
   console.warn(`⚠️  No se pudo crear la release en GitHub (¿tienes gh instalado y autenticado?)`);
   console.warn(`   Puedes crearla manualmente: ${repoUrl}/releases/new?tag=v${newVersion}`);
 } finally {
