@@ -68,7 +68,7 @@ function showHelp() {
     -y, --yes       Skip confirmation prompt
     --dry-run       Show skills without installing
     -v, --verbose   Show error details on failure
-    -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
+    -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code, OpenCode)
     -h, --help      Show this help message
 `);
 }

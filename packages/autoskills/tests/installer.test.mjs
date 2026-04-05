@@ -69,6 +69,21 @@ describe("buildInstallArgs", () => {
     ]);
   });
 
+  it("appends -a with opencode", () => {
+    const args = buildInstallArgs("owner/repo/my-skill", ["opencode"]);
+    assert.deepEqual(args, [
+      "-y",
+      "skills",
+      "add",
+      "owner/repo",
+      "--skill",
+      "my-skill",
+      "-y",
+      "-a",
+      "opencode",
+    ]);
+  });
+
   it("passes through wildcard agent", () => {
     const args = buildInstallArgs("owner/repo/my-skill", ["*"]);
     assert.deepEqual(args, [

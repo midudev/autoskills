@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { detectAgents, AGENT_FOLDER_MAP } from "../lib.mjs";
+import { detectAgents, hasAgentSkillsDir, AGENT_FOLDER_MAP } from "../lib.mjs";
 
 describe("detectAgents", () => {
   let tmpHome;
@@ -32,6 +32,12 @@ describe("detectAgents", () => {
     mkdirSync(join(tmpHome, ".cursor", "skills"), { recursive: true });
     const agents = detectAgents(tmpHome);
     assert.ok(agents.includes("cursor"));
+  });
+
+  it("detects opencode from .opencode/skills", () => {
+    mkdirSync(join(tmpHome, ".opencode", "skills"), { recursive: true });
+    const agents = detectAgents(tmpHome);
+    assert.ok(agents.includes("opencode"));
   });
 
   it("detects kiro from .kiro/skills", () => {
@@ -63,6 +69,15 @@ describe("detectAgents", () => {
     mkdirSync(join(tmpHome, ".unknown-editor", "skills"), { recursive: true });
     const agents = detectAgents(tmpHome);
     assert.deepEqual(agents, ["universal"]);
+  });
+
+  it("returns false when probing is denied", () => {
+    assert.equal(
+      hasAgentSkillsDir(tmpHome, ".opencode", () => {
+        throw new Error("permission denied");
+      }),
+      false,
+    );
   });
 
   it("detects all mapped agents when present", () => {

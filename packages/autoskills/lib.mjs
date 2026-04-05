@@ -374,12 +374,27 @@ export function detectAgents(home = homedir()) {
   const agents = ["universal"];
 
   for (const [folder, agentName] of Object.entries(AGENT_FOLDER_MAP)) {
-    if (existsSync(join(home, folder, "skills"))) {
+    if (hasAgentSkillsDir(home, folder)) {
       agents.push(agentName);
     }
   }
 
   return agents;
+}
+
+/**
+ * Checks whether an agent skills directory exists without ever throwing.
+ * @param {string} home - Home directory to inspect.
+ * @param {string} folder - Agent folder name (e.g. `.cursor`).
+ * @param {(path: string) => boolean} [pathExists=existsSync] - Injectable existence check.
+ * @returns {boolean}
+ */
+export function hasAgentSkillsDir(home, folder, pathExists = existsSync) {
+  try {
+    return pathExists(join(home, folder, "skills"));
+  } catch {
+    return false;
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────

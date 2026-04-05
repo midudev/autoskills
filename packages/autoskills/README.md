@@ -6,7 +6,9 @@ Auto-detect and install the best AI agent skills for your project. One command, 
 npx autoskills
 ```
 
-`autoskills` scans your project, detects the technologies you use, and installs curated [AI agent skills](https://skills.sh) that make Cursor, Claude Code, and other AI coding assistants actually understand your stack.
+`autoskills` scans your project, detects the technologies you use, and installs curated [AI agent skills](https://skills.sh) that make Cursor, Claude Code, OpenCode, and other AI coding assistants actually understand your stack.
+
+Supported agents are auto-detected from common home-directory skill folders, including OpenCode.
 
 ## Quick Start
 

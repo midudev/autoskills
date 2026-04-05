@@ -692,6 +692,7 @@ export const AGENT_FOLDER_MAP = {
   ".cursor": "cursor",
   ".cline": "cline",
   ".codex": "codex",
+  ".opencode": "opencode",
   ".antigravity": "antigravity",
   ".augment": "augment",
   ".copilot": "github-copilot",
