@@ -41,6 +41,7 @@ npx autoskills --dry-run
 | ----------------- | ----------------------------------------------------- |
 | `-y`, `--yes`     | Skip confirmation prompt, install all detected skills |
 | `--dry-run`       | Show detected skills without installing anything      |
+| `-a`, `--agent`   | Install for specific IDEs only (e.g. cursor, claude-code) |
 | `-v`, `--verbose` | Show error details if any installation fails          |
 | `-h`, `--help`    | Show help message                                     |
 

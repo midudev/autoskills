@@ -31,6 +31,7 @@ That's it. No config needed.
 ```
 -y, --yes       Skip confirmation prompt
 --dry-run       Show what would be installed without installing
+-a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
 -h, --help      Show help message
 ```
 
