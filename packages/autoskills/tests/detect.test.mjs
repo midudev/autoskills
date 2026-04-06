@@ -434,7 +434,120 @@ plugins {
     ok(detected.some((t) => t.id === "tauri"));
   });
 
-  it("detects Clerk from @clerk/nextjs package", () => {
+  // ── Python ecosystem ────────────────────────────────────────
+
+  it("detects Python from pyproject.toml", () => {
+    writeFile(tmp.path, "pyproject.toml", '[project]\nname = "my-app"');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Python from requirements.txt", () => {
+    writeFile(tmp.path, "requirements.txt", "requests==2.31.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Python from setup.py", () => {
+    writeFile(tmp.path, "setup.py", "from setuptools import setup");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Python from Pipfile", () => {
+    writeFile(tmp.path, "Pipfile", "[packages]\nrequests = '*'");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Django from manage.py", () => {
+    writeFile(tmp.path, "manage.py", "#!/usr/bin/env python");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "django"));
+  });
+
+  it("detects Django from requirements.txt content", () => {
+    writeFile(tmp.path, "requirements.txt", "Django==5.0\ngunicorn==21.2.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "django"));
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Django from pyproject.toml content", () => {
+    writeFile(tmp.path, "pyproject.toml", '[project]\ndependencies = ["django>=5.0"]');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "django"));
+  });
+
+  it("detects FastAPI from requirements.txt content", () => {
+    writeFile(tmp.path, "requirements.txt", "fastapi==0.110.0\nuvicorn==0.29.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "fastapi"));
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects FastAPI from pyproject.toml content", () => {
+    writeFile(tmp.path, "pyproject.toml", '[project]\ndependencies = ["FastAPI>=0.100"]');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "fastapi"));
+  });
+
+  it("detects Flask from requirements.txt content", () => {
+    writeFile(tmp.path, "requirements.txt", "Flask>=3.0.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "flask"));
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Flask from pyproject.toml content", () => {
+    writeFile(tmp.path, "pyproject.toml", '[project]\ndependencies = ["flask>=3.0"]');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "flask"));
+  });
+
+  it("returns correct skills for Python detection", () => {
+    writeFile(tmp.path, "requirements.txt", "requests==2.31.0");
+    const { detected } = detectTechnologies(tmp.path);
+    const python = detected.find((t) => t.id === "python");
+    ok(python);
+    ok(python.skills.includes("j-aldama/python-ai-skills/python-core"));
+  });
+
+  it("returns correct skills for Django detection", () => {
+    writeFile(tmp.path, "manage.py", "#!/usr/bin/env python");
+    const { detected } = detectTechnologies(tmp.path);
+    const django = detected.find((t) => t.id === "django");
+    ok(django);
+    ok(django.skills.includes("j-aldama/python-ai-skills/django-expert"));
+    ok(django.skills.includes("vintasoftware/django-ai-plugins/django-expert"));
+  });
+
+  it("returns correct skills for FastAPI detection", () => {
+    writeFile(tmp.path, "requirements.txt", "fastapi==0.110.0");
+    const { detected } = detectTechnologies(tmp.path);
+    const fastapi = detected.find((t) => t.id === "fastapi");
+    ok(fastapi);
+    ok(fastapi.skills.includes("j-aldama/python-ai-skills/fastapi-expert"));
+  });
+
+  it("detects Python but not Django/FastAPI/Flask for generic Python project", () => {
+    writeFile(tmp.path, "requirements.txt", "requests==2.31.0\nbeautifulsoup4==4.12.0");
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("python"));
+    ok(!ids.includes("django"));
+    ok(!ids.includes("fastapi"));
+    ok(!ids.includes("flask"));
+  });
+
+  it("detects Django + FastAPI combo", () => {
+    writeFile(tmp.path, "requirements.txt", "django==5.0\nfastapi==0.110.0");
+    const { combos } = detectTechnologies(tmp.path);
+    const comboIds = combos.map((c) => c.id);
+    ok(comboIds.includes("django-fastapi"));
+  });
+
+  it("Clerk from @clerk/nextjs package", () => {
     writePackageJson(tmp.path, { dependencies: { "@clerk/nextjs": "^6.0.0" } });
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "clerk"));
@@ -742,5 +855,15 @@ describe("detectCombos", () => {
   it("does not detect nextjs-clerk combo without clerk", () => {
     const combos = detectCombos(["nextjs"]);
     ok(!combos.some((c) => c.id === "nextjs-clerk"));
+  });
+
+  it("detects django-fastapi combo", () => {
+    const combos = detectCombos(["django", "fastapi"]);
+    ok(combos.some((c) => c.id === "django-fastapi"));
+  });
+
+  it("does not detect django-fastapi combo without fastapi", () => {
+    const combos = detectCombos(["django"]);
+    ok(!combos.some((c) => c.id === "django-fastapi"));
   });
 });

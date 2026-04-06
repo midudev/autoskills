@@ -612,6 +612,51 @@ export const SKILLS_MAP = [
     },
     skills: ["nodnarbnitram/claude-code-extensions/tauri-v2"],
   },
+  {
+    id: "python",
+    name: "Python",
+    detect: {
+      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+    },
+    skills: ["j-aldama/python-ai-skills/python-core"],
+  },
+  {
+    id: "django",
+    name: "Django",
+    detect: {
+      configFiles: ["manage.py"],
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+        patterns: ["django", "Django"],
+      },
+    },
+    skills: [
+      "j-aldama/python-ai-skills/django-expert",
+      "vintasoftware/django-ai-plugins/django-expert",
+    ],
+  },
+  {
+    id: "fastapi",
+    name: "FastAPI",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+        patterns: ["fastapi", "FastAPI"],
+      },
+    },
+    skills: ["j-aldama/python-ai-skills/fastapi-expert"],
+  },
+  {
+    id: "flask",
+    name: "Flask",
+    detect: {
+      configFileContent: {
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+        patterns: ["flask", "Flask"],
+      },
+    },
+    skills: ["j-aldama/python-ai-skills/flask-expert"],
+  },
 ];
 
 // ── Combo Skills Map (cross-technology) ──────────────────────
@@ -695,6 +740,15 @@ export const COMBO_SKILLS_MAP = [
     name: "React + React Three Fiber",
     requires: ["threejs", "react", "@react-three/fiber"],
     skills: ["vercel-labs/json-render/react-three-fiber"],
+  },
+  {
+    id: "django-fastapi",
+    name: "Django + FastAPI",
+    requires: ["django", "fastapi"],
+    skills: [
+      "j-aldama/python-ai-skills/django-expert",
+      "j-aldama/python-ai-skills/fastapi-expert",
+    ],
   },
 ];
 
