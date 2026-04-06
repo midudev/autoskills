@@ -1262,6 +1262,8 @@ export const AGENT_FOLDER_MAP = {
   ".kiro": "kiro-cli",
 };
 
+export const BACKEND_ONLY_IDS = new Set(["python", "java", "springboot", "django", "flask", "fastapi"]);
+
 export const WEB_FRONTEND_EXTENSIONS = new Set([
   ".html",
   ".htm",

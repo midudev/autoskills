@@ -1403,6 +1403,59 @@ describe("detectTechnologies (monorepo)", () => {
   });
 });
 
+// ── Python detection ─────────────────────────────────────────
+
+describe("detectTechnologies (Python)", () => {
+  const tmp = useTmpDir();
+
+  it("detects Python from requirements.txt", () => {
+    writeFile(tmp.path, "requirements.txt", "flask==3.0.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Python from pyproject.toml", () => {
+    writeFile(tmp.path, "pyproject.toml", "[project]\nname = 'myapp'");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Python from setup.py", () => {
+    writeFile(tmp.path, "setup.py", "from setuptools import setup");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("detects Python from Pipfile", () => {
+    writeFile(tmp.path, "Pipfile", "[packages]\nflask = '*'");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
+  });
+
+  it("does NOT detect web frontend for Python project with .html templates", () => {
+    writeFile(tmp.path, "requirements.txt", "flask==3.0.0");
+    writeFile(tmp.path, "templates/index.html", "<html><body>Hello</body></html>");
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, false);
+  });
+
+  it("does NOT detect web frontend for Django project with templates", () => {
+    writeFile(tmp.path, "manage.py", "#!/usr/bin/env python");
+    writeFile(tmp.path, "templates/base.html", "{% block content %}{% endblock %}");
+    writeFile(tmp.path, "static/style.css", "body { margin: 0 }");
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, false);
+  });
+
+  it("detects frontend when both Python and frontend framework are present", () => {
+    writeFile(tmp.path, "requirements.txt", "flask==3.0.0");
+    writePackageJson(tmp.path, { dependencies: { react: "^19" } });
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, true);
+  });
+
+});
+
 // ── detectCombos ──────────────────────────────────────────────
 
 describe("detectCombos", () => {
