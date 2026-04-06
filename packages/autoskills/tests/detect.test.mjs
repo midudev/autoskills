@@ -589,6 +589,30 @@ describe("getDenoImportNames", () => {
     ok(result.includes("@std/fs"));
     strictEqual(result.length, 3);
   });
+
+  it("marks frontend true via packages without requiring frontend files", () => {
+    // Frontend detected from package.json alone - no HTML/CSS files needed
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { react: "^19.0.0" } }),
+    );
+
+    const { isFrontend } = detectTechnologies(tmpDir);
+    assert.strictEqual(isFrontend, true);
+  });
+
+  it("falls back to file-based frontend detection when no frontend package is present", () => {
+    // Create a project without frontend packages but WITH a frontend file
+    writeFileSync(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ dependencies: { express: "^4.0.0" } }),
+    );
+    // Create an HTML file to trigger frontend detection via files
+    writeFileSync(join(tmpDir, "index.html"), "<!DOCTYPE html><html></html>");
+
+    const { isFrontend } = detectTechnologies(tmpDir);
+    assert.strictEqual(isFrontend, true);
+  });
 });
 
 // ── detectTechnologies (monorepo) ─────────────────────────────

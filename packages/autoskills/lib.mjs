@@ -2,6 +2,46 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 
+// ── FS Memoization Helper ────────────────────────────────────
+
+/** Creates a per-run fs cache. Returns object with same interface as raw fs helpers. */
+function createFsMemo() {
+  const existsCache = new Map();
+  const fileCache = new Map();
+  const dirCache = new Map();
+
+  return {
+    exists: (p) => {
+      const key = resolve(p);
+      if (!existsCache.has(key)) existsCache.set(key, existsSync(key));
+      return existsCache.get(key);
+    },
+    readFile: (p, e = "utf-8") => {
+      const key = resolve(p);
+      if (!fileCache.has(key)) {
+        try { fileCache.set(key, readFileSync(key, e)); }
+        catch { fileCache.set(key, null); }
+      }
+      return fileCache.get(key);
+    },
+    readDir: (p, o = {}) => {
+      const key = `${resolve(p)}#${JSON.stringify(o)}`;
+      if (!dirCache.has(key)) {
+        try { dirCache.set(key, readdirSync(resolve(p), o)); }
+        catch { dirCache.set(key, []); }
+      }
+      return dirCache.get(key);
+    },
+  };
+}
+
+/** Returns memoized fs or raw fs fallback with same interface. */
+const fsOps = (memo) => memo || {
+  exists: existsSync,
+  readFile: (p, e) => { try { return readFileSync(p, e); } catch { return null; } },
+  readDir: (p, o) => { try { return readdirSync(p, o); } catch { return []; } },
+};
+
 export {
   SKILLS_MAP,
   COMBO_SKILLS_MAP,
@@ -55,69 +95,40 @@ const GRADLE_SCAN_ROOT_FILES = [
  * Builds a list of Gradle build file paths to scan for technology markers.
  * Includes root-level Gradle files and `build.gradle(.kts)` inside immediate subdirectories.
  * @param {string} projectDir - Absolute path to the project root.
+ * @param {object|null} fsMemo - Per-run fs memoization helper.
  * @returns {string[]} Candidate file paths.
  */
-const _gradleCache = new Map();
-
-function gradleLayoutCandidatePaths(projectDir) {
-  const cached = _gradleCache.get(projectDir);
-  if (cached) return cached;
-
+function gradleLayoutCandidatePaths(projectDir, fsMemo = null) {
+  const f = fsOps(fsMemo);
   const candidates = [];
-  for (const f of GRADLE_SCAN_ROOT_FILES) {
-    candidates.push(join(projectDir, f));
+
+  for (const file of GRADLE_SCAN_ROOT_FILES) {
+    candidates.push(join(projectDir, file));
   }
-  let entries;
-  try {
-    entries = readdirSync(projectDir, { withFileTypes: true });
-  } catch {
-    entries = [];
-  }
-  for (const e of entries) {
+
+  for (const e of f.readDir(projectDir, { withFileTypes: true })) {
     if (!e.isDirectory() || e.name.startsWith(".") || SCAN_SKIP_DIRS.has(e.name)) continue;
+
     for (const g of ["build.gradle.kts", "build.gradle"]) {
       candidates.push(join(projectDir, e.name, g));
     }
   }
-  _gradleCache.set(projectDir, candidates);
+
   return candidates;
 }
 
-/**
- * Resolves the file paths that should be read when checking `configFileContent` detection rules.
- * Delegates to the Gradle scanner when `scanGradleLayout` is set, otherwise maps `config.files`
- * relative to the given directory.
- * @param {string} projectDir - Directory to resolve paths against.
- * @param {object} config - The `configFileContent` block from a SKILLS_MAP entry.
- * @returns {string[]} Absolute file paths to check.
- */
-function resolveConfigFileContentPaths(projectDir, config) {
-  if (config.scanGradleLayout) {
-    return gradleLayoutCandidatePaths(projectDir);
-  }
+function resolveConfigFileContentPaths(projectDir, config, fsMemo = null) {
+  if (config.scanGradleLayout) return gradleLayoutCandidatePaths(projectDir, fsMemo);
   return (config.files || []).map((f) => join(projectDir, f));
 }
 
 // ── Frontend File Scanning ───────────────────────────────────
 
-/**
- * Recursively checks whether the project contains files with web-frontend extensions
- * (e.g. `.html`, `.css`, `.vue`, `.blade.php`).
- * Skips common non-source directories like `node_modules` and `.git`.
- * @param {string} projectDir - Root directory to scan.
- * @param {number} [maxDepth=3] - Maximum directory nesting depth to traverse.
- * @returns {boolean} `true` if at least one frontend-related file is found.
- */
-export function hasWebFrontendFiles(projectDir, maxDepth = 3) {
-  function scan(dir, depth) {
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return false;
-    }
+export function hasWebFrontendFiles(projectDir, maxDepth = 3, fsMemo = null) {
+  const f = fsOps(fsMemo);
 
-    for (const entry of entries) {
+  function scan(dir, depth) {
+    for (const entry of f.readDir(dir, { withFileTypes: true })) {
       if (entry.isFile()) {
         const name = entry.name;
         if (name.endsWith(".blade.php")) return true;
@@ -129,7 +140,6 @@ export function hasWebFrontendFiles(projectDir, maxDepth = 3) {
         if (scan(join(dir, entry.name), depth + 1)) return true;
       }
     }
-
     return false;
   }
 
@@ -138,12 +148,6 @@ export function hasWebFrontendFiles(projectDir, maxDepth = 3) {
 
 // ── Workspace Resolution ──────────────────────────────────────
 
-/**
- * Zero-dependency parser for `pnpm-workspace.yaml`.
- * Extracts the `packages:` list entries (supports quoted and unquoted values).
- * @param {string} content - Raw file content of pnpm-workspace.yaml.
- * @returns {string[]} Workspace glob patterns (e.g. `["packages/*", "apps/*"]`).
- */
 function parsePnpmWorkspaceYaml(content) {
   const lines = content.split("\n");
   const patterns = [];
@@ -157,12 +161,7 @@ function parsePnpmWorkspaceYaml(content) {
     }
     if (inPackages) {
       if (line.startsWith("- ")) {
-        patterns.push(
-          line
-            .slice(2)
-            .trim()
-            .replace(/^['"]|['"]$/g, ""),
-        );
+        patterns.push(line.slice(2).trim().replace(/^['"]|['"]$/g, ""));
       } else if (line !== "" && !line.startsWith("#")) {
         break;
       }
@@ -172,33 +171,21 @@ function parsePnpmWorkspaceYaml(content) {
   return patterns;
 }
 
-/**
- * Expands workspace glob patterns (e.g. `packages/*`) into actual directory paths
- * that contain a `package.json`. Non-glob patterns are treated as exact directory references.
- * @param {string} projectDir - Absolute path to the monorepo root.
- * @param {string[]} patterns - Workspace patterns to resolve.
- * @returns {string[]} Absolute paths to workspace directories.
- */
-function expandWorkspacePatterns(projectDir, patterns) {
+function expandWorkspacePatterns(projectDir, patterns, fsMemo = null) {
+  const f = fsOps(fsMemo);
   const dirs = [];
 
   for (const pattern of patterns) {
     if (pattern.includes("*")) {
       const parent = join(projectDir, pattern.replace(/\/?\*.*$/, ""));
-      let entries;
-      try {
-        entries = readdirSync(parent, { withFileTypes: true });
-      } catch {
-        continue;
-      }
-      for (const entry of entries) {
+      for (const entry of f.readDir(parent, { withFileTypes: true })) {
         if (!entry.isDirectory() || SCAN_SKIP_DIRS.has(entry.name) || entry.name.startsWith("."))
           continue;
         const wsDir = join(parent, entry.name);
         if (
-          existsSync(join(wsDir, "package.json")) ||
-          existsSync(join(wsDir, "deno.json")) ||
-          existsSync(join(wsDir, "deno.jsonc"))
+          f.exists(join(wsDir, "package.json")) ||
+          f.exists(join(wsDir, "deno.json")) ||
+          f.exists(join(wsDir, "deno.jsonc"))
         ) {
           dirs.push(wsDir);
         }
@@ -206,9 +193,9 @@ function expandWorkspacePatterns(projectDir, patterns) {
     } else {
       const wsDir = join(projectDir, pattern);
       if (
-        existsSync(join(wsDir, "package.json")) ||
-        existsSync(join(wsDir, "deno.json")) ||
-        existsSync(join(wsDir, "deno.jsonc"))
+        f.exists(join(wsDir, "package.json")) ||
+        f.exists(join(wsDir, "deno.json")) ||
+        f.exists(join(wsDir, "deno.jsonc"))
       ) {
         dirs.push(wsDir);
       }
@@ -221,31 +208,35 @@ function expandWorkspacePatterns(projectDir, patterns) {
 /**
  * Discovers workspace directories in a monorepo.
  * Checks `pnpm-workspace.yaml` first (higher priority), then falls back to
- * the `workspaces` field in `package.json` (npm/yarn format).
+ * the `workspaces` field in `package.json` (npm/yarn format), and finally
+ * checks for Deno workspace configuration.
  * @param {string} projectDir - Absolute path to the project root.
  * @param {{ pkg?: object|null, denoJson?: object|null }} [preloaded] - Pre-read manifests to avoid duplicate I/O.
+ * @param {object|null} fsMemo - Per-run fs memoization helper.
  * @returns {string[]} Absolute paths to workspace subdirectories (excludes the root itself).
  */
-export function resolveWorkspaces(projectDir, preloaded) {
+export function resolveWorkspaces(projectDir, preloaded, fsMemo = null) {
+  const f = fsOps(fsMemo);
+
   const pnpmPath = join(projectDir, "pnpm-workspace.yaml");
-  if (existsSync(pnpmPath)) {
-    try {
-      const content = readFileSync(pnpmPath, "utf-8");
+  if (f.exists(pnpmPath)) {
+    const content = f.readFile(pnpmPath, "utf-8");
+    if (content !== null) {
       const patterns = parsePnpmWorkspaceYaml(content);
       if (patterns.length > 0) {
-        return expandWorkspacePatterns(projectDir, patterns).filter(
+        return expandWorkspacePatterns(projectDir, patterns, fsMemo).filter(
           (d) => resolve(d) !== resolve(projectDir),
         );
       }
-    } catch {}
+    }
   }
 
-  const pkg = preloaded?.pkg !== undefined ? preloaded.pkg : readPackageJson(projectDir);
+  const pkg = preloaded?.pkg !== undefined ? preloaded.pkg : readPackageJson(projectDir, fsMemo);
   if (pkg) {
     const ws = pkg.workspaces;
     const patterns = Array.isArray(ws) ? ws : Array.isArray(ws?.packages) ? ws.packages : null;
-    if (patterns && patterns.length > 0) {
-      return expandWorkspacePatterns(projectDir, patterns).filter(
+    if (patterns?.length > 0) {
+      return expandWorkspacePatterns(projectDir, patterns, fsMemo).filter(
         (d) => resolve(d) !== resolve(projectDir),
       );
     }
@@ -256,7 +247,7 @@ export function resolveWorkspaces(projectDir, preloaded) {
   if (denoJson?.workspace) {
     const members = Array.isArray(denoJson.workspace) ? denoJson.workspace : [];
     if (members.length > 0) {
-      return expandWorkspacePatterns(projectDir, members).filter(
+      return expandWorkspacePatterns(projectDir, members, fsMemo).filter(
         (d) => resolve(d) !== resolve(projectDir),
       );
     }
@@ -270,13 +261,16 @@ export function resolveWorkspaces(projectDir, preloaded) {
 /**
  * Reads and parses the package.json from the given directory.
  * Returns the parsed object, or null if the file is missing or malformed.
+ * @param {string} dir - Directory to look in.
+ * @param {object|null} fsMemo - Per-run fs memoization helper.
+ * @returns {object|null}
  */
-export function readPackageJson(dir) {
-  try {
-    return JSON.parse(readFileSync(join(dir, "package.json"), "utf-8"));
-  } catch {
-    return null;
-  }
+export function readPackageJson(dir, fsMemo = null) {
+  const f = fsOps(fsMemo);
+  const content = f.readFile(join(dir, "package.json"), "utf-8");
+  if (content === null) return null;
+  try { return JSON.parse(content); }
+  catch { return null; }
 }
 
 /**
@@ -321,7 +315,6 @@ export function getDenoImportNames(denoJson) {
  */
 export function getAllPackageNames(pkg) {
   if (!pkg) return [];
-
   return [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})];
 }
 
@@ -330,40 +323,30 @@ export function getAllPackageNames(pkg) {
  * config files, and config file content against the SKILLS_MAP.
  * Also determines whether the directory looks like a frontend project.
  * @param {string} dir - Directory to scan.
+ * @param {{ skipFrontendFiles?: boolean, pkg?: object|null, denoJson?: object|null }} [opts] - Options and preloaded manifests.
+ * @param {object|null} fsMemo - Per-run fs memoization helper.
  * @returns {{ detected: object[], isFrontendByPackages: boolean, isFrontendByFiles: boolean }}
  */
 function detectTechnologiesInDir(
   dir,
   { skipFrontendFiles = false, pkg: preloadedPkg, denoJson: preloadedDeno } = {},
+  fsMemo,
 ) {
-  const pkg = preloadedPkg !== undefined ? preloadedPkg : readPackageJson(dir);
+  const f = fsOps(fsMemo);
+
+  const pkg = preloadedPkg !== undefined ? preloadedPkg : readPackageJson(dir, fsMemo);
   const allPackages = getAllPackageNames(pkg);
   const deno = preloadedDeno !== undefined ? preloadedDeno : readDenoJson(dir);
   const denoImports = getDenoImportNames(deno);
   const allDepsSet =
     denoImports.length > 0 ? new Set([...allPackages, ...denoImports]) : new Set(allPackages);
   const allDepsArray = denoImports.length > 0 ? [...allDepsSet] : allPackages;
+
+  const isFrontendByPackages = allDepsArray.some((p) => FRONTEND_PACKAGES.has(p));
+  const isFrontendByFiles =
+    isFrontendByPackages || skipFrontendFiles ? false : hasWebFrontendFiles(dir, 3, fsMemo);
+
   const detected = [];
-  const fileContentCache = new Map();
-  const existsCache = new Map();
-
-  function cachedRead(filePath) {
-    if (fileContentCache.has(filePath)) return fileContentCache.get(filePath);
-    let content = null;
-    try {
-      content = readFileSync(filePath, "utf-8");
-    } catch {}
-    fileContentCache.set(filePath, content);
-    if (content !== null) existsCache.set(filePath, true);
-    return content;
-  }
-
-  function cachedExists(filePath) {
-    if (existsCache.has(filePath)) return existsCache.get(filePath);
-    const result = existsSync(filePath);
-    existsCache.set(filePath, result);
-    return result;
-  }
 
   for (const tech of SKILLS_MAP) {
     let found = false;
@@ -379,15 +362,15 @@ function detectTechnologiesInDir(
     }
 
     if (!found && tech.detect.configFiles) {
-      found = tech.detect.configFiles.some((f) => cachedExists(join(dir, f)));
+      found = tech.detect.configFiles.some((file) => f.exists(join(dir, file)));
     }
 
     if (!found && tech.detect.configFileContent) {
       const cfg = tech.detect.configFileContent;
-      const paths = resolveConfigFileContentPaths(dir, cfg);
+      const paths = resolveConfigFileContentPaths(dir, cfg, fsMemo);
       const { patterns } = cfg;
       for (const filePath of paths) {
-        const content = cachedRead(filePath);
+        const content = f.readFile(filePath, "utf-8");
         if (content === null) continue;
         if (patterns.some((p) => content.includes(p))) {
           found = true;
@@ -396,58 +379,37 @@ function detectTechnologiesInDir(
       }
     }
 
-    if (found) {
-      detected.push(tech);
-    }
+    if (found) detected.push(tech);
   }
-
-  const isFrontendByPackages = allDepsArray.some((p) => FRONTEND_PACKAGES.has(p));
-  const isFrontendByFiles =
-    isFrontendByPackages || skipFrontendFiles ? false : hasWebFrontendFiles(dir);
 
   return { detected, isFrontendByPackages, isFrontendByFiles };
 }
 
-/**
- * Main detection entry point. Scans the project root and all workspace subdirectories,
- * merges and deduplicates detected technologies, and resolves cross-technology combos.
- * @param {string} projectDir - Absolute path to the project root.
- * @returns {{ detected: object[], isFrontend: boolean, combos: object[] }}
- */
 export function detectTechnologies(projectDir) {
-  const pkg = readPackageJson(projectDir);
+  const fsMemo = createFsMemo();
+  const pkg = readPackageJson(projectDir, fsMemo);
   const denoJson = readDenoJson(projectDir);
-  const root = detectTechnologiesInDir(projectDir, { pkg, denoJson });
+  const root = detectTechnologiesInDir(projectDir, { pkg, denoJson }, fsMemo);
   const seenIds = new Map(root.detected.map((t) => [t.id, t]));
   let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
 
-  const workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
+  const workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson }, fsMemo);
   for (const wsDir of workspaceDirs) {
-    const ws = detectTechnologiesInDir(wsDir, { skipFrontendFiles: isFrontend });
+    const ws = detectTechnologiesInDir(wsDir, { skipFrontendFiles: isFrontend }, fsMemo);
 
     for (const tech of ws.detected) {
-      if (!seenIds.has(tech.id)) {
-        seenIds.set(tech.id, tech);
-      }
+      if (!seenIds.has(tech.id)) seenIds.set(tech.id, tech);
     }
 
-    if (ws.isFrontendByPackages || ws.isFrontendByFiles) {
-      isFrontend = true;
-    }
+    if (ws.isFrontendByPackages || ws.isFrontendByFiles) isFrontend = true;
   }
 
   const detected = [...seenIds.values()];
-  const detectedIds = detected.map((t) => t.id);
-  const combos = detectCombos(detectedIds);
+  const combos = detectCombos(detected.map((t) => t.id));
 
   return { detected, isFrontend, combos };
 }
 
-/**
- * Finds combo skills whose requirements are fully satisfied by the detected technology IDs.
- * @param {string[]} detectedIds - Array of technology IDs found in the project.
- * @returns {object[]} Matching entries from COMBO_SKILLS_MAP.
- */
 export function detectCombos(detectedIds) {
   const idSet = detectedIds instanceof Set ? detectedIds : new Set(detectedIds);
   return COMBO_SKILLS_MAP.filter((combo) => combo.requires.every((id) => idSet.has(id)));
@@ -455,13 +417,6 @@ export function detectCombos(detectedIds) {
 
 // ── Agent Detection ─────────────────────────────────────────
 
-/**
- * Detects which AI coding agents are installed by checking for `skills/` subdirectories
- * inside known agent folders in the user's home directory.
- * Always includes `"universal"` as the first entry.
- * @param {string} [home=os.homedir()] - Home directory to scan (injectable for testing).
- * @returns {string[]} Agent identifiers suitable for `npx skills add -a ...`.
- */
 export function detectAgents(home = homedir()) {
   const agents = ["universal"];
 
@@ -476,12 +431,6 @@ export function detectAgents(home = homedir()) {
 
 // ── Helpers ──────────────────────────────────────────────────
 
-/**
- * Splits a skill identifier (e.g. `"owner/repo/skill-name"`) into its repo and skill components.
- * Full URLs are returned as-is in the `repo` field.
- * @param {string} skill - Skill path string.
- * @returns {{ repo: string, skillName: string, full: string }}
- */
 export function parseSkillPath(skill) {
   if (skill.startsWith("http")) {
     return { repo: skill, skillName: "", full: skill };
@@ -551,21 +500,15 @@ export function collectSkills({ detected, isFrontend, combos = [], installedName
   }
 
   for (const tech of detected) {
-    for (const skill of tech.skills) {
-      addSkill(skill, tech.name);
-    }
+    for (const skill of tech.skills) addSkill(skill, tech.name);
   }
 
   for (const combo of combos) {
-    for (const skill of combo.skills) {
-      addSkill(skill, combo.name);
-    }
+    for (const skill of combo.skills) addSkill(skill, combo.name);
   }
 
   if (isFrontend) {
-    for (const skill of FRONTEND_BONUS_SKILLS) {
-      addSkill(skill, "Frontend");
-    }
+    for (const skill of FRONTEND_BONUS_SKILLS) addSkill(skill, "Frontend");
   }
 
   return skills;
