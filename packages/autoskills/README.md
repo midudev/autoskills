@@ -22,6 +22,7 @@ That's it. It will:
 2. **Detect** every technology in your stack
 3. **Show** an interactive selector with the best skills for your project
 4. **Install** them in parallel with live progress
+5. **Generate `CLAUDE.md` automatically** when Claude Code is one of the target agents
 
 ### Skip the prompt
 
@@ -34,6 +35,10 @@ npx autoskills -y
 ```bash
 npx autoskills --dry-run
 ```
+
+### Claude Code summary
+
+If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CLAUDE.md` file in your project root summarizing the markdown files installed under `.claude/skills`.
 
 ## Options
 

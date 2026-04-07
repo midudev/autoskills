@@ -1,0 +1,162 @@
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
+
+/**
+ * Returns true when Claude Code is one of the target agents.
+ * @param {string[]} agents
+ * @returns {boolean}
+ */
+export function shouldGenerateClaudeMd(agents = []) {
+  return agents.includes("claude-code");
+}
+
+/**
+ * Recursively collects markdown files from a directory.
+ * @param {string} dir
+ * @returns {string[]}
+ */
+function collectMarkdownFiles(dir) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectMarkdownFiles(fullPath));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+/**
+ * Extracts a compact summary from a markdown document.
+ * Uses the first heading as title and the first paragraph outside code fences as summary.
+ * @param {string} markdown
+ * @returns {{ title: string|null, summary: string|null }}
+ */
+export function summarizeMarkdown(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  let title = null;
+  let summary = null;
+  let inCodeFence = false;
+  const paragraph = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (line.startsWith("```")) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+
+    if (inCodeFence) continue;
+
+    if (!title && line.startsWith("#")) {
+      title = line.replace(/^#+\s*/, "").trim() || null;
+      continue;
+    }
+
+    if (!line) {
+      if (paragraph.length > 0) {
+        summary = paragraph.join(" ").trim();
+        break;
+      }
+      continue;
+    }
+
+    if (/^#{1,6}\s/.test(line)) continue;
+    if (/^[-*]\s+/.test(line) && paragraph.length === 0) continue;
+    if (/^\d+\.\s+/.test(line) && paragraph.length === 0) continue;
+    if (/^[>|`]/.test(line)) continue;
+
+    paragraph.push(line);
+  }
+
+  if (!summary && paragraph.length > 0) {
+    summary = paragraph.join(" ").trim();
+  }
+
+  if (summary) {
+    summary = summary.replace(/\s+/g, " ");
+    if (summary.length > 220) {
+      summary = `${summary.slice(0, 217).trimEnd()}...`;
+    }
+  }
+
+  return { title, summary };
+}
+
+/**
+ * Builds a CLAUDE.md summary from installed Claude Code skills.
+ * @param {string} projectDir
+ * @returns {{ generated: boolean, outputPath: string, files: number }}
+ */
+export function generateClaudeMd(projectDir) {
+  const skillsDir = join(projectDir, ".claude", "skills");
+  const outputPath = join(projectDir, "CLAUDE.md");
+
+  if (!existsSync(skillsDir)) {
+    return { generated: false, outputPath, files: 0 };
+  }
+
+  const markdownFiles = collectMarkdownFiles(skillsDir).sort((a, b) => a.localeCompare(b));
+  if (markdownFiles.length === 0) {
+    return { generated: false, outputPath, files: 0 };
+  }
+
+  const sections = [];
+  for (const filePath of markdownFiles) {
+    const relativePath = relative(projectDir, filePath).replaceAll("\\", "/");
+    const skillName = relative(skillsDir, filePath).split(/[/\\]/)[0] || "unknown-skill";
+    const markdown = readFileSync(filePath, "utf-8");
+    const { title, summary } = summarizeMarkdown(markdown);
+    sections.push({
+      skillName,
+      relativePath,
+      title: title || skillName,
+      summary: summary || "No inline summary found. Review the source markdown for details.",
+    });
+  }
+
+  const grouped = new Map();
+  for (const section of sections) {
+    if (!grouped.has(section.skillName)) {
+      grouped.set(section.skillName, []);
+    }
+    grouped.get(section.skillName).push(section);
+  }
+
+  const lines = [
+    "# CLAUDE.md",
+    "",
+    "Resumen generado por `autoskills` a partir de los markdown instalados para Claude Code.",
+    "Úsalo como guía rápida antes de consultar los archivos completos dentro de `.claude/skills`.",
+    "",
+  ];
+
+  for (const [skillName, entries] of grouped) {
+    lines.push(`## ${skillName}`);
+    lines.push("");
+    for (const entry of entries) {
+      lines.push(`### ${entry.title}`);
+      lines.push("");
+      lines.push(`- Fuente: \`${entry.relativePath}\``);
+      lines.push(`- Resumen: ${entry.summary}`);
+      lines.push("");
+    }
+  }
+
+  writeFileSync(outputPath, `${lines.join("\n").trimEnd()}\n`);
+  return { generated: true, outputPath, files: markdownFiles.length };
+}
