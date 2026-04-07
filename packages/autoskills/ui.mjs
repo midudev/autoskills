@@ -1,4 +1,6 @@
 import {
+  log,
+  write,
   bold,
   dim,
   green,
@@ -35,28 +37,39 @@ export function printBanner(version) {
   const title = "   autoskills";
   const gap = " ".repeat(39 - title.length - ver.length - 3);
 
-  console.log();
-  console.log(bold(cyan("   ╔═══════════════════════════════════════╗")));
-  console.log(bold(cyan("   ║")) + bold(yellow(title)) + gap + gray(ver) + "   " + bold(cyan("║")));
-  console.log(
-    bold(cyan("   ║")) + dim("   Auto-install the best AI skills     ") + bold(cyan("║")),
-  );
-  console.log(
-    bold(cyan("   ║")) + dim("   for your project                    ") + bold(cyan("║")),
-  );
-  console.log(bold(cyan("   ╚═══════════════════════════════════════╝")));
-  console.log();
+  log();
+  log(bold(cyan("   ╔═══════════════════════════════════════╗")));
+  log(bold(cyan("   ║")) + bold(yellow(title)) + gap + gray(ver) + "   " + bold(cyan("║")));
+  log(bold(cyan("   ║")) + dim("   Auto-install the best AI skills     ") + bold(cyan("║")));
+  log(bold(cyan("   ║")) + dim("   for your project                    ") + bold(cyan("║")));
+  log(bold(cyan("   ╚═══════════════════════════════════════╝")));
+  log();
 }
 
 /**
  * Interactive multi-select with optional group headers.
  * All items are selected by default.
+ * @param {any[]} items
+ * @param {object} opts
+ * @param {(item: any, i: number) => string} opts.labelFn
+ * @param {(item: any, i: number) => string} [opts.hintFn]
+ * @param {(item: any) => string} [opts.groupFn]
+ * @param {boolean[]} [opts.initialSelected] - Per-item initial selection state (must match items.length).
+ * @param {{ key: string, label: string, fn: (items: any[]) => boolean[] }[]} [opts.shortcuts] - Custom filter shortcuts.
  */
-export function multiSelect(items, { labelFn, hintFn, groupFn }) {
+export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }) {
+  if (initialSelected && initialSelected.length !== items.length) {
+    throw new Error(
+      `initialSelected length (${initialSelected.length}) must match items length (${items.length})`,
+    );
+  }
+
   if (!process.stdin.isTTY) return Promise.resolve(items);
 
   return new Promise((resolve) => {
-    const selected = Array.from({ length: items.length }, () => true);
+    const selected = initialSelected
+      ? initialSelected.slice()
+      : Array.from({ length: items.length }, () => true);
     let cursor = 0;
     let rendered = false;
 
@@ -76,10 +89,10 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
 
     function render() {
       if (rendered) {
-        process.stdout.write(`\x1b[${items.length + groupCount + separatorCount + 1}A\r`);
+        write(`\x1b[${items.length + groupCount + separatorCount + 1}A\r`);
       }
       rendered = true;
-      process.stdout.write("\x1b[J");
+      write("\x1b[J");
       draw();
     }
 
@@ -92,10 +105,10 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
         if (groupFn) {
           const group = groupFn(items[i]);
           if (group !== lastGroup) {
-            if (!isFirstGroup) process.stdout.write("\n");
+            if (!isFirstGroup) write("\n");
             isFirstGroup = false;
             lastGroup = group;
-            process.stdout.write(`   ${bold(yellow(group))}\n`);
+            write(`   ${bold(yellow(group))}\n`);
           }
         }
         const pointer = i === cursor ? cyan("❯") : " ";
@@ -103,10 +116,14 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
         const label = labelFn(items[i], i);
         const hint = hintFn ? hintFn(items[i], i) : "";
         const line = selected[i] ? label : dim(label);
-        process.stdout.write(`     ${pointer} ${check} ${line}${hint ? "  " + dim(hint) : ""}\n`);
+        write(`     ${pointer} ${check} ${line}${hint ? "  " + dim(hint) : ""}\n`);
       }
-      process.stdout.write("\n");
-      process.stdout.write(
+      write("\n");
+      const shortcutHints = shortcuts
+        .map((s) => white(bold(`[${s.key}]`)) + dim(` ${s.label}`))
+        .join(dim(" · "));
+      const shortcutPart = shortcuts.length > 0 ? shortcutHints + dim(" · ") : "";
+      write(
         dim("   ") +
           white(bold("[↑↓]")) +
           dim(" move · ") +
@@ -114,12 +131,13 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
           dim(" toggle · ") +
           white(bold("[a]")) +
           dim(" all · ") +
+          shortcutPart +
           white(bold("[enter]")) +
           dim(` confirm (${count}/${items.length})`),
       );
     }
 
-    process.stdout.write(HIDE_CURSOR);
+    write(HIDE_CURSOR);
     render();
 
     const { stdin } = process;
@@ -130,14 +148,14 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
     function onData(key) {
       if (key === "\x03") {
         cleanup();
-        process.stdout.write(SHOW_CURSOR + "\n");
+        write(SHOW_CURSOR + "\n");
         process.exit(0);
       }
 
       if (key === "\r" || key === "\n") {
         cleanup();
-        process.stdout.write("\x1b[1A\r\x1b[J");
-        process.stdout.write(SHOW_CURSOR);
+        write("\x1b[1A\r\x1b[J");
+        write(SHOW_CURSOR);
         resolve(items.filter((_, i) => selected[i]));
         return;
       }
@@ -153,6 +171,15 @@ export function multiSelect(items, { labelFn, hintFn, groupFn }) {
         selected.fill(!allSelected);
         render();
         return;
+      }
+
+      for (const shortcut of shortcuts) {
+        if (key === shortcut.key) {
+          const result = shortcut.fn(items);
+          for (let i = 0; i < selected.length; i++) selected[i] = result[i];
+          render();
+          return;
+        }
       }
 
       if (key === "\x1b[A" || key === "k") {

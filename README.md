@@ -34,9 +34,20 @@ That's it. No config needed.
 -h, --help      Show help message
 ```
 
-## Supported technologies
+## Supported Technologies
 
-React · Next.js · Vue · Nuxt · Pinia · Svelte · Angular · Astro · Tailwind CSS · shadcn/ui · TypeScript · Supabase · Neon · Playwright · Expo · React Native · Kotlin Multiplatform · Android · Remotion · Better Auth · Turborepo · Vite · Azure · Vercel · Vercel AI SDK · ElevenLabs · Cloudflare · Durable Objects · Cloudflare Agents · Cloudflare AI · AWS · SwiftUI · oxlint · GSAP · Node.js · Express · Bun · Deno · Prisma · Stripe · Hono · Vitest · Drizzle ORM · NestJS · Tauri
+Built to work across modern frontend, backend, mobile, cloud, and media stacks.
+
+- **Frameworks & UI:** React, Next.js, Vue, Nuxt, Svelte, Angular, Astro, Tailwind CSS, shadcn/ui, GSAP, Three.js
+- **Languages & Runtimes:** TypeScript, Node.js, Bun, Deno
+- **Backend & APIs:** Express, Hono, NestJS, Spring Boot
+- **Mobile & Desktop:** Expo, React Native, SwiftUI, Android, Kotlin Multiplatform, Tauri
+- **Data & Storage:** Supabase, Neon, Prisma, Drizzle ORM
+- **Auth & Billing:** Better Auth, Clerk, Stripe
+- **Testing:** Vitest, Playwright
+- **Cloud & Infrastructure:** Vercel, Vercel AI SDK, Cloudflare, Durable Objects, Cloudflare Agents, Cloudflare AI, AWS, Azure
+- **Tooling:** Turborepo, Vite, oxlint
+- **Media & AI:** Remotion, ElevenLabs
 
 ## Requirements
 

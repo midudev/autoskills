@@ -1,6 +1,6 @@
 {
   "name": "autoskills",
-  "version": "0.2.2",
+  "version": "0.2.4",
   "description": "Auto-detect and install the best AI agent skills for your project",
   "keywords": [
     "agent",
@@ -18,10 +18,10 @@
   "author": "midudev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/midudev/autoskills"
+    "url": "git+https://github.com/midudev/autoskills.git"
   },
   "bin": {
-    "autoskills": "./index.mjs"
+    "autoskills": "index.mjs"
   },
   "files": [
     "index.mjs",
@@ -34,7 +34,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test 'tests/*.test.mjs'",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "bench": "node scripts/bench.mjs"
   },
   "engines": {
     "node": ">=22.0.0"

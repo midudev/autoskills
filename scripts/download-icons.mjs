@@ -68,6 +68,7 @@ const TECHNOLOGIES = [
   "Drizzle ORM",
   "NestJS",
   "Tauri",
+  "Rust",
 ];
 
 function toFilename(name) {

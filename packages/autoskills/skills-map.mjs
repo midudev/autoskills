@@ -226,14 +226,28 @@ export const SKILLS_MAP = [
     id: "clerk",
     name: "Clerk",
     detect: {
-      packages: ["@clerk/nextjs", "@clerk/remix", "@clerk/astro", "@clerk/express", "@clerk/fastify", "@clerk/nuxt", "@clerk/vue", "@clerk/react", "@clerk/expo", "@clerk/tanstack-react-start", "@clerk/react-router", "@clerk/chrome-extension", "@clerk/backend"],
+      packages: [
+        "@clerk/nextjs",
+        "@clerk/remix",
+        "@clerk/astro",
+        "@clerk/express",
+        "@clerk/fastify",
+        "@clerk/nuxt",
+        "@clerk/vue",
+        "@clerk/react",
+        "@clerk/expo",
+        "@clerk/tanstack-react-start",
+        "@clerk/react-router",
+        "@clerk/chrome-extension",
+        "@clerk/backend",
+      ],
       packagePatterns: [/^@clerk\//],
     },
     skills: [
       "clerk/skills/clerk",
       "clerk/skills/clerk-setup",
       "clerk/skills/clerk-custom-ui",
-      "clerk/skills/clerk-nextjs-patterns",
+      "clerk/skills/clerk-backend-api",
       "clerk/skills/clerk-orgs",
       "clerk/skills/clerk-webhooks",
       "clerk/skills/clerk-testing",
@@ -372,7 +386,13 @@ export const SKILLS_MAP = [
     detect: {
       configFiles: ["Package.swift"],
     },
-    skills: ["avdlee/swiftui-agent-skill/swiftui-expert-skill"],
+    skills: [
+      "avdlee/swiftui-agent-skill/swiftui-expert-skill",
+      "avdlee/swift-concurrency-agent-skill",
+      "avdlee/xcode-build-optimization-agent-skill",
+      "avdlee/swift-testing-agent-skill",
+      "avdlee/core-data-agent-skill",
+    ],
   },
   {
     id: "oxlint",
@@ -398,6 +418,33 @@ export const SKILLS_MAP = [
       "greensock/gsap-skills/gsap-utils",
       "greensock/gsap-skills/gsap-frameworks",
     ],
+  },
+  {
+    id: "threejs",
+    name: "Three.js",
+    detect: {
+      packages: ["three"],
+    },
+    skills: [
+      "cloudai-x/threejs-skills/threejs-animation",
+      "cloudai-x/threejs-skills/threejs-fundamentals",
+      "cloudai-x/threejs-skills/threejs-shaders",
+      "cloudai-x/threejs-skills/threejs-geometry",
+      "cloudai-x/threejs-skills/threejs-interaction",
+      "cloudai-x/threejs-skills/threejs-materials",
+      "cloudai-x/threejs-skills/threejs-postprocessing",
+      "cloudai-x/threejs-skills/threejs-lighting",
+      "cloudai-x/threejs-skills/threejs-textures",
+      "cloudai-x/threejs-skills/threejs-loaders",
+    ],
+  },
+  {
+    id: "@react-three/fiber",
+    name: "React Three Fiber",
+    detect: {
+      packages: ["@react-three/fiber"],
+    },
+    skills: [],
   },
   {
     id: "bun",
@@ -566,6 +613,14 @@ export const SKILLS_MAP = [
     skills: ["nodnarbnitram/claude-code-extensions/tauri-v2"],
   },
   {
+    id: "rust",
+    name: "Rust",
+    detect: {
+      configFiles: ["Cargo.toml"],
+    },
+    skills: ["apollographql/skills/rust-best-practices"],
+  },
+  {
     id: "python",
     name: "Python",
     detect: {
@@ -714,7 +769,7 @@ export const SKILLS_MAP = [
     },
     skills: ["affaan-m/everything-claude-code/python-patterns"],
   },
-];
+]
 
 // ── Combo Skills Map (cross-technology) ──────────────────────
 
@@ -786,17 +841,49 @@ export const COMBO_SKILLS_MAP = [
     id: "nextjs-clerk",
     name: "Next.js + Clerk",
     requires: ["nextjs", "clerk"],
-    skills: [
-      "clerk/skills/clerk-nextjs-patterns",
-      "clerk/skills/clerk-setup",
-      "clerk/skills/clerk",
-    ],
+    skills: ["clerk/skills/clerk-nextjs-patterns"],
   },
-];
+  {
+    id: "nuxt-clerk",
+    name: "Nuxt + Clerk",
+    requires: ["nuxt", "clerk"],
+    skills: ["clerk/skills/clerk-nuxt-patterns"],
+  },
+  {
+    id: "vue-clerk",
+    name: "Vue + Clerk",
+    requires: ["vue", "clerk"],
+    skills: ["clerk/skills/clerk-vue-patterns"],
+  },
+  {
+    id: "react-clerk",
+    name: "React + Clerk",
+    requires: ["react", "clerk"],
+    skills: ["clerk/skills/clerk-react-patterns"],
+  },
+  {
+    id: "astro-clerk",
+    name: "Astro + Clerk",
+    requires: ["astro", "clerk"],
+    skills: ["clerk/skills/clerk-astro-patterns"],
+  },
+  {
+    id: "expo-clerk",
+    name: "Expo + Clerk",
+    requires: ["expo", "clerk"],
+    skills: ["clerk/skills/clerk-expo-patterns"],
+  },
+  {
+    id: "react-react-three-fiber",
+    name: "React + React Three Fiber",
+    requires: ["threejs", "react", "@react-three/fiber"],
+    skills: ["vercel-labs/json-render/react-three-fiber"],
+  },
+]
 
 // ── Frontend Detection ────────────────────────────────────────
 
-export const FRONTEND_PACKAGES = [
+export const FRONTEND_PACKAGES = new Set([
   "react",
   "vue",
   "svelte",
@@ -808,13 +895,13 @@ export const FRONTEND_PACKAGES = [
   "preact",
   "nuxt",
   "@sveltejs/kit",
-];
+])
 
 export const FRONTEND_BONUS_SKILLS = [
   "anthropics/skills/frontend-design",
   "addyosmani/web-quality-skills/accessibility",
   "addyosmani/web-quality-skills/seo",
-];
+]
 
 // ── Agent Folder Map ─────────────────────────────────────────
 
@@ -827,6 +914,7 @@ export const AGENT_FOLDER_MAP = {
   ".cursor": "cursor",
   ".cline": "cline",
   ".codex": "codex",
+  ".opencode": "opencode",
   ".antigravity": "antigravity",
   ".augment": "augment",
   ".copilot": "github-copilot",
@@ -836,7 +924,8 @@ export const AGENT_FOLDER_MAP = {
   ".supermaven": "supermaven",
   ".codebuddy": "codebuddy",
   ".continue": "continue",
-};
+  ".kiro": "kiro-cli",
+}
 
 export const WEB_FRONTEND_EXTENSIONS = new Set([
   ".html",
@@ -855,4 +944,4 @@ export const WEB_FRONTEND_EXTENSIONS = new Set([
   ".hbs",
   ".pug",
   ".njk",
-]);
+])

@@ -46,7 +46,7 @@ npx autoskills --dry-run
 
 ## Supported Technologies
 
-`autoskills` detects **46+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:
+`autoskills` detects **49+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:
 
 ### Frameworks & Libraries
 
@@ -65,9 +65,11 @@ npx autoskills --dry-run
 | Android              | Gradle with `com.android.application`, `com.android.library`, or `com.android.kotlin.multiplatform.library`                                       |
 | Remotion             | `remotion`, `@remotion/cli`                                                                                                                       |
 | GSAP                 | `gsap` package                                                                                                                                    |
+| Three.js             | `three`, `@react-three/fiber`, `@react-three/drei`                                                                                                |
 | Express              | `express` package                                                                                                                                 |
 | Hono                 | `hono` package                                                                                                                                    |
 | NestJS               | `@nestjs/core` package                                                                                                                            |
+| Spring Boot          | Gradle with `spring-boot-starter` or `org.springframework.boot`                                                                                   |
 
 ### Styling & UI
 
@@ -99,6 +101,12 @@ npx autoskills --dry-run
 | Drizzle ORM   | `drizzle-orm`, `drizzle-kit`                             |
 | Stripe        | `stripe`, `@stripe/stripe-js`, `@stripe/react-stripe-js` |
 | Better Auth   | `better-auth` package                                    |
+
+### Authentication
+
+| Technology | Detected from                                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| Clerk      | `@clerk/nextjs`, `@clerk/react`, `@clerk/expo`, `@clerk/astro`, `@clerk/remix`, `@clerk/vue`, or any `@clerk/*` scope |
 
 ### Cloud & Deploy
 

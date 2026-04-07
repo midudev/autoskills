@@ -49,14 +49,9 @@ function fail(msg) {
  */
 function bumpVersion(version, type) {
   const [major, minor, patch] = version.split(".").map(Number);
-  switch (type) {
-    case "major":
-      return `${major + 1}.0.0`;
-    case "minor":
-      return `${major}.${minor + 1}.0`;
-    case "patch":
-      return `${major}.${minor}.${patch + 1}`;
-  }
+  if (type === "major") return `${major + 1}.0.0`;
+  if (type === "minor") return `${major}.${minor + 1}.0`;
+  if (type === "patch") return `${major}.${minor}.${patch + 1}`;
 }
 
 /**
@@ -313,7 +308,19 @@ try {
 
   // 7. Publish to npm
   console.log("\n🚀 Publicando en npm...");
-  runVisible("npm publish --access public");
+  const cleanEnv = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([k]) =>
+        !k.startsWith("npm_config_") ||
+        k === "npm_config_registry" ||
+        k.startsWith("npm_config_//"),
+    ),
+  );
+  execSync("npm publish --access public", {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: cleanEnv,
+  });
 
   // 8. Push to GitHub
   console.log("\n📤 Pusheando a GitHub...");
@@ -337,7 +344,7 @@ try {
     { cwd: ROOT },
   );
   console.log(`✅ Release v${newVersion} creada en GitHub`);
-} catch (e) {
+} catch {
   console.warn(`⚠️  No se pudo crear la release en GitHub (¿tienes gh instalado y autenticado?)`);
   console.warn(`   Puedes crearla manualmente: ${repoUrl}/releases/new?tag=v${newVersion}`);
 } finally {
