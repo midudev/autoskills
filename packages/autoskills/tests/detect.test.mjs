@@ -139,6 +139,35 @@ describe("detectTechnologies", () => {
     ok(ids.includes("tailwind"));
   });
 
+  it("detects Go from go.mod", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
+
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+
+    ok(ids.includes("go"));
+  });
+
+  it("detects Go from go.work", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "go.work", "go 1.24.0\n");
+
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+
+    ok(ids.includes("go"));
+  });
+
+  it("does not detect Go without go.mod or go.work", () => {
+    writePackageJson(tmp.path);
+
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+
+    ok(!ids.includes("go"));
+  });
+
   it("detects Three.js from dependencies", () => {
     writePackageJson(tmp.path, { dependencies: { three: "^0.173.0" } });
     const { detected } = detectTechnologies(tmp.path);
@@ -480,6 +509,220 @@ plugins {
     ok(clerk.skills.includes("clerk/skills/clerk-testing"));
   });
 
+  it("detects React Router from react-router package", () => {
+    writePackageJson(tmp.path, { dependencies: { "react-router": "^7.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "react-router"));
+  });
+
+  it("detects React Router from @react-router/node package", () => {
+    writePackageJson(tmp.path, { dependencies: { "@react-router/node": "^7.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "react-router"));
+  });
+
+  it("detects React Router from @react-router/dev devDependency", () => {
+    writePackageJson(tmp.path, { devDependencies: { "@react-router/dev": "^7.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "react-router"));
+  });
+
+  it("detects TanStack Start from @tanstack/react-start package", () => {
+    writePackageJson(tmp.path, { dependencies: { "@tanstack/react-start": "^1.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "tanstack-start"));
+  });
+
+  it("detects TanStack Start from @tanstack/start package", () => {
+    writePackageJson(tmp.path, { dependencies: { "@tanstack/start": "^1.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "tanstack-start"));
+  });
+
+  it("returns correct skills for TanStack Start detection", () => {
+    writePackageJson(tmp.path, { dependencies: { "@tanstack/react-start": "^1.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const tanstack = detected.find((t) => t.id === "tanstack-start");
+    ok(tanstack);
+    ok(tanstack.skills.includes("tanstack-skills/tanstack-skills/tanstack-start"));
+  });
+
+  it("detects PHP from composer.json", () => {
+    writeFile(tmp.path, "composer.json", JSON.stringify({ require: { php: ">=8.2" } }));
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "php"));
+  });
+
+  it("detects PHP from composer.lock", () => {
+    writeFile(tmp.path, "composer.lock", JSON.stringify({ packages: [] }));
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "php"));
+  });
+
+  it("returns correct skills for PHP detection", () => {
+    writeFile(tmp.path, "composer.json", JSON.stringify({ require: { php: ">=8.2" } }));
+    const { detected } = detectTechnologies(tmp.path);
+    const php = detected.find((t) => t.id === "php");
+    ok(php);
+    ok(php.skills.includes("jeffallan/claude-skills/php-pro"));
+  });
+
+  it("does not detect PHP without composer files", () => {
+    writePackageJson(tmp.path, { dependencies: { express: "^4.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "php"));
+  });
+
+  it("detects Chrome Extension from manifest.json with manifest_version", () => {
+    writeFile(
+      tmp.path,
+      "manifest.json",
+      JSON.stringify({ manifest_version: 3, name: "My Extension", version: "1.0" }),
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "chrome-extension"));
+  });
+
+  it("does not detect Chrome Extension from manifest.json without manifest_version", () => {
+    writeFile(
+      tmp.path,
+      "manifest.json",
+      JSON.stringify({ name: "My PWA", short_name: "PWA", start_url: "/" }),
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "chrome-extension"));
+  });
+
+  it("detects Clerk from Package.swift with clerk-ios dependency", () => {
+    writeFile(
+      tmp.path,
+      "Package.swift",
+      `
+import PackageDescription
+let package = Package(
+  name: "MyApp",
+  dependencies: [
+    .package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0"),
+  ]
+)
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "clerk"));
+  });
+
+  it("detects Clerk from Package.swift with ClerkSDK import", () => {
+    writeFile(
+      tmp.path,
+      "Package.swift",
+      `
+import PackageDescription
+let package = Package(
+  name: "MyApp",
+  dependencies: [
+    .package(url: "https://github.com/example/ClerkSDK", from: "2.0.0"),
+  ]
+)
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "clerk"));
+  });
+
+  it("does not detect Clerk from Package.swift without Clerk references", () => {
+    writeFile(
+      tmp.path,
+      "Package.swift",
+      `
+import PackageDescription
+let package = Package(
+  name: "MyApp",
+  dependencies: [
+    .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
+  ]
+)
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "clerk"));
+  });
+
+  it("detects Clerk from Gradle with com.clerk dependency", () => {
+    writePackageJson(tmp.path);
+    writeFile(
+      tmp.path,
+      "app/build.gradle.kts",
+      `
+plugins {
+  id("com.android.application")
+}
+dependencies {
+  implementation("com.clerk:clerk-android:1.0.0")
+}
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "clerk"));
+  });
+
+  it("does not detect Clerk from Gradle without com.clerk", () => {
+    writePackageJson(tmp.path);
+    writeFile(
+      tmp.path,
+      "app/build.gradle.kts",
+      `
+plugins {
+  id("com.android.application")
+}
+dependencies {
+  implementation("com.google.firebase:firebase-auth:22.0.0")
+}
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "clerk"));
+  });
+
+  it("detects both SwiftUI and Clerk from a Swift project with Clerk", () => {
+    writeFile(
+      tmp.path,
+      "Package.swift",
+      `
+import PackageDescription
+let package = Package(
+  name: "MySwiftApp",
+  dependencies: [
+    .package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0"),
+  ]
+)
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("swiftui"));
+    ok(ids.includes("clerk"));
+  });
+
+  it("detects both Android and Clerk from an Android project with Clerk", () => {
+    writePackageJson(tmp.path);
+    writeFile(
+      tmp.path,
+      "app/build.gradle.kts",
+      `
+plugins {
+  id("com.android.application")
+}
+dependencies {
+  implementation("com.clerk:clerk-android:1.0.0")
+}
+`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("android"));
+    ok(ids.includes("clerk"));
+  });
+
   it("detects React from deno.json npm: import", () => {
     writeJson(tmp.path, "deno.json", {
       imports: { react: "npm:react@^19", "react-dom": "npm:react-dom@^19" },
@@ -516,6 +759,104 @@ plugins {
     const ids = detected.map((t) => t.id);
     ok(ids.includes("nextjs"));
     ok(ids.includes("react"));
+  });
+
+  it("detects react-router-clerk combo end-to-end", () => {
+    writePackageJson(tmp.path, {
+      dependencies: { "react-router": "^7.0.0", "@clerk/react-router": "^1.0.0" },
+    });
+    const { combos } = detectTechnologies(tmp.path);
+    ok(combos.some((c) => c.id === "react-router-clerk"));
+  });
+
+  it("detects tanstack-clerk combo end-to-end", () => {
+    writePackageJson(tmp.path, {
+      dependencies: { "@tanstack/react-start": "^1.0.0", "@clerk/tanstack-react-start": "^1.0.0" },
+    });
+    const { combos } = detectTechnologies(tmp.path);
+    ok(combos.some((c) => c.id === "tanstack-clerk"));
+  });
+
+  it("detects chrome-extension-clerk combo end-to-end", () => {
+    writePackageJson(tmp.path, { dependencies: { "@clerk/chrome-extension": "^1.0.0" } });
+    writeFile(
+      tmp.path,
+      "manifest.json",
+      JSON.stringify({ manifest_version: 3, name: "Ext", version: "1.0" }),
+    );
+    const { combos } = detectTechnologies(tmp.path);
+    ok(combos.some((c) => c.id === "chrome-extension-clerk"));
+  });
+
+  it("detects swiftui-clerk combo end-to-end", () => {
+    writeFile(
+      tmp.path,
+      "Package.swift",
+      'dependencies: [.package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0")]',
+    );
+    const { detected, combos } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("swiftui"));
+    ok(ids.includes("clerk"));
+    ok(combos.some((c) => c.id === "swiftui-clerk"));
+  });
+
+  it("detects android-clerk combo end-to-end", () => {
+    writePackageJson(tmp.path);
+    writeFile(
+      tmp.path,
+      "app/build.gradle.kts",
+      `
+plugins { id("com.android.application") }
+dependencies { implementation("com.clerk:clerk-android:1.0.0") }
+`,
+    );
+    const { detected, combos } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("android"));
+    ok(ids.includes("clerk"));
+    ok(combos.some((c) => c.id === "android-clerk"));
+  });
+
+  it("detects Terraform from .terraform.lock.hcl", () => {
+    writeFile(tmp.path, ".terraform.lock.hcl", "# This file is maintained automatically by terraform");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "terraform"));
+  });
+
+  it("detects Terraform from terraform.tfvars", () => {
+    writeFile(tmp.path, "terraform.tfvars", 'region = "us-east-1"');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "terraform"));
+  });
+
+  it("detects Terraform from main.tf", () => {
+    writeFile(tmp.path, "main.tf", 'terraform {\n  required_version = ">= 1.0"\n}');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "terraform"));
+  });
+
+  it("detects Terraform from variables.tf", () => {
+    writeFile(tmp.path, "variables.tf", 'variable "region" {\n  type = string\n}');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "terraform"));
+  });
+
+  it("detects Terraform from outputs.tf", () => {
+    writeFile(tmp.path, "outputs.tf", 'output "vpc_id" {\n  value = aws_vpc.main.id\n}');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "terraform"));
+  });
+
+  it("returns correct skills for Terraform detection", () => {
+    writeFile(tmp.path, ".terraform.lock.hcl", "# terraform lock file");
+    const { detected } = detectTechnologies(tmp.path);
+    const terraform = detected.find((t) => t.id === "terraform");
+    ok(terraform);
+    ok(terraform.skills.includes("hashicorp/agent-skills/terraform-style-guide"));
+    ok(terraform.skills.includes("hashicorp/agent-skills/refactor-module"));
+    ok(terraform.skills.includes("hashicorp/agent-skills/terraform-stacks"));
+    ok(terraform.skills.includes("wshobson/agents/terraform-module-library"));
   });
 });
 
@@ -786,5 +1127,55 @@ describe("detectCombos", () => {
   it("does not detect nextjs-clerk combo without clerk", () => {
     const combos = detectCombos(["nextjs"]);
     ok(!combos.some((c) => c.id === "nextjs-clerk"));
+  });
+
+  it("detects react-router-clerk combo", () => {
+    const combos = detectCombos(["react-router", "clerk"]);
+    ok(combos.some((c) => c.id === "react-router-clerk"));
+  });
+
+  it("does not detect react-router-clerk combo without clerk", () => {
+    const combos = detectCombos(["react-router"]);
+    ok(!combos.some((c) => c.id === "react-router-clerk"));
+  });
+
+  it("detects tanstack-clerk combo", () => {
+    const combos = detectCombos(["tanstack-start", "clerk"]);
+    ok(combos.some((c) => c.id === "tanstack-clerk"));
+  });
+
+  it("does not detect tanstack-clerk combo without tanstack-start", () => {
+    const combos = detectCombos(["clerk"]);
+    ok(!combos.some((c) => c.id === "tanstack-clerk"));
+  });
+
+  it("detects chrome-extension-clerk combo", () => {
+    const combos = detectCombos(["chrome-extension", "clerk"]);
+    ok(combos.some((c) => c.id === "chrome-extension-clerk"));
+  });
+
+  it("does not detect chrome-extension-clerk combo without chrome-extension", () => {
+    const combos = detectCombos(["clerk"]);
+    ok(!combos.some((c) => c.id === "chrome-extension-clerk"));
+  });
+
+  it("detects swiftui-clerk combo", () => {
+    const combos = detectCombos(["swiftui", "clerk"]);
+    ok(combos.some((c) => c.id === "swiftui-clerk"));
+  });
+
+  it("does not detect swiftui-clerk combo without clerk", () => {
+    const combos = detectCombos(["swiftui"]);
+    ok(!combos.some((c) => c.id === "swiftui-clerk"));
+  });
+
+  it("detects android-clerk combo", () => {
+    const combos = detectCombos(["android", "clerk"]);
+    ok(combos.some((c) => c.id === "android-clerk"));
+  });
+
+  it("does not detect android-clerk combo without clerk", () => {
+    const combos = detectCombos(["android"]);
+    ok(!combos.some((c) => c.id === "android-clerk"));
   });
 });

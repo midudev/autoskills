@@ -22,6 +22,7 @@ That's it. It will:
 2. **Detect** every technology in your stack
 3. **Show** an interactive selector with the best skills for your project
 4. **Install** them in parallel with live progress
+5. **Generate `CLAUDE.md` automatically** when Claude Code is one of the target agents
 
 ### Skip the prompt
 
@@ -35,6 +36,10 @@ npx autoskills -y
 npx autoskills --dry-run
 ```
 
+### Claude Code summary
+
+If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CLAUDE.md` file in your project root summarizing the markdown files installed under `.claude/skills`.
+
 ## Options
 
 | Flag              | Description                                           |
@@ -47,7 +52,7 @@ npx autoskills --dry-run
 
 ## Supported Technologies
 
-`autoskills` detects **49+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:
+`autoskills` detects **50+ technologies** from your `package.json`, lockfiles, Gradle files, and config files:
 
 ### Frameworks & Libraries
 
@@ -87,6 +92,7 @@ npx autoskills --dry-run
 | Node.js    | `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `.nvmrc` |
 | Bun        | `bun.lockb`, `bun.lock`, `bunfig.toml`                       |
 | Deno       | `deno.json`, `deno.jsonc`, `deno.lock`                       |
+| Go         | `go.mod`, `go.work`                                          |
 | Vite       | `vite` package or `vite.config.*`                            |
 | Turborepo  | `turbo` package or `turbo.json`                              |
 | Vitest     | `vitest` package or `vitest.config.*`                        |

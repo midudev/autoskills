@@ -21,6 +21,7 @@ import {
 } from "./colors.mjs"
 import { printBanner, multiSelect, formatTime } from "./ui.mjs"
 import { installAll, resolveSkillsBin } from "./installer.mjs"
+import { shouldGenerateClaudeMd, generateClaudeMd } from "./claude.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const VERSION = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf-8")).version
@@ -355,6 +356,9 @@ async function main() {
   if (dryRun) {
     printSkillsList(skills)
     log(dim(`   Agents: ${resolvedAgents.join(", ")}`))
+    if (shouldGenerateClaudeMd(resolvedAgents)) {
+      log(dim("   Claude Code detected: `CLAUDE.md` will be generated after install."))
+    }
     log(dim("   --dry-run: nothing was installed."))
     log()
     process.exit(0)
@@ -396,6 +400,11 @@ async function main() {
   const startTime = Date.now()
   const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents)
   const elapsed = Date.now() - startTime
+  let claudeSummary = null
+
+  if (shouldGenerateClaudeMd(resolvedAgents) && installed > 0) {
+    claudeSummary = generateClaudeMd(projectDir)
+  }
 
   if (process.stdout.isTTY) {
     const up = selectedSkills.length + 2
@@ -405,6 +414,16 @@ async function main() {
   }
 
   printSummary({ installed, failed, errors, elapsed, verbose })
+
+  if (shouldGenerateClaudeMd(resolvedAgents)) {
+    if (claudeSummary?.generated) {
+      log(dim(`   Claude Code summary written to CLAUDE.md (${claudeSummary.files} markdown files).`))
+      log()
+    } else {
+      log(dim("   Claude Code detected, but no markdown files were found under .claude/skills."))
+      log()
+    }
+  }
 }
 
 main().catch((err) => {
