@@ -310,6 +310,20 @@ describe("CLI", () => {
       ok(output.includes("nodejs-express-server"));
     });
 
+    it("shows Go curated skills in declared order", () => {
+      writePackageJson(tmp.path);
+      writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
+
+      const output = run(["--dry-run"], tmp.path);
+
+      ok(output.includes("Go"));
+      ok(output.includes("golang-patterns"));
+      ok(output.includes("golang-testing"));
+      ok(output.indexOf("golang-patterns") < output.indexOf("golang-testing"));
+      ok(!output.includes("No skills available for your stack yet."));
+      ok(output.includes("nothing was installed"));
+    });
+
     it("detects WordPress from wp-config.php", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "wp-config.php", "<?php // WP config");

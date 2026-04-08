@@ -1,10 +1,12 @@
 import { describe, it } from "node:test";
 import { ok, strictEqual, deepStrictEqual, throws } from "node:assert/strict";
-import { collectSkills, getInstalledSkillNames } from "../lib.mjs";
+import { collectSkills, detectTechnologies, getInstalledSkillNames } from "../lib.mjs";
 import { multiSelect } from "../ui.mjs";
-import { useTmpDir, writeJson, writeFile } from "./helpers.mjs";
+import { useTmpDir, writeJson, writeFile, writePackageJson } from "./helpers.mjs";
 
 describe("collectSkills", () => {
+  const tmp = useTmpDir();
+
   it("returns empty array when no technologies detected", () => {
     const skills = collectSkills({ detected: [], isFrontend: false });
     deepStrictEqual(skills, []);
@@ -66,6 +68,28 @@ describe("collectSkills", () => {
     strictEqual(skills.length, 2);
     strictEqual(skills[0].skill, "hyf0/vue-skills/vue-best-practices");
     strictEqual(skills[1].skill, "antfu/skills/vue");
+  });
+
+  it("collects Go curated skills in declared order", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
+
+    const { detected } = detectTechnologies(tmp.path);
+    const skills = collectSkills({ detected, isFrontend: false });
+
+    deepStrictEqual(
+      skills.slice(0, 2).map(({ skill, sources }) => ({ skill, sources })),
+      [
+        {
+          skill: "affaan-m/everything-claude-code/golang-patterns",
+          sources: ["Go"],
+        },
+        {
+          skill: "affaan-m/everything-claude-code/golang-testing",
+          sources: ["Go"],
+        },
+      ],
+    );
   });
 
   it("adds frontend bonus skills for frontend projects", () => {

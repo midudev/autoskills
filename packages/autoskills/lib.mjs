@@ -38,6 +38,7 @@ const SCAN_SKIP_DIRS = new Set([
   ".cache",
   "coverage",
   ".turbo",
+  ".terraform",
   "var",
 ]);
 
@@ -383,16 +384,21 @@ function detectTechnologiesInDir(
     }
 
     if (!found && tech.detect.configFileContent) {
-      const cfg = tech.detect.configFileContent;
-      const paths = resolveConfigFileContentPaths(dir, cfg);
-      const { patterns } = cfg;
-      for (const filePath of paths) {
-        const content = cachedRead(filePath);
-        if (content === null) continue;
-        if (patterns.some((p) => content.includes(p))) {
-          found = true;
-          break;
+      const configs = Array.isArray(tech.detect.configFileContent)
+        ? tech.detect.configFileContent
+        : [tech.detect.configFileContent];
+      for (const cfg of configs) {
+        const paths = resolveConfigFileContentPaths(dir, cfg);
+        const { patterns } = cfg;
+        for (const filePath of paths) {
+          const content = cachedRead(filePath);
+          if (content === null) continue;
+          if (patterns.some((p) => content.includes(p))) {
+            found = true;
+            break;
+          }
         }
+        if (found) break;
       }
     }
 
