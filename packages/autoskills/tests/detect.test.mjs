@@ -819,7 +819,11 @@ dependencies { implementation("com.clerk:clerk-android:1.0.0") }
   });
 
   it("detects Terraform from .terraform.lock.hcl", () => {
-    writeFile(tmp.path, ".terraform.lock.hcl", "# This file is maintained automatically by terraform");
+    writeFile(
+      tmp.path,
+      ".terraform.lock.hcl",
+      "# This file is maintained automatically by terraform",
+    );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "terraform"));
   });
