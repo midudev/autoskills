@@ -478,61 +478,59 @@ plugins {
   });
 
   it("detects Python from pyproject.toml", () => {
-    writeFileSync(join(tmpDir, "pyproject.toml"), '[tool.poetry]\nname = "test"');
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "python"));
+    writeFile(tmp.path, "pyproject.toml", '[tool.poetry]\nname = "test"');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
   });
 
   it("detects Python from requirements.txt", () => {
-    writeFileSync(join(tmpDir, "requirements.txt"), "requests==2.31.0");
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "python"));
+    writeFile(tmp.path, "requirements.txt", "requests==2.31.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python"));
   });
 
   it("detects FastAPI from requirements.txt", () => {
-    writeFileSync(join(tmpDir, "requirements.txt"), "fastapi==0.100.0\npydantic==2.0.0");
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "fastapi"));
-    assert.ok(detected.some((t) => t.id === "pydantic"));
+    writeFile(tmp.path, "requirements.txt", "fastapi==0.100.0\npydantic==2.0.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "fastapi"));
+    ok(detected.some((t) => t.id === "pydantic"));
   });
 
   it("detects Django from pyproject.toml", () => {
-    writeFileSync(join(tmpDir, "pyproject.toml"), '[tool.poetry.dependencies]\nDjango = "^5.0"');
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "django"));
+    writeFile(tmp.path, "pyproject.toml", '[tool.poetry.dependencies]\nDjango = "^5.0"');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "django"));
   });
 
   it("detects Flask from requirements.txt", () => {
-    writeFileSync(join(tmpDir, "requirements.txt"), "Flask>=2.0.0");
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "flask"));
+    writeFile(tmp.path, "requirements.txt", "Flask>=2.0.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "flask"));
   });
 
   it("detects SQLAlchemy from requirements.txt", () => {
-    writeFileSync(join(tmpDir, "requirements.txt"), "SQLAlchemy==2.0.19");
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "sqlalchemy"));
+    writeFile(tmp.path, "requirements.txt", "SQLAlchemy==2.0.19");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "sqlalchemy"));
   });
 
   it("detects Data Science stack (Pandas, NumPy, Scikit-Learn)", () => {
-    writeFileSync(
-      join(tmpDir, "requirements.txt"),
-      "pandas>=2.0\nnumpy==1.26.0\nscikit-learn==1.3.0",
-    );
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "pandas"));
-    assert.ok(detected.some((t) => t.id === "numpy"));
-    assert.ok(detected.some((t) => t.id === "scikit-learn"));
+    writeFile(tmp.path, "requirements.txt", "pandas>=2.0\nnumpy==1.26.0\nscikit-learn==1.3.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "pandas"));
+    ok(detected.some((t) => t.id === "numpy"));
+    ok(detected.some((t) => t.id === "scikit-learn"));
   });
 
   it("detects Pytest and Celery from pyproject.toml", () => {
-    writeFileSync(
-      join(tmpDir, "pyproject.toml"),
+    writeFile(
+      tmp.path,
+      "pyproject.toml",
       '[tool.poetry.dependencies]\npytest = "^7.0"\ncelery = "^5.3"',
     );
-    const { detected } = detectTechnologies(tmpDir);
-    assert.ok(detected.some((t) => t.id === "pytest"));
-    assert.ok(detected.some((t) => t.id === "celery"));
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "pytest"));
+    ok(detected.some((t) => t.id === "celery"));
   });
 
   it("detects Clerk from @clerk/nextjs package", () => {
