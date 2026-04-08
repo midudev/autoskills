@@ -170,6 +170,29 @@ export const SKILLS_MAP = [
     skills: ["sleekdotdesign/agent-skills/sleek-design-mobile-apps"],
   },
   {
+    id: "dart",
+    name: "Dart",
+    detect: {
+      configFiles: ["pubspec.yaml"],
+    },
+    skills: ["kevmoo/dash_skills/dart-best-practices"],
+  },
+  {
+    id: "flutter",
+    name: "Flutter",
+    detect: {
+      configFileContent: {
+        patterns: ["flutter:"],
+        files: ["pubspec.yaml"],
+      },
+    },
+    skills: [
+      "jeffallan/claude-skills/flutter-expert",
+      "madteacher/mad-agents-skills/flutter-animations",
+      "madteacher/mad-agents-skills/flutter-testing",
+    ],
+  },
+  {
     id: "kotlin-multiplatform",
     name: "Kotlin Multiplatform",
     detect: {

@@ -66,6 +66,8 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | Astro                | `astro` package or `astro.config.*`                                                                                                               |
 | Expo                 | `expo` package                                                                                                                                    |
 | React Native         | `react-native` package                                                                                                                            |
+| Dart                 | `pubspec.yaml` file                                                                                                                              |
+| Flutter              | `pubspec.yaml` file with `flutter:` dependencies                                                                                                  |
 | Kotlin Multiplatform | Gradle with KMP plugin: `kotlin("multiplatform")`, `org.jetbrains.kotlin.multiplatform`, or `kotlin-multiplatform` in `gradle/libs.versions.toml` |
 | Android              | Gradle with `com.android.application`, `com.android.library`, or `com.android.kotlin.multiplatform.library`                                       |
 | Remotion             | `remotion`, `@remotion/cli`                                                                                                                       |
