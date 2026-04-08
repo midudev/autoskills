@@ -394,7 +394,9 @@ async function main() {
 
   if (shouldGenerateClaudeMd(resolvedAgents)) {
     if (claudeSummary?.generated) {
-      log(dim(`   Claude Code summary written to CLAUDE.md (${claudeSummary.files} markdown files).`));
+      log(
+        dim(`   Claude Code summary written to CLAUDE.md (${claudeSummary.files} markdown files).`),
+      );
       log();
     } else {
       log(dim("   Claude Code detected, but no markdown files were found under .claude/skills."));
