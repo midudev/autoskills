@@ -723,15 +723,13 @@ dependencies {
     ok(ids.includes("clerk"));
   });
 
-  it("detects Dart from pubspec.yaml", () => {
-    writePackageJson(tmp.path);
+  it("detects Dart from pubspec.yaml without package.json", () => {
     writeFile(tmp.path, "pubspec.yaml", "name: dart_app\ndescription: A Dart CLI tool\nenvironment:\n  sdk: '^3.2.0'");
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "dart"));
   });
 
   it("returns correct skills for Dart detection", () => {
-    writePackageJson(tmp.path);
     writeFile(tmp.path, "pubspec.yaml", "name: dart_app\ndescription: A Dart application");
     const { detected } = detectTechnologies(tmp.path);
     const dart = detected.find((t) => t.id === "dart");
@@ -740,14 +738,12 @@ dependencies {
   });
 
   it("detects Flutter from pubspec.yaml with flutter: key", () => {
-    writePackageJson(tmp.path);
     writeFile(tmp.path, "pubspec.yaml", "name: flutter_app\ndescription: A Flutter application\nflutter:\n  uses-material-design: true");
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "flutter"));
   });
 
   it("returns correct skills for Flutter detection", () => {
-    writePackageJson(tmp.path);
     writeFile(tmp.path, "pubspec.yaml", "name: flutter_app\nflutter:\n  uses-material-design: true");
     const { detected } = detectTechnologies(tmp.path);
     const flutter = detected.find((t) => t.id === "flutter");
@@ -758,7 +754,6 @@ dependencies {
   });
 
   it("detects both Dart and Flutter for Flutter projects", () => {
-    writePackageJson(tmp.path);
     writeFile(tmp.path, "pubspec.yaml", "name: flutter_app\nenvironment:\n  sdk: '^3.2.0'\nflutter:\n  uses-material-design: true");
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
@@ -767,7 +762,6 @@ dependencies {
   });
 
   it("detects only Dart when pubspec.yaml has no flutter: key", () => {
-    writePackageJson(tmp.path);
     writeFile(tmp.path, "pubspec.yaml", "name: dart_cli\ndescription: A Dart CLI tool\nenvironment:\n  sdk: '^3.2.0'\ndependencies:\n  args: ^2.4.0");
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
