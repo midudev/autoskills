@@ -46,7 +46,7 @@ Built to work across modern frontend, backend, mobile, cloud, and media stacks.
 - **Frameworks & UI:** React, Next.js, Vue, Nuxt, Svelte, Angular, Astro, Tailwind CSS, shadcn/ui, GSAP, Three.js
 - **Languages & Runtimes:** TypeScript, Node.js, Go, Bun, Deno
 - **Backend & APIs:** Express, Hono, NestJS, Spring Boot
-- **Mobile & Desktop:** Expo, React Native, SwiftUI, Android, Kotlin Multiplatform, Tauri
+- **Mobile & Desktop:** Expo, React Native, SwiftUI, Android, Kotlin Multiplatform, Tauri, Electron
 - **Data & Storage:** Supabase, Neon, Prisma, Drizzle ORM
 - **Auth & Billing:** Better Auth, Clerk, Stripe
 - **Testing:** Vitest, Playwright

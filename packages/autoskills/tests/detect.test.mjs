@@ -463,6 +463,33 @@ plugins {
     ok(detected.some((t) => t.id === "tauri"));
   });
 
+  it("detects Electron from electron package", () => {
+    writePackageJson(tmp.path, { devDependencies: { electron: "^30.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "electron"));
+  });
+
+  it("detects Electron from electron-builder config file", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "electron-builder.yml", "productName: My App");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "electron"));
+  });
+
+  it("detects Electron from forge config file", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "forge.config.js", "module.exports = {}");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "electron"));
+  });
+
+  it("detects Electron from electron-vite config file", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "electron-vite.config.ts", "export default {}");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "electron"));
+  });
+
   it("detects Rust from Cargo.toml", () => {
     writeFile(tmp.path, "Cargo.toml", '[package]\nname = "my-crate"\nversion = "0.1.0"');
     const { detected } = detectTechnologies(tmp.path);

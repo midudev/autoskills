@@ -680,6 +680,27 @@ export const SKILLS_MAP = [
     skills: ["nodnarbnitram/claude-code-extensions/tauri-v2"],
   },
   {
+    id: "electron",
+    name: "Electron",
+    detect: {
+      packages: ["electron"],
+      configFiles: [
+        "electron-builder.yml",
+        "electron-builder.json",
+        "electron-builder.js",
+        "forge.config.js",
+        "forge.config.cjs",
+        "forge.config.mjs",
+        "forge.config.ts",
+        "electron-vite.config.ts",
+        "electron-vite.config.js",
+        "electron-vite.config.mjs",
+        "electron-vite.config.cjs",
+      ],
+    },
+    skills: ["vercel-labs/agent-skills/electron-best-practices"],
+  },
+  {
     id: "rust",
     name: "Rust",
     detect: {
