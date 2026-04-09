@@ -1262,6 +1262,17 @@ export const AGENT_FOLDER_MAP = {
   ".kiro": "kiro-cli",
 };
 
+/**
+ * Backend-only stacks whose .html/.css files are server-side templates or
+ * static assets, not a frontend application. Skipping frontend detection for
+ * these avoids misclassifying e.g. Flask or Django projects as frontend.
+ *
+ * Trade-off: causes a false negative when one of these backends is paired
+ * with a vanilla frontend directory (no package.json). Accepted because the
+ * inverse case is significantly more common. Extend this set when adding
+ * backend languages whose templates match WEB_FRONTEND_EXTENSIONS (e.g. Go,
+ * PHP, server-side Node).
+ */
 export const BACKEND_ONLY_IDS = new Set(["python", "java", "springboot", "django", "flask", "fastapi"]);
 
 export const WEB_FRONTEND_EXTENSIONS = new Set([

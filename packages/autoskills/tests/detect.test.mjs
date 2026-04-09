@@ -268,6 +268,13 @@ describe("detectTechnologies", () => {
     strictEqual(isFrontend, false);
   });
 
+  it("detects frontend from .html files when no backend stack is present", () => {
+    writeFile(tmp.path, "index.html", "<!DOCTYPE html><html></html>");
+    writeFile(tmp.path, "style.css", "body { margin: 0 }");
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, true);
+  });
+
   it("detects combos when multiple technologies match", () => {
     writePackageJson(tmp.path, { dependencies: { expo: "^52.0.0", tailwindcss: "^4.0.0" } });
     const { combos } = detectTechnologies(tmp.path);
