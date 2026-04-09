@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.2.6](git+https://github.com/midudev/autoskills/releases/tag/v0.2.6) (2026-04-09)
+
+### ✨ Features
+
+- feat: show structured error details in install summary [`64ed941`](git+https://github.com/midudev/autoskills/commit/64ed941)
+- feat: add Laravel detection with multi-signal approach [`cc4f7c2`](git+https://github.com/midudev/autoskills/commit/cc4f7c2)
+- feat(autoskills): add Python ecosystem technology detection (#17) [`323edbf`](git+https://github.com/midudev/autoskills/commit/323edbf)
+- feat: add Electron project detection (#74) [`1d5bd1f`](git+https://github.com/midudev/autoskills/commit/1d5bd1f)
+- feat: agregar detección de tecnologías y skills para proyectos Ruby on Rails [`0987c24`](git+https://github.com/midudev/autoskills/commit/0987c24)
+- feat(detect): add Dart and Flutter project detection (#70) [`7b5b2b3`](git+https://github.com/midudev/autoskills/commit/7b5b2b3)
+- feat: generate CLAUDE.md summary for Claude Code installs (#61) [`60e8db8`](git+https://github.com/midudev/autoskills/commit/60e8db8)
+- feat(detect): expand technology signals and combo mappings [`815f25f`](git+https://github.com/midudev/autoskills/commit/815f25f)
+- feat(clerk): add new skills and framework combos [`ae23db2`](git+https://github.com/midudev/autoskills/commit/ae23db2)
+- feat: add Rust technology detection from Cargo.toml [`0253ec4`](git+https://github.com/midudev/autoskills/commit/0253ec4)
+- feat: add Go curated skills [`2be15ab`](git+https://github.com/midudev/autoskills/commit/2be15ab)
+- feat: detect Go projects [`b7a43e8`](git+https://github.com/midudev/autoskills/commit/b7a43e8)
+
+### 🐛 Bug Fixes
+
+- fix: remove unused variable in claude.ts [`447b954`](git+https://github.com/midudev/autoskills/commit/447b954)
+- fix: improve Gradle module parsing and update Laravel detection [`ff792ee`](git+https://github.com/midudev/autoskills/commit/ff792ee)
+- fix: format code for better readability in collectMarkdownFiles and test cases [`7371088`](git+https://github.com/midudev/autoskills/commit/7371088)
+- fix: handle escape sequences and batched input in multiSelect [`2c4b7fd`](git+https://github.com/midudev/autoskills/commit/2c4b7fd)
+- fix: improve CLAUDE.md generation with symlink support and frontmatter parsing [`c661ed3`](git+https://github.com/midudev/autoskills/commit/c661ed3)
+- fix: use delimited sections in CLAUDE.md to preserve user content [`55d4d05`](git+https://github.com/midudev/autoskills/commit/55d4d05)
+- fix: detect technologies in Gradle multi-module projects via settings.gradle (#26) [`286494c`](git+https://github.com/midudev/autoskills/commit/286494c)
+
+### 📦 Other Changes
+
+- refactor: migrate autoskills package from .mjs to TypeScript [`1885540`](git+https://github.com/midudev/autoskills/commit/1885540)
+- Merge pull request #57 from oscaruiz/fix/26-gradle-multimodule-detection [`9f1330f`](git+https://github.com/midudev/autoskills/commit/9f1330f)
+- refactor: apply review improvements to Ruby/Rails detection [`027d3e9`](git+https://github.com/midudev/autoskills/commit/027d3e9)
+- chore: bump version to 0.2.5 [`c51559b`](git+https://github.com/midudev/autoskills/commit/c51559b)
+- chore: format (#66) [`4fc16a4`](git+https://github.com/midudev/autoskills/commit/4fc16a4)
+- Merge branch 'main' into feat/go-support [`c4b7526`](git+https://github.com/midudev/autoskills/commit/c4b7526)
+- terraform detection and skills added [`a49969a`](git+https://github.com/midudev/autoskills/commit/a49969a)
+- Merge branch 'main' of github.com:midudev/autoskills [`4b08c10`](git+https://github.com/midudev/autoskills/commit/4b08c10)
+- test(detect): cover new detections and Clerk combos [`3382bd7`](git+https://github.com/midudev/autoskills/commit/3382bd7)
+
 ## [0.2.4](git+https://github.com/midudev/autoskills/releases/tag/v0.2.4) (2026-04-06)
 
 ### ✨ Features
