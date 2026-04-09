@@ -66,6 +66,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | Astro                | `astro` package or `astro.config.*`                                                                                                               |
 | Expo                 | `expo` package                                                                                                                                    |
 | React Native         | `react-native` package                                                                                                                            |
+| Flutter              | `pubspec.yaml` file with `flutter:` key                                                                                                           |
 | Kotlin Multiplatform | Gradle with KMP plugin: `kotlin("multiplatform")`, `org.jetbrains.kotlin.multiplatform`, or `kotlin-multiplatform` in `gradle/libs.versions.toml` |
 | Android              | Gradle with `com.android.application`, `com.android.library`, or `com.android.kotlin.multiplatform.library`                                       |
 | Remotion             | `remotion`, `@remotion/cli`                                                                                                                       |
@@ -91,6 +92,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | Node.js    | `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `.nvmrc` |
 | Bun        | `bun.lockb`, `bun.lock`, `bunfig.toml`                       |
 | Deno       | `deno.json`, `deno.jsonc`, `deno.lock`                       |
+| Dart       | `pubspec.yaml`                                               |
 | Go         | `go.mod`, `go.work`                                          |
 | Vite       | `vite` package or `vite.config.*`                            |
 | Turborepo  | `turbo` package or `turbo.json`                              |

@@ -170,6 +170,29 @@ export const SKILLS_MAP = [
     skills: ["sleekdotdesign/agent-skills/sleek-design-mobile-apps"],
   },
   {
+    id: "dart",
+    name: "Dart",
+    detect: {
+      configFiles: ["pubspec.yaml"],
+    },
+    skills: ["kevmoo/dash_skills/dart-best-practices"],
+  },
+  {
+    id: "flutter",
+    name: "Flutter",
+    detect: {
+      configFileContent: {
+        patterns: ["flutter:"],
+        files: ["pubspec.yaml"],
+      },
+    },
+    skills: [
+      "jeffallan/claude-skills/flutter-expert",
+      "madteacher/mad-agents-skills/flutter-animations",
+      "madteacher/mad-agents-skills/flutter-testing",
+    ],
+  },
+  {
     id: "kotlin-multiplatform",
     name: "Kotlin Multiplatform",
     detect: {
@@ -709,10 +732,75 @@ export const SKILLS_MAP = [
     skills: ["apollographql/skills/rust-best-practices"],
   },
   {
+    id: "ruby",
+    name: "Ruby",
+    detect: {
+      configFiles: ["Gemfile", "Gemfile.lock", ".ruby-version", ".ruby-gemset"],
+    },
+    skills: [
+      "lucianghinda/superpowers-ruby/ruby",
+    ],
+  },
+  {
+    id: "rails",
+    name: "Ruby on Rails",
+    detect: {
+      gems: ["rails"],
+      configFiles: ["config/routes.rb", "config/application.rb", "bin/rails"],
+    },
+    skills: [
+      "sergiodxa/agent-skills/ruby-on-rails-best-practices",
+      "lucianghinda/superpowers-ruby/rails-guides",
+      "igmarin/rails-agent-skills/rails-stack-conventions",
+      "igmarin/rails-agent-skills/rails-code-review",
+      "igmarin/rails-agent-skills/rails-migration-safety",
+      "igmarin/rails-agent-skills/rails-security-review",
+      "ombulabs/claude-code_rails-upgrade-skill/rails-upgrade",
+    ],
+  },
+  {
+    id: "redis-ruby",
+    name: "Redis (Ruby)",
+    detect: {
+      gems: ["redis", "sidekiq", "resque", "redis-rails"],
+    },
+    skills: [
+      "redis/agent-skills/redis-development",
+    ],
+  },
+  {
+    id: "postgres-ruby",
+    name: "PostgreSQL",
+    detect: {
+      gems: ["pg"],
+    },
+    skills: [],
+  },
+  {
     id: "python",
     name: "Python",
     detect: {
       configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+    },
+    skills: [],
+  },
+  {
+    id: "sorbet",
+    name: "Sorbet",
+    detect: {
+      gems: ["sorbet", "sorbet-runtime"],
+      configFiles: ["sorbet/config"],
+    },
+    skills: [
+      "DmitryPogrebnoy/ruby-agent-skills/generating-sorbet",
+      "DmitryPogrebnoy/ruby-agent-skills/generating-sorbet-inline",
+    ],
+  },
+  {
+    id: "activeadmin",
+    name: "ActiveAdmin",
+    detect: {
+      gems: ["activeadmin"],
     },
     skills: [],
   },
@@ -729,6 +817,14 @@ export const SKILLS_MAP = [
     skills: [],
   },
   {
+    id: "devise",
+    name: "Devise",
+    detect: {
+      gems: ["devise"],
+    },
+    skills: [],
+  },
+  {
     id: "fastapi",
     name: "FastAPI",
     detect: {
@@ -736,6 +832,38 @@ export const SKILLS_MAP = [
         files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
         patterns: ["fastapi", "FastAPI"],
       },
+    },
+    skills: [],
+  },
+  {
+    id: "sidekiq",
+    name: "Sidekiq",
+    detect: {
+      gems: ["sidekiq"],
+    },
+    skills: [
+      "igmarin/rails-agent-skills/rails-background-jobs",
+    ],
+  },
+  {
+    id: "rspec",
+    name: "RSpec",
+    detect: {
+      gems: ["rspec", "rspec-rails"],
+      configFiles: [".rspec"],
+    },
+    skills: [
+      "igmarin/rails-agent-skills/rspec-best-practices",
+      "igmarin/rails-agent-skills/rspec-service-testing",
+      "lucianghinda/superpowers-ruby/test-driven-development",
+    ],
+  },
+  {
+    id: "rubocop",
+    name: "RuboCop",
+    detect: {
+      gems: ["rubocop", "rubocop-rails"],
+      configFiles: [".rubocop.yml"],
     },
     skills: [],
   },
@@ -909,6 +1037,21 @@ export const COMBO_SKILLS_MAP = [
     name: "Android + Clerk",
     requires: ["android", "clerk"],
     skills: ["clerk/skills/clerk-android", "clerk/skills/clerk-setup", "clerk/skills/clerk"],
+  },
+  {
+    id: "rails-rspec",
+    name: "Ruby on Rails + RSpec",
+    requires: ["rails", "rspec"],
+    skills: [
+      "igmarin/rails-agent-skills/rails-tdd-slices",
+      "igmarin/rails-agent-skills/rails-bug-triage",
+    ],
+  },
+  {
+    id: "rails-sidekiq",
+    name: "Ruby on Rails + Sidekiq",
+    requires: ["rails", "sidekiq"],
+    skills: [],
   },
 ];
 
