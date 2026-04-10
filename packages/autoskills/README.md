@@ -104,7 +104,6 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | Technology    | Detected from                                            |
 | ------------- | -------------------------------------------------------- |
 | Supabase      | `@supabase/supabase-js`, `@supabase/ssr`                 |
-| Zod           | `zod` package                                            |
 | Neon Postgres | `@neondatabase/serverless`                               |
 | Prisma        | `prisma`, `@prisma/client`                               |
 | Drizzle ORM   | `drizzle-orm`, `drizzle-kit`                             |

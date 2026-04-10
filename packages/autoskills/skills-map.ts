@@ -149,14 +149,6 @@ export const SKILLS_MAP: Technology[] = [
     skills: ["wshobson/agents/typescript-advanced-types"],
   },
   {
-    id: "zod",
-    name: "Zod",
-    detect: {
-      packages: ["zod"],
-    },
-    skills: ["pproenca/dot-skills/zod"],
-  },
-  {
     id: "supabase",
     name: "Supabase",
     detect: {

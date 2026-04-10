@@ -237,13 +237,6 @@ describe("detectTechnologies", () => {
     ok(ids.includes("tailwind"));
   });
 
-  it("detects Zod from dependencies", () => {
-    writePackageJson(tmp.path, { dependencies: { zod: "^4.3.6" } });
-    const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("zod"));
-  });
-
   it("detects Go from go.mod", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
