@@ -1397,6 +1397,128 @@ describe("detectTechnologies (monorepo)", () => {
   });
 });
 
+// ── detectTechnologies (auto-discover, no workspace config) ───
+
+describe("detectTechnologies (auto-discover subdirectories)", () => {
+  const tmp = useTmpDir();
+
+  it("discovers subdirectories with package.json without workspace config", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    addWorkspace(tmp.path, "frontend", { dependencies: { react: "^19", vite: "^6" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "react"), "react should be detected from subdirectory");
+    ok(detected.some((t) => t.id === "vite"), "vite should be detected from subdirectory");
+  });
+
+  it("discovers subdirectories with pom.xml (Maven) without workspace config", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    writeFile(
+      tmp.path,
+      "backend/pom.xml",
+      "<project><groupId>com.example</groupId></project>",
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "java"), "java should be detected from subdirectory pom.xml");
+  });
+
+  it("detects technologies from nested subdirectories (root/sub/backend + root/sub/frontend)", () => {
+    writePackageJson(tmp.path, { name: "root", devDependencies: { playwright: "^1.40" } });
+    addWorkspace(tmp.path, "sub/frontend", {
+      dependencies: { react: "^19", "react-dom": "^19", vite: "^6" },
+    });
+    writeFile(
+      tmp.path,
+      "sub/backend/pom.xml",
+      `<project><dependencies><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>`,
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("react"), "react from sub/frontend");
+    ok(ids.includes("vite"), "vite from sub/frontend");
+    ok(ids.includes("java"), "java from sub/backend");
+    ok(ids.includes("springboot"), "springboot from sub/backend");
+    ok(ids.includes("playwright"), "playwright from root");
+  });
+
+  it("does not auto-discover when workspace config exists", () => {
+    writePackageJson(tmp.path, { name: "root", workspaces: ["packages/*"] });
+    addWorkspace(tmp.path, "packages/app", { dependencies: { express: "^4" } });
+    addWorkspace(tmp.path, "standalone", { dependencies: { react: "^19" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("express"), "workspace member should be detected");
+    ok(!ids.includes("react"), "non-workspace dir should not be discovered via fallback");
+  });
+
+  it("skips SCAN_SKIP_DIRS during auto-discover", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    addWorkspace(tmp.path, "node_modules/fake-pkg", { dependencies: { react: "^19" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "react"), "node_modules should be skipped");
+  });
+
+  it("discovers Go module from subdirectory", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    writeFile(tmp.path, "api/go.mod", "module example.com/api\n\ngo 1.24.0\n");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "go"), "go should be detected from subdirectory");
+  });
+
+  it("discovers Python from subdirectory requirements.txt", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    writeFile(tmp.path, "ml-service/requirements.txt", "fastapi==0.100.0\npydantic==2.0.0");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "fastapi"), "fastapi from subdirectory");
+    ok(detected.some((t) => t.id === "pydantic"), "pydantic from subdirectory");
+  });
+
+  it("deduplicates technologies across auto-discovered directories", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    addWorkspace(tmp.path, "web", { dependencies: { react: "^19" } });
+    addWorkspace(tmp.path, "mobile", { dependencies: { react: "^19" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const reactCount = detected.filter((t) => t.id === "react").length;
+    strictEqual(reactCount, 1, "react should appear only once");
+  });
+
+  it("detects frontend from auto-discovered subdirectory", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    addWorkspace(tmp.path, "web", { dependencies: { react: "^19" } });
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, true, "should detect frontend from subdirectory");
+  });
+
+  it("detects combos across auto-discovered subdirectories", () => {
+    writePackageJson(tmp.path, { name: "root" });
+    addWorkspace(tmp.path, "web", { dependencies: { next: "^15" } });
+    addWorkspace(tmp.path, "db", { dependencies: { "@supabase/supabase-js": "^2" } });
+    const { combos } = detectTechnologies(tmp.path);
+    ok(
+      combos.some((c) => c.id === "nextjs-supabase"),
+      "cross-directory combo should be detected",
+    );
+  });
+
+  it("detects root + backend (Maven) + frontend (Vite React) without workspace config", () => {
+    writePackageJson(tmp.path, { name: "root", devDependencies: { "@playwright/test": "^1.40" } });
+    addWorkspace(tmp.path, "frontend", {
+      dependencies: { react: "^19", "react-dom": "^19", vite: "^6" },
+    });
+    writeFile(
+      tmp.path,
+      "backend/pom.xml",
+      "<project><groupId>com.example</groupId></project>",
+    );
+    const { detected, isFrontend } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("react"), "react from frontend/");
+    ok(ids.includes("vite"), "vite from frontend/");
+    ok(ids.includes("java"), "java from backend/pom.xml");
+    ok(ids.includes("playwright"), "playwright from root package.json");
+    strictEqual(isFrontend, true, "frontend detected from frontend/ subdirectory");
+  });
+});
+
 // ── detectCombos ──────────────────────────────────────────────
 
 describe("detectCombos", () => {

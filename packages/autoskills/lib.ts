@@ -163,6 +163,57 @@ export function hasWebFrontendFiles(projectDir: string, maxDepth: number = 3): b
   return scan(projectDir, 0);
 }
 
+// ── Auto-Discover Subdirectories ───────────────────────────────
+
+const MANIFEST_FILES = [
+  "package.json",
+  "deno.json",
+  "deno.jsonc",
+  "pom.xml",
+  "build.gradle.kts",
+  "build.gradle",
+  "pubspec.yaml",
+  "Cargo.toml",
+  "go.mod",
+  "composer.json",
+  "Gemfile",
+  "pyproject.toml",
+  "requirements.txt",
+  "setup.py",
+  "Pipfile",
+];
+
+function discoverSubDirs(projectDir: string, maxDepth: number = 3): string[] {
+  const dirs: string[] = [];
+
+  function walk(dir: string, depth: number): void {
+    let entries: import("node:fs").Dirent[];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".") || SCAN_SKIP_DIRS.has(entry.name)) continue;
+
+      const subDir = join(dir, entry.name);
+
+      if (MANIFEST_FILES.some((f) => existsSync(join(subDir, f)))) {
+        dirs.push(subDir);
+      }
+
+      if (depth < maxDepth) {
+        walk(subDir, depth + 1);
+      }
+    }
+  }
+
+  walk(projectDir, 0);
+  return dirs;
+}
+
 // ── Workspace Resolution ──────────────────────────────────────
 
 function parsePnpmWorkspaceYaml(content: string): string[] {
@@ -457,8 +508,12 @@ export function detectTechnologies(projectDir: string): DetectResult {
   const seenIds = new Map<string, Technology>(root.detected.map((t) => [t.id, t]));
   let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
 
-  const workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
-  for (const wsDir of workspaceDirs) {
+  let scanDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
+  if (scanDirs.length === 0) {
+    scanDirs = discoverSubDirs(projectDir);
+  }
+
+  for (const wsDir of scanDirs) {
     const ws = detectTechnologiesInDir(wsDir, { skipFrontendFiles: isFrontend });
 
     for (const tech of ws.detected) {
