@@ -358,6 +358,46 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
   return selected;
 }
 
+// ── Agent Selection ──────────────────────────────────────────
+
+async function selectAgents(
+  detectedAgents: string[],
+  autoYes: boolean,
+  hasExplicitAgent: boolean,
+): Promise<string[]> {
+  const explicitAgents = detectedAgents.filter((a) => a !== "universal");
+
+  // Skip prompt when: explicit -a flag, auto-yes, or only 0-1 explicit agents detected
+  if (hasExplicitAgent || autoYes || explicitAgents.length <= 1) {
+    return detectedAgents;
+  }
+
+  log();
+  log(cyan("   ◆ ") + bold(`Select target agents `) + dim(`(${explicitAgents.length} detected)`));
+  log();
+
+  const selected = await multiSelect(explicitAgents, {
+    labelFn: (agent: string) => agent,
+    initialSelected: explicitAgents.map(() => true),
+    shortcuts: [
+      {
+        key: "n",
+        label: "none",
+        fn: (items: string[]) => items.map(() => false),
+      },
+    ],
+  });
+
+  if (selected.length === 0) {
+    log();
+    log(dim("   No agents selected. Only 'universal' will be used."));
+    log();
+    return ["universal"];
+  }
+
+  return ["universal", ...selected];
+}
+
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -412,6 +452,7 @@ async function main(): Promise<void> {
   }
 
   const selectedSkills = await selectSkills(skills, autoYes);
+  const selectedAgents = await selectAgents(resolvedAgents, autoYes, agents.length > 0);
 
   if (!autoYes && process.stdout.isTTY) {
     write("\x1b[H\x1b[2J\x1b[3J");
@@ -421,15 +462,15 @@ async function main(): Promise<void> {
   }
 
   log(cyan("   ◆ ") + bold("Installing skills..."));
-  log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
+  log(dim(`   Agents: ${selectedAgents.join(", ")}`));
   log();
 
   const startTime = Date.now();
-  const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents);
+  const { installed, failed, errors } = await installAll(selectedSkills, selectedAgents);
   const elapsed = Date.now() - startTime;
   let claudeSummary: { generated: boolean; files: number } | null = null;
 
-  if (shouldGenerateClaudeMd(resolvedAgents)) {
+  if (shouldGenerateClaudeMd(selectedAgents)) {
     claudeSummary = generateClaudeMd(projectDir);
   }
 
@@ -442,7 +483,7 @@ async function main(): Promise<void> {
 
   printSummary({ installed, failed, errors, elapsed, verbose });
 
-  if (shouldGenerateClaudeMd(resolvedAgents)) {
+  if (shouldGenerateClaudeMd(selectedAgents)) {
     if (claudeSummary?.generated) {
       log(
         dim(`   Claude Code summary written to CLAUDE.md (${claudeSummary.files} markdown files).`),
