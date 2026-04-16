@@ -726,6 +726,13 @@ export const FRONTEND_BONUS_SKILLS = [
   "addyosmani/web-quality-skills/seo",
 ];
 
+// ── Default Skills ─────────────────────────────────────────
+
+export const DEFAULT_SKILLS = [
+  "juliusbrussee/caveman/caveman",
+];
+
+
 // ── Agent Folder Map ─────────────────────────────────────────
 
 /**

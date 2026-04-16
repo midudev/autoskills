@@ -1,11 +1,12 @@
 import { describe, it } from "node:test";
 import { ok, strictEqual, deepStrictEqual } from "node:assert/strict";
 import { collectSkills } from "../lib.mjs";
+import { DEFAULT_SKILLS } from "../skills-map.mjs";
 
 describe("collectSkills", () => {
-  it("returns empty array when no technologies detected", () => {
+  it("returns default skills when no technologies detected", () => {
     const skills = collectSkills([], false);
-    deepStrictEqual(skills, []);
+    deepStrictEqual(skills, DEFAULT_SKILLS.map(skill => ({ skill, sources: ["Default"] })));
   });
 
   it("collects skills from a single technology", () => {
@@ -18,7 +19,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false);
 
-    strictEqual(skills.length, 1);
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "vercel-labs/agent-skills/vercel-react-best-practices");
     deepStrictEqual(skills[0].sources, ["React"]);
   });
@@ -30,7 +31,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false);
 
-    strictEqual(skills.length, 1);
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "shared/repo/my-skill");
     deepStrictEqual(skills[0].sources, ["Tech A", "Tech B"]);
   });
@@ -46,7 +47,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false);
 
-    strictEqual(skills.length, 2);
+    strictEqual(skills.length, 2 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "vercel-labs/agent-skills/vercel-react-best-practices");
     strictEqual(skills[1].skill, "vercel-labs/next-skills/next-best-practices");
   });
@@ -61,7 +62,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false);
 
-    strictEqual(skills.length, 2);
+    strictEqual(skills.length, 2 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "hyf0/vue-skills/vue-best-practices");
     strictEqual(skills[1].skill, "antfu/skills/vue");
   });
@@ -102,6 +103,7 @@ describe("collectSkills", () => {
 
     const matches = skills.filter((s) => s.skill === "anthropics/skills/frontend-design");
     strictEqual(matches.length, 1);
+    strictEqual(skills.length, 3 + DEFAULT_SKILLS.length); // 3 Frontend Bonus skills + Default
   });
 
   it("skips technologies with empty skills", () => {
@@ -115,7 +117,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false);
 
-    strictEqual(skills.length, 1);
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "vercel-labs/agent-skills/vercel-react-best-practices");
   });
 
@@ -127,7 +129,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false);
 
-    strictEqual(skills.length, 1);
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
     deepStrictEqual(skills[0].sources, ["Tech A", "Tech B", "Tech C"]);
   });
 
@@ -142,7 +144,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false, combos);
 
-    strictEqual(skills.length, 2);
+    strictEqual(skills.length, 2 + DEFAULT_SKILLS.length);
     ok(skills.some((s) => s.skill === "expo/skills/building-native-ui"));
     ok(skills.some((s) => s.skill === "expo/skills/expo-tailwind-setup"));
   });
@@ -158,7 +160,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false, combos);
 
-    strictEqual(skills.length, 1);
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "expo/skills/expo-tailwind-setup");
     ok(skills[0].sources.includes("Expo"));
     ok(skills[0].sources.includes("Expo + Tailwind CSS"));
@@ -177,7 +179,7 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false, combos);
 
-    strictEqual(skills.length, 2);
+    strictEqual(skills.length, 2 + DEFAULT_SKILLS.length);
     ok(skills.some((s) => s.skill === "custom/repo/combo-skill"));
     const combo = skills.find((s) => s.skill === "custom/repo/combo-skill");
     deepStrictEqual(combo.sources, ["React + Custom"]);
@@ -209,7 +211,21 @@ describe("collectSkills", () => {
     ];
     const skills = collectSkills(detected, false, []);
 
-    strictEqual(skills.length, 1);
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
     strictEqual(skills[0].skill, "vercel-labs/agent-skills/vercel-react-best-practices");
+  });
+
+  it("always includes DEFAULT_SKILLS perfectly even when other technologies are present", () => {
+    const detected = [
+      { id: "react", name: "React", skills: ["vercel-labs/agent-skills/vercel-react-best-practices"] },
+    ];
+    const skills = collectSkills(detected, false);
+    
+    strictEqual(skills.length, 1 + DEFAULT_SKILLS.length);
+    for (const defaultSkill of DEFAULT_SKILLS) {
+      ok(skills.some(s => s.skill === defaultSkill), `Missing default skill: ${defaultSkill}`);
+      const entry = skills.find(s => s.skill === defaultSkill);
+      ok(entry.sources.includes("Default"), `Source "Default" not assigned to: ${defaultSkill}`);
+    }
   });
 });

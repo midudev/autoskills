@@ -9,6 +9,7 @@ export {
   FRONTEND_BONUS_SKILLS,
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
+  DEFAULT_SKILLS,
 } from "./skills-map.mjs";
 
 import {
@@ -18,6 +19,7 @@ import {
   FRONTEND_BONUS_SKILLS,
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
+  DEFAULT_SKILLS,
 } from "./skills-map.mjs";
 
 // ── Internal Constants ───────────────────────────────────────
@@ -237,7 +239,7 @@ export function resolveWorkspaces(projectDir, preloaded) {
           (d) => resolve(d) !== resolve(projectDir),
         );
       }
-    } catch {}
+    } catch { }
   }
 
   const pkg = preloaded?.pkg !== undefined ? preloaded.pkg : readPackageJson(projectDir);
@@ -352,7 +354,7 @@ function detectTechnologiesInDir(
     let content = null;
     try {
       content = readFileSync(filePath, "utf-8");
-    } catch {}
+    } catch { }
     fileContentCache.set(filePath, content);
     if (content !== null) existsCache.set(filePath, true);
     return content;
@@ -537,6 +539,12 @@ export function collectSkills(detected, isFrontend, combos = []) {
     for (const skill of FRONTEND_BONUS_SKILLS) {
       addSkill(skill, "Frontend");
     }
+  }
+
+  // ── Default Skills ─────────────────────────────────────────
+
+  for (const skill of DEFAULT_SKILLS) {
+    addSkill(skill, "Default");
   }
 
   return skills;
