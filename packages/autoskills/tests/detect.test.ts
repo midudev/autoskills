@@ -1539,7 +1539,6 @@ describe("detectTechnologies (Python)", () => {
     const { isFrontend } = detectTechnologies(tmp.path);
     strictEqual(isFrontend, true);
   });
-
 });
 
 // ── detectCombos ──────────────────────────────────────────────

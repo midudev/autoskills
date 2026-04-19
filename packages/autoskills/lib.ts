@@ -535,8 +535,7 @@ export function detectTechnologies(projectDir: string): DetectResult {
   // or static .css files that should not trigger frontend classification.
   if (!isFrontend && !detectedIds.some((id) => BACKEND_ONLY_IDS.has(id))) {
     isFrontend =
-      hasWebFrontendFiles(projectDir) ||
-      workspaceDirs.some((dir) => hasWebFrontendFiles(dir));
+      hasWebFrontendFiles(projectDir) || workspaceDirs.some((dir) => hasWebFrontendFiles(dir));
   }
 
   const combos = detectCombos(detectedIds);
