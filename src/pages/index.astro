@@ -73,12 +73,14 @@ try {
   // Falls back to featuredSponsors
 }
 
-const { SKILLS_MAP } = await import('../../packages/autoskills/skills-map.mjs');
+const { SKILLS_MAP } = await import('../../packages/autoskills/skills-map.ts');
 const { default: cliPkg } = await import('../../packages/autoskills/package.json', { with: { type: 'json' } });
 const cliVersion = cliPkg.version;
 
 const popularityOrder = [
   'typescript',
+  'zod',
+  'react-hook-form',
   'react',
   'nextjs',
   'node',
@@ -475,6 +477,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
       { skill: 'astro', source: 'Astro' },
       { skill: 'tailwind-css-patterns', source: 'Tailwind CSS' },
       { skill: 'typescript-advanced-types', source: 'TypeScript' },
+      { skill: 'react-hook-form-zod', source: 'React Hook Form + Zod' },
       { skill: 'supabase-postgres-best-practices', source: 'Supabase' },
       { skill: 'frontend-design', source: 'Frontend' },
     ]

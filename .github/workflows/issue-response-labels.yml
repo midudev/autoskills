@@ -1,0 +1,25 @@
+name: Issue response labels
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  update-labels:
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.comment.user.login == github.event.issue.user.login &&
+      contains(github.event.issue.labels.*.name, 'waiting response')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove "waiting response" and add "more info provided"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ github.event.issue.number }} \
+            --repo ${{ github.repository }} \
+            --remove-label "waiting response" \
+            --add-label "more info provided"

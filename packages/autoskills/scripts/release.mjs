@@ -269,7 +269,7 @@ if (dirtyFiles.length) {
 // 2. Run tests
 console.log("🧪 Ejecutando tests...");
 try {
-  runVisible("node --test tests/*.test.mjs");
+  runVisible("node --test tests/*.test.ts");
 } catch {
   fail("Los tests han fallado. Arregla los errores antes de publicar.");
 }
@@ -306,7 +306,12 @@ try {
   run(`git tag -a v${newVersion} -m "v${newVersion}"`, { cwd: REPO_ROOT });
   tagCreated = true;
 
-  // 7. Publish to npm
+  // 7. Build TypeScript
+  console.log("\n🔨 Compilando TypeScript...");
+  run("rm -rf dist");
+  runVisible("npx tsc");
+
+  // 8. Publish to npm
   console.log("\n🚀 Publicando en npm...");
   const cleanEnv = Object.fromEntries(
     Object.entries(process.env).filter(
@@ -322,7 +327,7 @@ try {
     env: cleanEnv,
   });
 
-  // 8. Push to GitHub
+  // 9. Push to GitHub
   console.log("\n📤 Pusheando a GitHub...");
   run("git push", { cwd: REPO_ROOT });
   run("git push --tags", { cwd: REPO_ROOT });
@@ -332,7 +337,7 @@ try {
   fail(`La release falló y se revirtieron los cambios locales.\n${message}`);
 }
 
-// 9. Create GitHub release
+// 10. Create GitHub release
 console.log("\n🏷️  Creando GitHub Release...");
 const releaseNotes = changelogEntry.replace(/^## .*\n\n/, "");
 const tempFile = resolve(ROOT, ".release-notes-tmp.md");

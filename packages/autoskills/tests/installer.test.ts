@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import { ok, equal, deepEqual } from "node:assert/strict";
-import { getNpxCommand, getNpxSpawnOptions, buildInstallArgs } from "../installer.mjs";
+import { getNpxCommand, getNpxSpawnOptions, buildInstallArgs } from "../installer.ts";
 
 describe("installer", () => {
   it("uses npx.cmd on Windows", () => {
@@ -13,21 +13,12 @@ describe("installer", () => {
   });
 
   it("uses shell mode on Windows", () => {
-    deepEqual(getNpxSpawnOptions("win32"), {
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: true,
-    });
+    deepEqual(getNpxSpawnOptions("win32"), { stdio: ["pipe", "pipe", "pipe"], shell: true });
   });
 
   it("avoids shell mode on non-Windows platforms", () => {
-    deepEqual(getNpxSpawnOptions("linux"), {
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: false,
-    });
-    deepEqual(getNpxSpawnOptions("darwin"), {
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: false,
-    });
+    deepEqual(getNpxSpawnOptions("linux"), { stdio: ["pipe", "pipe", "pipe"], shell: false });
+    deepEqual(getNpxSpawnOptions("darwin"), { stdio: ["pipe", "pipe", "pipe"], shell: false });
   });
 });
 
@@ -39,8 +30,7 @@ describe("buildInstallArgs", () => {
   });
 
   it("appends -a with a single agent", () => {
-    const args = buildInstallArgs("owner/repo/my-skill", ["cursor"]);
-    deepEqual(args, [
+    deepEqual(buildInstallArgs("owner/repo/my-skill", ["cursor"]), [
       "-y",
       "skills",
       "add",
@@ -54,8 +44,7 @@ describe("buildInstallArgs", () => {
   });
 
   it("appends -a with multiple agents", () => {
-    const args = buildInstallArgs("owner/repo/my-skill", ["cursor", "claude-code"]);
-    deepEqual(args, [
+    deepEqual(buildInstallArgs("owner/repo/my-skill", ["cursor", "claude-code"]), [
       "-y",
       "skills",
       "add",
@@ -70,12 +59,28 @@ describe("buildInstallArgs", () => {
   });
 
   it("passes through wildcard agent", () => {
-    const args = buildInstallArgs("owner/repo/my-skill", ["*"]);
-    deepEqual(args, ["-y", "skills", "add", "owner/repo", "--skill", "my-skill", "-y", "-a", "*"]);
+    deepEqual(buildInstallArgs("owner/repo/my-skill", ["*"]), [
+      "-y",
+      "skills",
+      "add",
+      "owner/repo",
+      "--skill",
+      "my-skill",
+      "-y",
+      "-a",
+      "*",
+    ]);
   });
 
   it("handles skill path without skill name", () => {
-    const args = buildInstallArgs("owner/repo", ["cursor"]);
-    deepEqual(args, ["-y", "skills", "add", "owner/repo", "-y", "-a", "cursor"]);
+    deepEqual(buildInstallArgs("owner/repo", ["cursor"]), [
+      "-y",
+      "skills",
+      "add",
+      "owner/repo",
+      "-y",
+      "-a",
+      "cursor",
+    ]);
   });
 });

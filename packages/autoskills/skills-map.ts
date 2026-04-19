@@ -1,6 +1,37 @@
+// ── Types ─────────────────────────────────────────────────────
+
+export interface ConfigFileContentBlock {
+  files?: string[];
+  patterns: string[];
+  scanGradleLayout?: boolean;
+  scanDotNetLayout?: boolean;
+}
+
+export interface DetectConfig {
+  packages?: string[];
+  packagePatterns?: RegExp[];
+  configFiles?: string[];
+  gems?: string[];
+  configFileContent?: ConfigFileContentBlock | ConfigFileContentBlock[];
+}
+
+export interface Technology {
+  id: string;
+  name: string;
+  detect: DetectConfig;
+  skills: string[];
+}
+
+export interface ComboSkill {
+  id: string;
+  name: string;
+  requires: string[];
+  skills: string[];
+}
+
 // ── Skills Map ────────────────────────────────────────────────
 
-export const SKILLS_MAP = [
+export const SKILLS_MAP: Technology[] = [
   {
     id: "react",
     name: "React",
@@ -117,6 +148,22 @@ export const SKILLS_MAP = [
       configFiles: ["tsconfig.json"],
     },
     skills: ["wshobson/agents/typescript-advanced-types"],
+  },
+  {
+    id: "react-hook-form",
+    name: "React Hook Form",
+    detect: {
+      packages: ["react-hook-form"],
+    },
+    skills: ["pproenca/dot-skills/react-hook-form"],
+  },
+  {
+    id: "zod",
+    name: "Zod",
+    detect: {
+      packages: ["zod"],
+    },
+    skills: ["pproenca/dot-skills/zod"],
   },
   {
     id: "supabase",
@@ -724,6 +771,88 @@ export const SKILLS_MAP = [
     skills: ["vercel-labs/agent-skills/electron-best-practices"],
   },
   {
+    id: "dotnet",
+    name: ".NET",
+    detect: {
+      configFiles: [
+        "global.json",
+        "NuGet.Config",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+      ],
+      configFileContent: {
+        scanDotNetLayout: true,
+        patterns: ['<Project Sdk="Microsoft.NET.Sdk'],
+      },
+    },
+    skills: [
+      "github/awesome-copilot/dotnet-best-practices",
+      "github/awesome-copilot/dotnet-design-pattern-review",
+      "github/awesome-copilot/dotnet-upgrade"
+    ],
+  },
+  {
+    id: "csharp",
+    name: "C#",
+    detect: {
+      configFileContent: {
+        scanDotNetLayout: true,
+        patterns: ["<Project", "Microsoft.NET.Sdk"],
+      },
+    },
+    skills: [
+      "github/awesome-copilot/csharp-xunit",
+      "github/awesome-copilot/csharp-async",
+      "github/awesome-copilot/csharp-docs",
+      "github/awesome-copilot/csharp-nunit",
+      "github/awesome-copilot/csharp-mstest",
+      "github/awesome-copilot/csharp-tunit",
+    ],
+  },
+  {
+    id: "aspnetcore",
+    name: "ASP.NET Core",
+    detect: {
+      configFiles: ["appsettings.json", "appsettings.Development.json"],
+      configFileContent: {
+        scanDotNetLayout: true,
+        patterns: ["Microsoft.NET.Sdk.Web"],
+      },
+    },
+    skills: [
+      "github/awesome-copilot/containerize-aspnetcore",
+      "openai/skills/aspnet-core",
+    ],
+  },
+  {
+    id: "aspnet-blazor",
+    name: "Blazor",
+    detect: {
+      configFileContent: {
+        scanDotNetLayout: true,
+        patterns: ["Microsoft.NET.Sdk.BlazorWebAssembly", "Microsoft.AspNetCore.Components"],
+      },
+    },
+    skills: [
+      "github/awesome-copilot/fluentui-blazor"
+    ],
+  },
+  {
+    id: "aspnet-minimal-api",
+    name: "ASP.NET Minimal API",
+    detect: {
+      configFiles: ["appsettings.json"],
+      configFileContent: {
+        scanDotNetLayout: true,
+        patterns: ["Microsoft.AspNetCore.OpenApi", "Swashbuckle.AspNetCore"],
+      },
+    },
+    skills: [
+      "github/awesome-copilot/aspnet-minimal-api-openapi",
+      "dotnet/skills/minimal-api-file-upload"
+    ],
+  },
+  {
     id: "rust",
     name: "Rust",
     detect: {
@@ -737,9 +866,7 @@ export const SKILLS_MAP = [
     detect: {
       configFiles: ["Gemfile", "Gemfile.lock", ".ruby-version", ".ruby-gemset"],
     },
-    skills: [
-      "lucianghinda/superpowers-ruby/ruby",
-    ],
+    skills: ["lucianghinda/superpowers-ruby/ruby"],
   },
   {
     id: "rails",
@@ -764,9 +891,7 @@ export const SKILLS_MAP = [
     detect: {
       gems: ["redis", "sidekiq", "resque", "redis-rails"],
     },
-    skills: [
-      "redis/agent-skills/redis-development",
-    ],
+    skills: ["redis/agent-skills/redis-development"],
   },
   {
     id: "postgres-ruby",
@@ -825,18 +950,6 @@ export const SKILLS_MAP = [
     skills: [],
   },
   {
-    id: "laravel",
-    name: "Laravel",
-    detect: {
-      configFiles: ["artisan", "bootstrap/app.php"],
-      configFileContent: {
-        files: ["composer.json"],
-        patterns: ["laravel/framework", "illuminate/"],
-      },
-    },
-    skills: ["jpcaparas/superpowers-laravel"],
-  },
-  {
     id: "fastapi",
     name: "FastAPI",
     detect: {
@@ -853,9 +966,7 @@ export const SKILLS_MAP = [
     detect: {
       gems: ["sidekiq"],
     },
-    skills: [
-      "igmarin/rails-agent-skills/rails-background-jobs",
-    ],
+    skills: ["igmarin/rails-agent-skills/rails-background-jobs"],
   },
   {
     id: "rspec",
@@ -886,6 +997,21 @@ export const SKILLS_MAP = [
       configFiles: ["composer.json", "composer.lock"],
     },
     skills: ["jeffallan/claude-skills/php-pro"],
+  },
+  {
+    id: "laravel",
+    name: "Laravel",
+    detect: {
+      configFiles: ["artisan", "bootstrap/app.php"],
+      configFileContent: {
+        files: ["composer.json"],
+        patterns: ['"laravel/framework"', '"illuminate/'],
+      },
+    },
+    skills: [
+      "jeffallan/claude-skills/laravel-specialist",
+      "affaan-m/everything-claude-code/laravel-patterns",
+    ],
   },
   {
     id: "flask",
@@ -1051,12 +1177,18 @@ export const SKILLS_MAP = [
 
 // ── Combo Skills Map (cross-technology) ──────────────────────
 
-export const COMBO_SKILLS_MAP = [
+export const COMBO_SKILLS_MAP: ComboSkill[] = [
   {
     id: "expo-tailwind",
     name: "Expo + Tailwind CSS",
     requires: ["expo", "tailwind"],
     skills: ["expo/skills/expo-tailwind-setup"],
+  },
+  {
+    id: "react-hook-form-zod",
+    name: "React Hook Form + Zod",
+    requires: ["react-hook-form", "zod"],
+    skills: ["jezweb/claude-skills/react-hook-form-zod", "pproenca/dot-skills/zod"],
   },
   {
     id: "nextjs-supabase",
@@ -1218,7 +1350,7 @@ export const COMBO_SKILLS_MAP = [
 
 // ── Frontend Detection ────────────────────────────────────────
 
-export const FRONTEND_PACKAGES = new Set([
+export const FRONTEND_PACKAGES: Set<string> = new Set([
   "react",
   "vue",
   "svelte",
@@ -1232,7 +1364,7 @@ export const FRONTEND_PACKAGES = new Set([
   "@sveltejs/kit",
 ]);
 
-export const FRONTEND_BONUS_SKILLS = [
+export const FRONTEND_BONUS_SKILLS: string[] = [
   "anthropics/skills/frontend-design",
   "addyosmani/web-quality-skills/accessibility",
   "addyosmani/web-quality-skills/seo",
@@ -1240,11 +1372,7 @@ export const FRONTEND_BONUS_SKILLS = [
 
 // ── Agent Folder Map ─────────────────────────────────────────
 
-/**
- * Maps well-known agent home directory folder names to their `skills` CLI agent identifiers.
- * Only the most common agents are included; `.agents` (universal) is handled separately.
- */
-export const AGENT_FOLDER_MAP = {
+export const AGENT_FOLDER_MAP: Record<string, string> = {
   ".claude": "claude-code",
   ".cursor": "cursor",
   ".cline": "cline",
@@ -1262,20 +1390,7 @@ export const AGENT_FOLDER_MAP = {
   ".kiro": "kiro-cli",
 };
 
-/**
- * Backend-only stacks whose .html/.css files are server-side templates or
- * static assets, not a frontend application. Skipping frontend detection for
- * these avoids misclassifying e.g. Flask or Django projects as frontend.
- *
- * Trade-off: causes a false negative when one of these backends is paired
- * with a vanilla frontend directory (no package.json). Accepted because the
- * inverse case is significantly more common. Extend this set when adding
- * backend languages whose templates match WEB_FRONTEND_EXTENSIONS (e.g. Go,
- * PHP, server-side Node).
- */
-export const BACKEND_ONLY_IDS = new Set(["python", "java", "springboot", "django", "flask", "fastapi"]);
-
-export const WEB_FRONTEND_EXTENSIONS = new Set([
+export const WEB_FRONTEND_EXTENSIONS: Set<string> = new Set([
   ".html",
   ".htm",
   ".css",
@@ -1292,4 +1407,24 @@ export const WEB_FRONTEND_EXTENSIONS = new Set([
   ".hbs",
   ".pug",
   ".njk",
+]);
+
+/**
+ * Backend-only stacks whose .html/.css files are server-side templates or
+ * static assets, not a frontend application. Skipping frontend detection for
+ * these avoids misclassifying e.g. Flask or Django projects as frontend.
+ *
+ * Trade-off: causes a false negative when one of these backends is paired
+ * with a vanilla frontend directory (no package.json). Accepted because the
+ * inverse case is significantly more common. Extend this set when adding
+ * backend languages whose templates match WEB_FRONTEND_EXTENSIONS (e.g. Go,
+ * PHP, server-side Node).
+ */
+export const BACKEND_ONLY_IDS: Set<string> = new Set([
+  "python",
+  "java",
+  "springboot",
+  "django",
+  "flask",
+  "fastapi",
 ]);

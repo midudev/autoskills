@@ -2,11 +2,11 @@ import { describe, it } from "node:test";
 import { ok } from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.mjs";
+import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.ts";
 
-const CLI_PATH = resolve(import.meta.dirname, "..", "index.mjs");
+const CLI_PATH = resolve(import.meta.dirname!, "..", "index.mjs");
 
-function run(args = [], cwd = process.cwd()) {
+function run(args: string[] = [], cwd: string = process.cwd()): string {
   return execFileSync(process.execPath, [CLI_PATH, ...args], {
     cwd,
     encoding: "utf-8",
@@ -115,18 +115,14 @@ describe("CLI", () => {
 
     it("detects Pinia from package.json", () => {
       writePackageJson(tmp.path, { dependencies: { pinia: "^2" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Pinia"));
       ok(output.includes("vue-pinia-best-practices"));
     });
 
     it("detects GSAP from package.json", () => {
       writePackageJson(tmp.path, { dependencies: { gsap: "^3" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("GSAP"));
       ok(output.includes("gsap-core"));
       ok(output.includes("gsap-scrolltrigger"));
@@ -136,9 +132,7 @@ describe("CLI", () => {
       writePackageJson(tmp.path, {
         dependencies: { gsap: "^3", react: "^19", "react-dom": "^19" },
       });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("GSAP"));
       ok(output.includes("React"));
       ok(output.includes("GSAP + React"));
@@ -148,9 +142,7 @@ describe("CLI", () => {
     it("detects Tailwind + shadcn/ui combo", () => {
       writePackageJson(tmp.path, { devDependencies: { tailwindcss: "^4" } });
       writeFile(tmp.path, "components.json", "{}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Tailwind CSS"));
       ok(output.includes("shadcn/ui"));
       ok(output.includes("Tailwind CSS + shadcn/ui"));
@@ -159,9 +151,7 @@ describe("CLI", () => {
 
     it("detects Cloudflare base skills from wrangler package", () => {
       writePackageJson(tmp.path, { devDependencies: { wrangler: "^3" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Cloudflare"));
       ok(output.includes("cloudflare"));
       ok(output.includes("wrangler"));
@@ -172,9 +162,7 @@ describe("CLI", () => {
     it("detects Cloudflare from wrangler.json config file", () => {
       writePackageJson(tmp.path);
       writeJson(tmp.path, "wrangler.json", { name: "my-worker" });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Cloudflare"));
     });
 
@@ -184,9 +172,7 @@ describe("CLI", () => {
         name: "my-worker",
         durable_objects: { bindings: [{ name: "MY_DO", class_name: "MyDO" }] },
       });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Durable Objects"));
       ok(output.includes("durable-objects"));
       ok(!output.includes("cloudflare/skills/durable-objects"));
@@ -195,18 +181,14 @@ describe("CLI", () => {
     it("detects Cloudflare AI from wrangler.json content", () => {
       writePackageJson(tmp.path);
       writeJson(tmp.path, "wrangler.json", { name: "my-worker", ai: { binding: "AI" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Cloudflare AI"));
       ok(output.includes("building-ai-agent-on-cloudflare"));
     });
 
     it("detects Cloudflare Agents from agents package", () => {
       writePackageJson(tmp.path, { dependencies: { agents: "^1" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Cloudflare Agents"));
       ok(output.includes("agents-sdk"));
       ok(output.includes("building-mcp-server-on-cloudflare"));
@@ -214,9 +196,7 @@ describe("CLI", () => {
 
     it("detects Cloudflare + Vite combo for vinext", () => {
       writePackageJson(tmp.path, { devDependencies: { wrangler: "^3", vite: "^6" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Cloudflare"));
       ok(output.includes("Vite"));
       ok(output.includes("Cloudflare + Vite"));
@@ -226,31 +206,21 @@ describe("CLI", () => {
     it("detects Vercel deploy from .vercel directory", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, ".vercel/.gitkeep");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Vercel"));
       ok(output.includes("deploy-to-vercel"));
     });
 
     it("detects Vercel deploy from @astrojs/vercel adapter", () => {
-      writePackageJson(tmp.path, {
-        dependencies: { astro: "^5", "@astrojs/vercel": "^8" },
-      });
-
+      writePackageJson(tmp.path, { dependencies: { astro: "^5", "@astrojs/vercel": "^8" } });
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Vercel"));
       ok(output.includes("deploy-to-vercel"));
     });
 
     it("detects Cloudflare from @astrojs/cloudflare adapter", () => {
-      writePackageJson(tmp.path, {
-        dependencies: { astro: "^5", "@astrojs/cloudflare": "^12" },
-      });
-
+      writePackageJson(tmp.path, { dependencies: { astro: "^5", "@astrojs/cloudflare": "^12" } });
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Cloudflare"));
       ok(output.includes("cloudflare"));
       ok(!output.includes("cloudflare/skills/cloudflare"));
@@ -260,9 +230,7 @@ describe("CLI", () => {
     it("detects Bun from bun.lockb", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "bun.lockb");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Bun"));
       ok(output.includes("https://bun.sh/docs"));
     });
@@ -270,18 +238,14 @@ describe("CLI", () => {
     it("detects Bun from bunfig.toml", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "bunfig.toml", "[install]");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Bun"));
     });
 
     it("detects Deno from deno.json", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "deno.json", "{}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Deno"));
       ok(output.includes("deno-expert"));
       ok(output.includes("deno-typescript"));
@@ -290,9 +254,7 @@ describe("CLI", () => {
     it("detects Node.js from package-lock.json", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "package-lock.json", "{}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Node.js"));
       ok(output.includes("nodejs-backend-patterns"));
       ok(output.includes("nodejs-best-practices"));
@@ -301,9 +263,7 @@ describe("CLI", () => {
     it("detects Node.js + Express combo", () => {
       writePackageJson(tmp.path, { dependencies: { express: "^4" } });
       writeFile(tmp.path, "package-lock.json", "{}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Node.js"));
       ok(output.includes("Express"));
       ok(output.includes("Node.js + Express"));
@@ -313,9 +273,7 @@ describe("CLI", () => {
     it("shows Go curated skills in declared order", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Go"));
       ok(output.includes("golang-patterns"));
       ok(output.includes("golang-testing"));
@@ -327,9 +285,7 @@ describe("CLI", () => {
     it("detects WordPress from wp-config.php", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "wp-config.php", "<?php // WP config");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("WordPress"));
       ok(output.includes("wp-plugin-development"));
       ok(output.includes("wp-rest-api"));
@@ -338,9 +294,7 @@ describe("CLI", () => {
 
     it("detects WordPress from @wordpress npm packages", () => {
       writePackageJson(tmp.path, { devDependencies: { "@wordpress/scripts": "^30" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("WordPress"));
       ok(output.includes("wp-block-development"));
     });
@@ -350,36 +304,28 @@ describe("CLI", () => {
       writeJson(tmp.path, "composer.json", {
         require: { "wpackagist-plugin/advanced-custom-fields": "^6" },
       });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("WordPress"));
     });
 
     it("detects WordPress from style.css theme header", () => {
       writePackageJson(tmp.path);
       writeFile(tmp.path, "style.css", "/*\nTheme Name: My Theme\nAuthor: Test\n*/");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("WordPress"));
       ok(output.includes("wp-block-themes"));
     });
 
     it("detects Rust from Cargo.toml", () => {
       writeFile(tmp.path, "Cargo.toml", '[package]\nname = "my-crate"\nversion = "0.1.0"');
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Rust"));
       ok(output.includes("rust-best-practices"));
     });
 
     it("detects web frontend from .html files and installs web fundamentals", () => {
       writeFile(tmp.path, "public/index.html", "<html></html>");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Web frontend detected"));
       ok(output.includes("frontend-design"));
       ok(output.includes("accessibility"));
@@ -388,43 +334,33 @@ describe("CLI", () => {
 
     it("detects web frontend from .tpl files (PrestaShop)", () => {
       writeFile(tmp.path, "themes/classic/templates/index.tpl", "{block name='content'}{/block}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Web frontend detected"));
       ok(output.includes("frontend-design"));
     });
 
     it("detects web frontend from .twig files (Symfony/PHP)", () => {
       writeFile(tmp.path, "templates/base.html.twig", "{% block body %}{% endblock %}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Web frontend detected"));
     });
 
     it("detects web frontend from .blade.php files (Laravel)", () => {
       writeFile(tmp.path, "resources/views/app.blade.php", "@yield('content')");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Web frontend detected"));
     });
 
     it("detects web frontend from .css files", () => {
       writeFile(tmp.path, "assets/main.css", "body { margin: 0 }");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Web frontend detected"));
     });
 
     it("does NOT detect web frontend from .php files alone", () => {
       writeFile(tmp.path, "src/index.php", "<?php echo 'hello';");
       writeFile(tmp.path, "src/controller.php", "<?php class Controller {}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("No supported technologies"));
     });
 
@@ -434,13 +370,9 @@ describe("CLI", () => {
         workspaces: ["packages/*", "apps/*"],
       });
       writeFile(tmp.path, "tsconfig.json", "{}");
-      addWorkspace(tmp.path, "packages/ui", {
-        dependencies: { react: "^19", tailwindcss: "^4" },
-      });
+      addWorkspace(tmp.path, "packages/ui", { dependencies: { react: "^19", tailwindcss: "^4" } });
       addWorkspace(tmp.path, "apps/web", { dependencies: { next: "^15" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("TypeScript"), "root tech detected");
       ok(output.includes("React"), "workspace tech detected");
       ok(output.includes("Next.js"), "workspace tech detected");
@@ -453,9 +385,7 @@ describe("CLI", () => {
       writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
       addWorkspace(tmp.path, "packages/api", { dependencies: { express: "^4" } });
       writeFile(tmp.path, "package-lock.json", "{}");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Express"), "workspace tech detected via pnpm");
       ok(output.includes("Node.js"));
     });
@@ -474,9 +404,7 @@ describe("CLI", () => {
         'plugins { id("org.springframework.boot") }',
       );
       writeFile(tmp.path, "src/main/resources/application.properties", "server.port=8080");
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Java"));
       ok(output.includes("Spring Boot"));
     });
@@ -503,9 +431,7 @@ describe("CLI", () => {
 
     it("adds web fundamentals when npm frontend is detected too", () => {
       writePackageJson(tmp.path, { dependencies: { react: "^19", next: "^15" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("React"));
       ok(output.includes("frontend-design"));
       ok(output.includes("accessibility"));
@@ -514,18 +440,14 @@ describe("CLI", () => {
 
     it("shows auto-detected agents in dry-run output", () => {
       writePackageJson(tmp.path, { dependencies: { react: "^19" } });
-
       const output = run(["--dry-run"], tmp.path);
-
       ok(output.includes("Agents:"));
       ok(output.includes("universal"));
     });
 
     it("shows user-specified agents instead of auto-detected", () => {
       writePackageJson(tmp.path, { dependencies: { react: "^19" } });
-
       const output = run(["--dry-run", "-a", "cursor"], tmp.path);
-
       ok(output.includes("Agents: cursor"));
       ok(!output.includes("universal"));
     });

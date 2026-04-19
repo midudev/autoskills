@@ -1,37 +1,23 @@
 import { spawn, execFileSync } from "node:child_process";
-import { parseSkillPath } from "./lib.mjs";
-import { log, write, dim, green, cyan, red, HIDE_CURSOR, SHOW_CURSOR, SPINNER } from "./colors.mjs";
+import { parseSkillPath } from "./lib.ts";
+import type { SkillEntry } from "./lib.ts";
+import { log, write, dim, green, cyan, red, HIDE_CURSOR, SHOW_CURSOR, SPINNER } from "./colors.ts";
 
-/**
- * Returns the platform-appropriate npx executable name.
- * On Windows, Node requires `npx.cmd` to locate the batch wrapper.
- * @param {string} [platform=process.platform]
- * @returns {string} `"npx.cmd"` on win32, `"npx"` elsewhere.
- */
-export function getNpxCommand(platform = process.platform) {
+export function getNpxCommand(platform: string = process.platform): string {
   return platform === "win32" ? "npx.cmd" : "npx";
 }
 
-/**
- * Builds platform-aware options for `child_process.spawn()`.
- * Enables `shell: true` on Windows so `.cmd` executables resolve correctly.
- * @param {string} [platform=process.platform]
- * @returns {{ stdio: string[], shell: boolean }}
- */
-export function getNpxSpawnOptions(platform = process.platform) {
+export function getNpxSpawnOptions(platform: string = process.platform): {
+  stdio: string[];
+  shell: boolean;
+} {
   return {
     stdio: ["pipe", "pipe", "pipe"],
     shell: platform === "win32",
   };
 }
 
-/**
- * Constructs the argument array for `npx skills add ...`.
- * @param {string} skillPath - Skill identifier (e.g. `"owner/repo/skill-name"`).
- * @param {string[]} [agents=[]] - Optional list of target IDEs (e.g. `["cursor"]`).
- * @returns {string[]} The full args array ready for `spawn`.
- */
-export function buildInstallArgs(skillPath, agents = []) {
+export function buildInstallArgs(skillPath: string, agents: string[] = []): string[] {
   const { repo, skillName } = parseSkillPath(skillPath);
   const args = ["-y", "skills", "add", repo];
   if (skillName) args.push("--skill", skillName);
@@ -40,13 +26,7 @@ export function buildInstallArgs(skillPath, agents = []) {
   return args;
 }
 
-/**
- * Constructs the argument array for a direct `skills` binary call (no npx wrapper).
- * @param {string} skillPath
- * @param {string[]} [agents=[]]
- * @returns {string[]}
- */
-export function buildDirectArgs(skillPath, agents = []) {
+export function buildDirectArgs(skillPath: string, agents: string[] = []): string[] {
   const { repo, skillName } = parseSkillPath(skillPath);
   const args = ["add", repo];
   if (skillName) args.push("--skill", skillName);
@@ -55,16 +35,9 @@ export function buildDirectArgs(skillPath, agents = []) {
   return args;
 }
 
-let _resolvedBin;
+let _resolvedBin: string | null | undefined;
 
-/**
- * Ensures the `skills` npm package is available and resolves its binary path.
- * The first call triggers `npx -y skills --version` to install/cache the package,
- * then reads the binary location via `which`. Subsequent calls return the cached path.
- * Falls back to null (use npx) if resolution fails.
- * @returns {string|null}
- */
-export function resolveSkillsBin() {
+export function resolveSkillsBin(): string | null {
   if (_resolvedBin !== undefined) return _resolvedBin;
   try {
     const npx = getNpxCommand();
@@ -87,21 +60,24 @@ export function resolveSkillsBin() {
 }
 
 /** @internal — exported for testing only */
-export function _resetResolvedBin() {
+export function _resetResolvedBin(): void {
   _resolvedBin = undefined;
 }
 
-/**
- * Spawns a child process to install a single skill via `npx skills add`.
- * Tries to use a pre-resolved binary path to avoid npx overhead on each call.
- * @param {string} skillPath - Skill identifier to install.
- * @param {string[]} [agents=[]] - Optional list of target IDEs.
- * @returns {Promise<{ success: boolean, output: string }>}
- */
-export function installSkill(skillPath, agents = []) {
+interface InstallResult {
+  success: boolean;
+  output: string;
+  stderr: string;
+  exitCode: number | null;
+  command: string;
+}
+
+export function installSkill(skillPath: string, agents: string[] = []): Promise<InstallResult> {
   const bin = resolveSkillsBin();
 
-  let cmd, args, opts;
+  let cmd: string;
+  let args: string[];
+  let opts: { stdio: string[]; shell?: boolean };
   if (bin) {
     cmd = bin;
     args = buildDirectArgs(skillPath, agents);
@@ -112,28 +88,41 @@ export function installSkill(skillPath, agents = []) {
     opts = getNpxSpawnOptions();
   }
 
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, opts);
+  const command = `${cmd} ${args.join(" ")}`;
 
-    const chunks = [];
-    child.stdout?.on("data", (d) => chunks.push(d));
-    child.stderr?.on("data", (d) => chunks.push(d));
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, opts as Parameters<typeof spawn>[2]);
+
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+    child.stdout?.on("data", (d: Buffer) => stdoutChunks.push(d));
+    child.stderr?.on("data", (d: Buffer) => stderrChunks.push(d));
 
     child.on("close", (code) => {
-      resolve({ success: code === 0, output: Buffer.concat(chunks).toString() });
+      const stdout = Buffer.concat(stdoutChunks).toString();
+      const stderr = Buffer.concat(stderrChunks).toString();
+      resolve({
+        success: code === 0,
+        output: stdout + stderr,
+        stderr,
+        exitCode: code,
+        command,
+      });
     });
 
     child.on("error", (err) => {
-      resolve({ success: false, output: err.message });
+      resolve({
+        success: false,
+        output: err.message,
+        stderr: err.message,
+        exitCode: null,
+        command,
+      });
     });
   });
 }
 
-/**
- * Sorts skills so that entries from the same repo are adjacent.
- * This improves git clone cache locality during parallel installation.
- */
-function sortByRepo(skills) {
+function sortByRepo(skills: SkillEntry[]): SkillEntry[] {
   return [...skills].sort((a, b) => {
     const repoA = parseSkillPath(a.skill).repo;
     const repoB = parseSkillPath(b.skill).repo;
@@ -141,11 +130,22 @@ function sortByRepo(skills) {
   });
 }
 
-/**
- * Parallel installer with animated spinners and live status.
- * Falls back to sequential output for non-TTY environments.
- */
-export async function installAll(skills, agents = []) {
+interface InstallAllResult {
+  installed: number;
+  failed: number;
+  errors: {
+    name: string;
+    output: string;
+    stderr: string;
+    exitCode: number | null;
+    command: string;
+  }[];
+}
+
+export async function installAll(
+  skills: SkillEntry[],
+  agents: string[] = [],
+): Promise<InstallAllResult> {
   if (!process.stdout.isTTY) return installAllSimple(skills, agents);
 
   const CONCURRENCY = 6;
@@ -155,7 +155,7 @@ export async function installAll(skills, agents = []) {
   const states = sorted.map(({ skill }) => ({
     name: skill,
     skill,
-    status: "pending",
+    status: "pending" as "pending" | "installing" | "success" | "failed",
     output: "",
   }));
 
@@ -163,7 +163,7 @@ export async function installAll(skills, agents = []) {
   let rendered = false;
   let activeCount = 0;
 
-  function render() {
+  function render(): void {
     if (rendered) {
       write(`\x1b[${total}A\r`);
     }
@@ -197,10 +197,10 @@ export async function installAll(skills, agents = []) {
 
   let installed = 0;
   let failed = 0;
-  const errors = [];
+  const errors: InstallAllResult["errors"] = [];
   let nextIdx = 0;
 
-  async function worker() {
+  async function worker(): Promise<void> {
     while (nextIdx < total) {
       const idx = nextIdx++;
       const state = states[idx];
@@ -217,7 +217,13 @@ export async function installAll(skills, agents = []) {
       } else {
         state.status = "failed";
         state.output = result.output;
-        errors.push({ name: state.name, output: result.output });
+        errors.push({
+          name: state.name,
+          output: result.output,
+          stderr: result.stderr,
+          exitCode: result.exitCode,
+          command: result.command,
+        });
         failed++;
       }
       render();
@@ -234,22 +240,18 @@ export async function installAll(skills, agents = []) {
   return { installed, failed, errors };
 }
 
-/**
- * Sequential fallback installer for non-TTY environments (CI, piped output).
- * Prints results line-by-line without animated spinners.
- * @param {{ skill: string }[]} skills - Skills to install.
- * @param {string[]} [agents=[]] - Optional list of target IDEs.
- * @returns {Promise<{ installed: number, failed: number, errors: { name: string, output: string }[] }>}
- */
-async function installAllSimple(skills, agents = []) {
+async function installAllSimple(
+  skills: SkillEntry[],
+  agents: string[] = [],
+): Promise<InstallAllResult> {
   const CONCURRENCY = 6;
   const sorted = sortByRepo(skills);
   let installed = 0;
   let failed = 0;
-  const errors = [];
+  const errors: InstallAllResult["errors"] = [];
   let nextIdx = 0;
 
-  async function worker() {
+  async function worker(): Promise<void> {
     while (nextIdx < sorted.length) {
       const idx = nextIdx++;
       const { skill } = sorted[idx];
@@ -260,7 +262,13 @@ async function installAllSimple(skills, agents = []) {
         installed++;
       } else {
         log(red(`   ✘ ${skill}`) + dim(" — failed"));
-        errors.push({ name: skill, output: result.output });
+        errors.push({
+          name: skill,
+          output: result.output,
+          stderr: result.stderr,
+          exitCode: result.exitCode,
+          command: result.command,
+        });
         failed++;
       }
     }

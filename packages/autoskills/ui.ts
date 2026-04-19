@@ -10,15 +10,9 @@ import {
   white,
   HIDE_CURSOR,
   SHOW_CURSOR,
-} from "./colors.mjs";
+} from "./colors.ts";
 
-/**
- * Formats a duration in milliseconds into a human-readable string.
- * Returns `"42ms"`, `"3.2s"`, or `"2m 15s"` depending on magnitude.
- * @param {number} ms - Duration in milliseconds.
- * @returns {string}
- */
-export function formatTime(ms) {
+export function formatTime(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
 
   const s = ms / 1000;
@@ -28,11 +22,7 @@ export function formatTime(ms) {
   return `${m}m ${Math.round(s % 60)}s`;
 }
 
-/**
- * Prints the autoskills ASCII banner with version number to stdout.
- * @param {string} version - Current package version (without the `v` prefix).
- */
-export function printBanner(version) {
+export function printBanner(version: string): void {
   const ver = `v${version}`;
   const title = "   autoskills";
   const gap = " ".repeat(39 - title.length - ver.length - 3);
@@ -46,18 +36,18 @@ export function printBanner(version) {
   log();
 }
 
-/**
- * Interactive multi-select with optional group headers.
- * All items are selected by default.
- * @param {any[]} items
- * @param {object} opts
- * @param {(item: any, i: number) => string} opts.labelFn
- * @param {(item: any, i: number) => string} [opts.hintFn]
- * @param {(item: any) => string} [opts.groupFn]
- * @param {boolean[]} [opts.initialSelected] - Per-item initial selection state (must match items.length).
- * @param {{ key: string, label: string, fn: (items: any[]) => boolean[] }[]} [opts.shortcuts] - Custom filter shortcuts.
- */
-export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }) {
+interface MultiSelectOptions<T> {
+  labelFn: (item: T, i: number) => string;
+  hintFn?: (item: T, i: number) => string;
+  groupFn?: (item: T) => string;
+  initialSelected?: boolean[];
+  shortcuts?: { key: string; label: string; fn: (items: T[]) => boolean[] }[];
+}
+
+export function multiSelect<T>(
+  items: T[],
+  { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }: MultiSelectOptions<T>,
+): Promise<T[]> {
   if (initialSelected && initialSelected.length !== items.length) {
     throw new Error(
       `initialSelected length (${initialSelected.length}) must match items length (${items.length})`,
@@ -75,7 +65,7 @@ export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, 
 
     let groupCount = 0;
     if (groupFn) {
-      let last = null;
+      let last: string | null = null;
       for (const item of items) {
         const g = groupFn(item);
         if (g !== last) {
@@ -87,7 +77,7 @@ export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, 
 
     const separatorCount = groupCount > 1 ? groupCount - 1 : 0;
 
-    function render() {
+    function render(): void {
       if (rendered) {
         write(`\x1b[${items.length + groupCount + separatorCount + 1}A\r`);
       }
@@ -96,9 +86,9 @@ export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, 
       draw();
     }
 
-    function draw() {
+    function draw(): void {
       const count = selected.filter(Boolean).length;
-      let lastGroup = null;
+      let lastGroup: string | null = null;
       let isFirstGroup = true;
 
       for (let i = 0; i < items.length; i++) {
@@ -147,24 +137,21 @@ export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, 
 
     let settled = false;
 
-    function onData(data) {
+    function onData(data: string): void {
       if (settled) return;
 
-      // Escape sequences (arrows) must be matched as a whole unit
       if (data.startsWith("\x1b")) {
         processKey(data);
         return;
       }
 
-      // Some terminals (especially on Windows) send \r\n for Enter
-      // or batch multiple characters in a single data event.
       for (const ch of data.replace(/\r\n/g, "\r")) {
         if (settled) return;
         processKey(ch);
       }
     }
 
-    function processKey(key) {
+    function processKey(key: string): void {
       if (key === "\x03") {
         cleanup();
         write(SHOW_CURSOR + "\n");
@@ -214,7 +201,7 @@ export function multiSelect(items, { labelFn, hintFn, groupFn, initialSelected, 
       }
     }
 
-    function cleanup() {
+    function cleanup(): void {
       stdin.setRawMode(false);
       stdin.pause();
       stdin.removeListener("data", onData);

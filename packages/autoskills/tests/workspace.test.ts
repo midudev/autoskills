@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import { ok, strictEqual, deepStrictEqual } from "node:assert/strict";
-import { resolveWorkspaces } from "../lib.mjs";
-import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.mjs";
+import { resolveWorkspaces } from "../lib.ts";
+import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.ts";
 
 describe("resolveWorkspaces", () => {
   const tmp = useTmpDir();
@@ -19,7 +19,6 @@ describe("resolveWorkspaces", () => {
     writePackageJson(tmp.path, { workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/app-a");
     addWorkspace(tmp.path, "packages/app-b");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 2);
     ok(result.some((d) => d.includes("app-a")));
@@ -29,7 +28,6 @@ describe("resolveWorkspaces", () => {
   it("detects npm/yarn workspaces (object format with packages key)", () => {
     writePackageJson(tmp.path, { workspaces: { packages: ["packages/*"] } });
     addWorkspace(tmp.path, "packages/lib");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("lib"));
@@ -40,7 +38,6 @@ describe("resolveWorkspaces", () => {
     writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n  - apps/*\n");
     addWorkspace(tmp.path, "packages/ui");
     addWorkspace(tmp.path, "apps/web");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 2);
     ok(result.some((d) => d.includes("ui")));
@@ -52,7 +49,6 @@ describe("resolveWorkspaces", () => {
     writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
     addWorkspace(tmp.path, "packages/core");
     addWorkspace(tmp.path, "other/ignored");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("core"));
@@ -62,7 +58,6 @@ describe("resolveWorkspaces", () => {
     writePackageJson(tmp.path, { workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/has-pkg");
     writeFile(tmp.path, "packages/no-pkg/.gitkeep");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("has-pkg"));
@@ -72,7 +67,6 @@ describe("resolveWorkspaces", () => {
     writePackageJson(tmp.path, { workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/node_modules");
     addWorkspace(tmp.path, "packages/real-pkg");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("real-pkg"));
@@ -82,15 +76,12 @@ describe("resolveWorkspaces", () => {
     writePackageJson(tmp.path, { workspaces: ["packages/*", "apps/*", "tools/*"] });
     addWorkspace(tmp.path, "packages/ui");
     addWorkspace(tmp.path, "apps/web");
-
-    const result = resolveWorkspaces(tmp.path);
-    strictEqual(result.length, 2);
+    strictEqual(resolveWorkspaces(tmp.path).length, 2);
   });
 
   it("handles exact directory references (no glob)", () => {
     writePackageJson(tmp.path, { workspaces: ["tools/special-tool"] });
     addWorkspace(tmp.path, "tools/special-tool");
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("special-tool"));
@@ -100,9 +91,7 @@ describe("resolveWorkspaces", () => {
     writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - 'packages/*'\n  - \"apps/*\"\n");
     addWorkspace(tmp.path, "packages/a");
     addWorkspace(tmp.path, "apps/b");
-
-    const result = resolveWorkspaces(tmp.path);
-    strictEqual(result.length, 2);
+    strictEqual(resolveWorkspaces(tmp.path).length, 2);
   });
 
   it("returns empty for pnpm-workspace.yaml without packages key", () => {
@@ -119,7 +108,6 @@ describe("resolveWorkspaces", () => {
     writeJson(tmp.path, "deno.json", { workspace: ["./api", "./shared"] });
     writeJson(tmp.path, "api/deno.json", {});
     writeJson(tmp.path, "shared/deno.json", {});
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 2);
     ok(result.some((d) => d.includes("api")));
@@ -129,7 +117,6 @@ describe("resolveWorkspaces", () => {
   it("Deno workspace members with deno.jsonc are detected", () => {
     writeJson(tmp.path, "deno.json", { workspace: ["./lib"] });
     writeJson(tmp.path, "lib/deno.jsonc", {});
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("lib"));
@@ -141,7 +128,6 @@ describe("resolveWorkspaces", () => {
     writeJson(tmp.path, "deno.json", { workspace: ["./deno-member"] });
     addWorkspace(tmp.path, "packages/core");
     writeJson(tmp.path, "deno-member/deno.json", {});
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("core"));
@@ -152,7 +138,6 @@ describe("resolveWorkspaces", () => {
     writeJson(tmp.path, "deno.json", { workspace: ["./deno-member"] });
     addWorkspace(tmp.path, "packages/ui");
     writeJson(tmp.path, "deno-member/deno.json", {});
-
     const result = resolveWorkspaces(tmp.path);
     strictEqual(result.length, 1);
     ok(result[0].includes("ui"));

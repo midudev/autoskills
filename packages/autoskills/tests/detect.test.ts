@@ -8,8 +8,9 @@ import {
   getDenoImportNames,
   detectTechnologies,
   detectCombos,
-} from "../lib.mjs";
-import { useTmpDir, writePackageJson, writeJson, writeFile, addWorkspace } from "./helpers.mjs";
+  parseSettingsGradleModules,
+} from "../lib.ts";
+import { useTmpDir, writePackageJson, writeJson, writeFile, addWorkspace } from "./helpers.ts";
 
 // ── getAllPackageNames ─────────────────────────────────────────
 
@@ -95,6 +96,72 @@ describe("readGemfile", () => {
   });
 });
 
+// ── parseSettingsGradleModules ─────────────────────────────────
+
+describe("parseSettingsGradleModules", () => {
+  it("extracts module from Kotlin DSL include", () => {
+    const modules = parseSettingsGradleModules('include("app")');
+    deepStrictEqual(modules, ["app"]);
+  });
+
+  it("extracts module from Groovy include", () => {
+    const modules = parseSettingsGradleModules("include 'app'");
+    deepStrictEqual(modules, ["app"]);
+  });
+
+  it("strips leading colon from module paths", () => {
+    const modules = parseSettingsGradleModules('include(":app")');
+    deepStrictEqual(modules, ["app"]);
+  });
+
+  it("converts colon-separated paths to filesystem paths", () => {
+    const modules = parseSettingsGradleModules('include(":feature:login")');
+    deepStrictEqual(modules, ["feature/login"]);
+  });
+
+  it("handles multiple modules on one line (Groovy)", () => {
+    const modules = parseSettingsGradleModules("include 'app', 'core', 'data'");
+    deepStrictEqual(modules, ["app", "core", "data"]);
+  });
+
+  it("handles multiple modules on one line (Kotlin DSL)", () => {
+    const modules = parseSettingsGradleModules('include(":app", ":core", ":data")');
+    deepStrictEqual(modules, ["app", "core", "data"]);
+  });
+
+  it("handles multi-line include block", () => {
+    const content = `include(
+  ":app",
+  ":core",
+  ":shared:data"
+)`;
+    deepStrictEqual(parseSettingsGradleModules(content), ["app", "core", "shared/data"]);
+  });
+
+  it("handles multiple separate include statements", () => {
+    const content = 'include(":app")\ninclude(":core")';
+    deepStrictEqual(parseSettingsGradleModules(content), ["app", "core"]);
+  });
+
+  it("returns empty array when no includes are present", () => {
+    const content = 'rootProject.name = "my-app"\npluginManagement { }';
+    deepStrictEqual(parseSettingsGradleModules(content), []);
+  });
+
+  it("returns empty array for empty content", () => {
+    deepStrictEqual(parseSettingsGradleModules(""), []);
+  });
+
+  it("ignores non-include content around includes", () => {
+    const content = `rootProject.name = "my-app"
+pluginManagement {
+    repositories { google() }
+}
+include(":app")`;
+    deepStrictEqual(parseSettingsGradleModules(content), ["app"]);
+  });
+});
+
 // ── detectTechnologies ────────────────────────────────────────
 
 describe("detectTechnologies", () => {
@@ -170,40 +237,53 @@ describe("detectTechnologies", () => {
     ok(ids.includes("tailwind"));
   });
 
+  it("detects Zod from dependencies", () => {
+    writePackageJson(tmp.path, { dependencies: { zod: "^4.3.6" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const ids = detected.map((t) => t.id);
+    ok(ids.includes("zod"));
+  });
+
+  it("detects React Hook Form from dependencies", () => {
+    writePackageJson(tmp.path, { dependencies: { "react-hook-form": "^7.58.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const reactHookForm = detected.find((t) => t.id === "react-hook-form");
+    ok(reactHookForm);
+    ok(reactHookForm.skills.includes("pproenca/dot-skills/react-hook-form"));
+  });
+
+  it("detects React Hook Form + Zod combo when both are present", () => {
+    writePackageJson(tmp.path, {
+      dependencies: { "react-hook-form": "^7.58.0", zod: "^4.3.6" },
+    });
+    const { combos } = detectTechnologies(tmp.path);
+    ok(combos.some((c) => c.id === "react-hook-form-zod"));
+  });
+
   it("detects Go from go.mod", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
-
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-
-    ok(ids.includes("go"));
+    ok(detected.some((t) => t.id === "go"));
   });
 
   it("detects Go from go.work", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "go.work", "go 1.24.0\n");
-
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-
-    ok(ids.includes("go"));
+    ok(detected.some((t) => t.id === "go"));
   });
 
   it("does not detect Go without go.mod or go.work", () => {
     writePackageJson(tmp.path);
-
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-
-    ok(!ids.includes("go"));
+    ok(!detected.some((t) => t.id === "go"));
   });
 
   it("detects Three.js from dependencies", () => {
     writePackageJson(tmp.path, { dependencies: { three: "^0.173.0" } });
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("threejs"));
+    ok(detected.some((t) => t.id === "threejs"));
   });
 
   it("keeps Three.js detection when React and React Three Fiber are present", () => {
@@ -211,8 +291,7 @@ describe("detectTechnologies", () => {
       dependencies: { three: "^0.173.0", react: "^19.0.0", "react-dom": "^19.0.0" },
     });
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("threejs"));
+    ok(detected.some((t) => t.id === "threejs"));
   });
 
   it("detects React + React Three Fiber combo when Three.js is present", () => {
@@ -220,24 +299,21 @@ describe("detectTechnologies", () => {
       dependencies: { three: "^0.173.0", react: "^19.0.0", "@react-three/fiber": "^9.0.0" },
     });
     const { combos } = detectTechnologies(tmp.path);
-    const comboIds = combos.map((c) => c.id);
-    ok(comboIds.includes("react-react-three-fiber"));
+    ok(combos.some((c) => c.id === "react-react-three-fiber"));
   });
 
   it("detects shadcn/ui from components.json", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "components.json", "{}");
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("shadcn"));
+    ok(detected.some((t) => t.id === "shadcn"));
   });
 
   it("detects Cloudflare from wrangler.toml", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "wrangler.toml");
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("cloudflare"));
+    ok(detected.some((t) => t.id === "cloudflare"));
   });
 
   it("detects multiple technologies at once", () => {
@@ -246,10 +322,8 @@ describe("detectTechnologies", () => {
       devDependencies: { typescript: "^5", "@playwright/test": "^1.40" },
     });
     writeFile(tmp.path, "tsconfig.json", "{}");
-
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
-
     ok(ids.includes("react"));
     ok(ids.includes("nextjs"));
     ok(ids.includes("typescript"));
@@ -278,15 +352,13 @@ describe("detectTechnologies", () => {
   it("detects combos when multiple technologies match", () => {
     writePackageJson(tmp.path, { dependencies: { expo: "^52.0.0", tailwindcss: "^4.0.0" } });
     const { combos } = detectTechnologies(tmp.path);
-    const comboIds = combos.map((c) => c.id);
-    ok(comboIds.includes("expo-tailwind"));
+    ok(combos.some((c) => c.id === "expo-tailwind"));
   });
 
   it("returns no combos when only one technology of a pair is present", () => {
     writePackageJson(tmp.path, { dependencies: { expo: "^52.0.0" } });
     const { combos } = detectTechnologies(tmp.path);
-    const comboIds = combos.map((c) => c.id);
-    ok(!comboIds.includes("expo-tailwind"));
+    ok(!combos.some((c) => c.id === "expo-tailwind"));
   });
 
   it("detects Kotlin Multiplatform from root build.gradle.kts", () => {
@@ -359,11 +431,7 @@ plugins {
   it("detects Android from deeply nested module in Gradle multi-module project", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "settings.gradle.kts", 'include("feature:login")');
-    writeFile(
-      tmp.path,
-      "feature/login/build.gradle.kts",
-      'plugins { id("com.android.library") }',
-    );
+    writeFile(tmp.path, "feature/login/build.gradle.kts", 'plugins { id("com.android.library") }');
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "android"));
   });
@@ -371,11 +439,7 @@ plugins {
   it("handles settings.gradle with multiple includes on one line", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "settings.gradle", "include 'app', 'core', 'data'");
-    writeFile(
-      tmp.path,
-      "app/build.gradle.kts",
-      'plugins { id("java-library") }',
-    );
+    writeFile(tmp.path, "app/build.gradle.kts", 'plugins { id("java-library") }');
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "java"));
   });
@@ -388,6 +452,14 @@ plugins {
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "java"));
     ok(detected.some((t) => t.id === "kotlin-multiplatform"));
+  });
+
+  it("does not break when settings.gradle.kts has no include statements", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "settings.gradle.kts", 'rootProject.name = "my-app"');
+    writeFile(tmp.path, "build.gradle.kts", "sourceCompatibility = JavaVersion.VERSION_17");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "java"));
   });
 
   it("detects Java from pom.xml (Maven project)", () => {
@@ -433,14 +505,7 @@ plugins {
     writeFile(
       tmp.path,
       "pom.xml",
-      `<project>
-        <dependencies>
-          <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-          </dependency>
-        </dependencies>
-      </project>`,
+      `<project><dependencies><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>`,
     );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "springboot"));
@@ -450,14 +515,7 @@ plugins {
     writeFile(
       tmp.path,
       "pom.xml",
-      `<project>
-        <dependencies>
-          <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-          </dependency>
-        </dependencies>
-      </project>`,
+      `<project><dependencies><dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>`,
     );
     writeFile(tmp.path, "src/main/resources/application.properties", "server.port=8080");
     const { detected } = detectTechnologies(tmp.path);
@@ -584,6 +642,68 @@ plugins {
     writeFile(tmp.path, "electron-vite.config.ts", "export default {}");
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "electron"));
+  });
+
+  it("detects .NET from global.json", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "global.json", '{"sdk": {"version": "8.0.100"}}');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "dotnet"));
+  });
+
+  it("detects C# from .csproj in root", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "MyProject.csproj", '<Project Sdk="Microsoft.NET.Sdk">');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "csharp"));
+    ok(detected.some((t) => t.id === "dotnet"));
+  });
+
+  it("detects ASP.NET Core from .csproj with Web SDK", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "MyWebApp.csproj", '<Project Sdk="Microsoft.NET.Sdk.Web">');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "aspnetcore"));
+  });
+
+  it("detects .NET and C# from nested .csproj", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "src/Library/Library.csproj", '<Project Sdk="Microsoft.NET.Sdk">');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "dotnet"));
+    ok(detected.some((t) => t.id === "csharp"));
+  });
+
+  it("detects Blazor from .csproj", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "MyBlazor.csproj", '<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "aspnet-blazor"));
+  });
+
+  it("detects Minimal API from .csproj package reference", () => {
+    writePackageJson(tmp.path);
+    writeFile(
+      tmp.path,
+      "MyApi.csproj",
+      '<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />',
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "aspnet-minimal-api"));
+  });
+
+  it("detects ASP.NET Core from appsettings.json", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "appsettings.json", "{}");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "aspnetcore"));
+  });
+
+  it("skips bin and obj directories when scanning .NET projects", () => {
+    writePackageJson(tmp.path);
+    writeFile(tmp.path, "bin/Debug/net8.0/ExcludeMe.csproj", '<Project Sdk="Microsoft.NET.Sdk">');
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "csharp"));
   });
 
   it("detects Rust from Cargo.toml", () => {
@@ -753,7 +873,11 @@ plugins {
   });
 
   it("detects Laravel from artisan file", () => {
-    writeFile(tmp.path, "artisan", "#!/usr/bin/env php\n<?php\ndefine('LARAVEL_START', microtime(true));");
+    writeFile(
+      tmp.path,
+      "artisan",
+      "#!/usr/bin/env php\n<?php\ndefine('LARAVEL_START', microtime(true));",
+    );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "laravel"));
   });
@@ -793,7 +917,19 @@ plugins {
     const { detected } = detectTechnologies(tmp.path);
     const laravel = detected.find((t) => t.id === "laravel");
     ok(laravel);
-    ok(laravel.skills.includes("jpcaparas/superpowers-laravel"));
+    ok(laravel.skills.includes("jeffallan/claude-skills/laravel-specialist"));
+    ok(laravel.skills.includes("affaan-m/everything-claude-code/laravel-patterns"));
+  });
+
+  it("detects both PHP and Laravel from composer.json", () => {
+    writeFile(
+      tmp.path,
+      "composer.json",
+      JSON.stringify({ require: { "laravel/framework": "^11.0" } }),
+    );
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "laravel"));
+    ok(detected.some((t) => t.id === "php"));
   });
 
   it("does not detect Laravel without Laravel files or packages", () => {
@@ -826,15 +962,7 @@ plugins {
     writeFile(
       tmp.path,
       "Package.swift",
-      `
-import PackageDescription
-let package = Package(
-  name: "MyApp",
-  dependencies: [
-    .package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0"),
-  ]
-)
-`,
+      `import PackageDescription\nlet package = Package(name: "MyApp", dependencies: [.package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0")])`,
     );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "clerk"));
@@ -844,15 +972,7 @@ let package = Package(
     writeFile(
       tmp.path,
       "Package.swift",
-      `
-import PackageDescription
-let package = Package(
-  name: "MyApp",
-  dependencies: [
-    .package(url: "https://github.com/example/ClerkSDK", from: "2.0.0"),
-  ]
-)
-`,
+      `import PackageDescription\nlet package = Package(name: "MyApp", dependencies: [.package(url: "https://github.com/example/ClerkSDK", from: "2.0.0")])`,
     );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "clerk"));
@@ -862,15 +982,7 @@ let package = Package(
     writeFile(
       tmp.path,
       "Package.swift",
-      `
-import PackageDescription
-let package = Package(
-  name: "MyApp",
-  dependencies: [
-    .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
-  ]
-)
-`,
+      `import PackageDescription\nlet package = Package(name: "MyApp", dependencies: [.package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0")])`,
     );
     const { detected } = detectTechnologies(tmp.path);
     ok(!detected.some((t) => t.id === "clerk"));
@@ -881,14 +993,7 @@ let package = Package(
     writeFile(
       tmp.path,
       "app/build.gradle.kts",
-      `
-plugins {
-  id("com.android.application")
-}
-dependencies {
-  implementation("com.clerk:clerk-android:1.0.0")
-}
-`,
+      `plugins { id("com.android.application") }\ndependencies { implementation("com.clerk:clerk-android:1.0.0") }`,
     );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "clerk"));
@@ -899,14 +1004,7 @@ dependencies {
     writeFile(
       tmp.path,
       "app/build.gradle.kts",
-      `
-plugins {
-  id("com.android.application")
-}
-dependencies {
-  implementation("com.google.firebase:firebase-auth:22.0.0")
-}
-`,
+      `plugins { id("com.android.application") }\ndependencies { implementation("com.google.firebase:firebase-auth:22.0.0") }`,
     );
     const { detected } = detectTechnologies(tmp.path);
     ok(!detected.some((t) => t.id === "clerk"));
@@ -916,15 +1014,7 @@ dependencies {
     writeFile(
       tmp.path,
       "Package.swift",
-      `
-import PackageDescription
-let package = Package(
-  name: "MySwiftApp",
-  dependencies: [
-    .package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0"),
-  ]
-)
-`,
+      `import PackageDescription\nlet package = Package(name: "MySwiftApp", dependencies: [.package(url: "https://github.com/clerk/clerk-ios", from: "1.0.0")])`,
     );
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
@@ -937,14 +1027,7 @@ let package = Package(
     writeFile(
       tmp.path,
       "app/build.gradle.kts",
-      `
-plugins {
-  id("com.android.application")
-}
-dependencies {
-  implementation("com.clerk:clerk-android:1.0.0")
-}
-`,
+      `plugins { id("com.android.application") }\ndependencies { implementation("com.clerk:clerk-android:1.0.0") }`,
     );
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
@@ -953,7 +1036,11 @@ dependencies {
   });
 
   it("detects Dart from pubspec.yaml without package.json", () => {
-    writeFile(tmp.path, "pubspec.yaml", "name: dart_app\ndescription: A Dart CLI tool\nenvironment:\n  sdk: '^3.2.0'");
+    writeFile(
+      tmp.path,
+      "pubspec.yaml",
+      "name: dart_app\ndescription: A Dart CLI tool\nenvironment:\n  sdk: '^3.2.0'",
+    );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "dart"));
   });
@@ -967,13 +1054,21 @@ dependencies {
   });
 
   it("detects Flutter from pubspec.yaml with flutter: key", () => {
-    writeFile(tmp.path, "pubspec.yaml", "name: flutter_app\ndescription: A Flutter application\nflutter:\n  uses-material-design: true");
+    writeFile(
+      tmp.path,
+      "pubspec.yaml",
+      "name: flutter_app\ndescription: A Flutter application\nflutter:\n  uses-material-design: true",
+    );
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "flutter"));
   });
 
   it("returns correct skills for Flutter detection", () => {
-    writeFile(tmp.path, "pubspec.yaml", "name: flutter_app\nflutter:\n  uses-material-design: true");
+    writeFile(
+      tmp.path,
+      "pubspec.yaml",
+      "name: flutter_app\nflutter:\n  uses-material-design: true",
+    );
     const { detected } = detectTechnologies(tmp.path);
     const flutter = detected.find((t) => t.id === "flutter");
     ok(flutter);
@@ -983,7 +1078,11 @@ dependencies {
   });
 
   it("detects both Dart and Flutter for Flutter projects", () => {
-    writeFile(tmp.path, "pubspec.yaml", "name: flutter_app\nenvironment:\n  sdk: '^3.2.0'\nflutter:\n  uses-material-design: true");
+    writeFile(
+      tmp.path,
+      "pubspec.yaml",
+      "name: flutter_app\nenvironment:\n  sdk: '^3.2.0'\nflutter:\n  uses-material-design: true",
+    );
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
     ok(ids.includes("dart"), "Dart should be detected (pubspec.yaml exists)");
@@ -991,7 +1090,11 @@ dependencies {
   });
 
   it("detects only Dart when pubspec.yaml has no flutter: key", () => {
-    writeFile(tmp.path, "pubspec.yaml", "name: dart_cli\ndescription: A Dart CLI tool\nenvironment:\n  sdk: '^3.2.0'\ndependencies:\n  args: ^2.4.0");
+    writeFile(
+      tmp.path,
+      "pubspec.yaml",
+      "name: dart_cli\ndescription: A Dart CLI tool\nenvironment:\n  sdk: '^3.2.0'\ndependencies:\n  args: ^2.4.0",
+    );
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
     ok(ids.includes("dart"), "Dart should be detected");
@@ -1003,8 +1106,7 @@ dependencies {
       imports: { react: "npm:react@^19", "react-dom": "npm:react-dom@^19" },
     });
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("react"));
+    ok(detected.some((t) => t.id === "react"));
   });
 
   it("detects Hono from deno.json npm: import", () => {
@@ -1081,10 +1183,7 @@ dependencies {
     writeFile(
       tmp.path,
       "app/build.gradle.kts",
-      `
-plugins { id("com.android.application") }
-dependencies { implementation("com.clerk:clerk-android:1.0.0") }
-`,
+      `plugins { id("com.android.application") }\ndependencies { implementation("com.clerk:clerk-android:1.0.0") }`,
     );
     const { detected, combos } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
@@ -1213,18 +1312,13 @@ describe("getDenoImportNames", () => {
 
   it("handles multiple imports", () => {
     const result = getDenoImportNames({
-      imports: {
-        react: "npm:react@^19",
-        hono: "npm:hono@^4",
-        "@std/fs": "jsr:@std/fs@^1",
-      },
+      imports: { react: "npm:react@^19", hono: "npm:hono@^4", "@std/fs": "jsr:@std/fs@^1" },
     });
     ok(result.includes("react"));
     ok(result.includes("hono"));
     ok(result.includes("@std/fs"));
     strictEqual(result.length, 3);
   });
-
 });
 
 // ── detectTechnologies (Ruby/Rails) ───────────────────────────
@@ -1325,7 +1419,6 @@ describe("detectTechnologies (monorepo)", () => {
   it("detects technologies from workspace subpackages", () => {
     writePackageJson(tmp.path, { workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/web", { dependencies: { next: "^15", react: "^19" } });
-
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
     ok(ids.includes("nextjs"));
@@ -1339,7 +1432,6 @@ describe("detectTechnologies (monorepo)", () => {
     });
     writeFile(tmp.path, "tsconfig.json", "{}");
     addWorkspace(tmp.path, "packages/api", { dependencies: { express: "^4" } });
-
     const { detected } = detectTechnologies(tmp.path);
     const ids = detected.map((t) => t.id);
     ok(ids.includes("typescript"), "root tech should be detected");
@@ -1350,7 +1442,6 @@ describe("detectTechnologies (monorepo)", () => {
     writePackageJson(tmp.path, { workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/ui", { dependencies: { react: "^19" } });
     addWorkspace(tmp.path, "packages/app", { dependencies: { react: "^19" } });
-
     const { detected } = detectTechnologies(tmp.path);
     const reactCount = detected.filter((t) => t.id === "react").length;
     strictEqual(reactCount, 1, "react should appear only once");
@@ -1360,53 +1451,41 @@ describe("detectTechnologies (monorepo)", () => {
     writePackageJson(tmp.path, { workspaces: ["apps/*"] });
     addWorkspace(tmp.path, "apps/web");
     writeFile(tmp.path, "apps/web/next.config.mjs", "export default {}");
-
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("nextjs"));
+    ok(detected.some((t) => t.id === "nextjs"));
   });
 
   it("detects frontend from any workspace", () => {
-    writePackageJson(tmp.path, {
-      dependencies: { express: "^4" },
-      workspaces: ["packages/*"],
-    });
+    writePackageJson(tmp.path, { dependencies: { express: "^4" }, workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/ui", { dependencies: { react: "^19" } });
-
     const { isFrontend } = detectTechnologies(tmp.path);
     strictEqual(isFrontend, true);
   });
 
   it("detects combos across workspaces", () => {
-    writePackageJson(tmp.path, {
-      dependencies: { next: "^15" },
-      workspaces: ["packages/*"],
-    });
+    writePackageJson(tmp.path, { dependencies: { next: "^15" }, workspaces: ["packages/*"] });
     addWorkspace(tmp.path, "packages/db", { dependencies: { "@supabase/supabase-js": "^2" } });
-
     const { combos } = detectTechnologies(tmp.path);
-    const ids = combos.map((c) => c.id);
-    ok(ids.includes("nextjs-supabase"), "cross-workspace combo should be detected");
+    ok(
+      combos.some((c) => c.id === "nextjs-supabase"),
+      "cross-workspace combo should be detected",
+    );
   });
 
   it("works with pnpm-workspace.yaml", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
     addWorkspace(tmp.path, "packages/app", { dependencies: { vue: "^3" } });
-
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("vue"));
+    ok(detected.some((t) => t.id === "vue"));
   });
 
   it("detects config file content in workspaces", () => {
     writePackageJson(tmp.path, { workspaces: ["workers/*"] });
     addWorkspace(tmp.path, "workers/do-worker");
     writeJson(tmp.path, "workers/do-worker/wrangler.json", { durable_objects: { bindings: [] } });
-
     const { detected } = detectTechnologies(tmp.path);
-    const ids = detected.map((t) => t.id);
-    ok(ids.includes("cloudflare-durable-objects"));
+    ok(detected.some((t) => t.id === "cloudflare-durable-objects"));
   });
 });
 
@@ -1467,23 +1546,23 @@ describe("detectTechnologies (Python)", () => {
 
 describe("detectCombos", () => {
   it("returns empty array when no combos match", () => {
-    const combos = detectCombos(["react"]);
-    strictEqual(combos.length, 0);
+    strictEqual(detectCombos(["react"]).length, 0);
   });
 
   it("returns empty array for empty input", () => {
-    const combos = detectCombos([]);
-    strictEqual(combos.length, 0);
+    strictEqual(detectCombos([]).length, 0);
   });
 
   it("detects expo + tailwind combo", () => {
-    const combos = detectCombos(["expo", "tailwind"]);
-    ok(combos.some((c) => c.id === "expo-tailwind"));
+    ok(detectCombos(["expo", "tailwind"]).some((c) => c.id === "expo-tailwind"));
   });
 
   it("detects combo even with extra technologies", () => {
-    const combos = detectCombos(["react", "expo", "tailwind", "typescript"]);
-    ok(combos.some((c) => c.id === "expo-tailwind"));
+    ok(
+      detectCombos(["react", "expo", "tailwind", "typescript"]).some(
+        (c) => c.id === "expo-tailwind",
+      ),
+    );
   });
 
   it("detects multiple combos simultaneously", () => {
@@ -1493,127 +1572,124 @@ describe("detectCombos", () => {
     ok(ids.includes("nextjs-playwright"));
   });
 
+  it("detects react-hook-form-zod combo", () => {
+    const combo = detectCombos(["react-hook-form", "zod"]).find(
+      (c) => c.id === "react-hook-form-zod",
+    );
+    ok(combo);
+    ok(combo.skills.includes("jezweb/claude-skills/react-hook-form-zod"));
+    ok(combo.skills.includes("pproenca/dot-skills/zod"));
+  });
+
   it("does not detect combo when only one requirement is met", () => {
-    const combos = detectCombos(["nextjs"]);
-    ok(!combos.some((c) => c.id === "nextjs-supabase"));
+    ok(!detectCombos(["nextjs"]).some((c) => c.id === "nextjs-supabase"));
   });
 
   it("detects nextjs-clerk combo", () => {
-    const combos = detectCombos(["nextjs", "clerk"]);
-    const combo = combos.find((c) => c.id === "nextjs-clerk");
+    const combo = detectCombos(["nextjs", "clerk"]).find((c) => c.id === "nextjs-clerk");
     ok(combo);
     ok(combo.skills.includes("clerk/skills/clerk-nextjs-patterns"));
   });
 
   it("detects nuxt-clerk combo", () => {
-    const combos = detectCombos(["nuxt", "clerk"]);
-    const combo = combos.find((c) => c.id === "nuxt-clerk");
+    const combo = detectCombos(["nuxt", "clerk"]).find((c) => c.id === "nuxt-clerk");
     ok(combo);
     ok(combo.skills.includes("clerk/skills/clerk-nuxt-patterns"));
   });
 
   it("detects vue-clerk combo", () => {
-    const combos = detectCombos(["vue", "clerk"]);
-    ok(combos.some((c) => c.id === "vue-clerk"));
+    ok(detectCombos(["vue", "clerk"]).some((c) => c.id === "vue-clerk"));
   });
 
   it("detects react-clerk combo", () => {
-    const combos = detectCombos(["react", "clerk"]);
-    ok(combos.some((c) => c.id === "react-clerk"));
+    ok(detectCombos(["react", "clerk"]).some((c) => c.id === "react-clerk"));
   });
 
   it("detects astro-clerk combo", () => {
-    const combos = detectCombos(["astro", "clerk"]);
-    ok(combos.some((c) => c.id === "astro-clerk"));
+    ok(detectCombos(["astro", "clerk"]).some((c) => c.id === "astro-clerk"));
   });
 
   it("detects expo-clerk combo", () => {
-    const combos = detectCombos(["expo", "clerk"]);
-    ok(combos.some((c) => c.id === "expo-clerk"));
+    ok(detectCombos(["expo", "clerk"]).some((c) => c.id === "expo-clerk"));
   });
 
   it("detects react-react-three-fiber combo", () => {
-    const combos = detectCombos(["threejs", "react", "@react-three/fiber"]);
-    ok(combos.some((c) => c.id === "react-react-three-fiber"));
+    ok(
+      detectCombos(["threejs", "react", "@react-three/fiber"]).some(
+        (c) => c.id === "react-react-three-fiber",
+      ),
+    );
   });
 
   it("does not detect react-react-three-fiber combo without react", () => {
-    const combos = detectCombos(["threejs", "@react-three/fiber"]);
-    ok(!combos.some((c) => c.id === "react-react-three-fiber"));
+    ok(
+      !detectCombos(["threejs", "@react-three/fiber"]).some(
+        (c) => c.id === "react-react-three-fiber",
+      ),
+    );
   });
 
   it("does not detect react-react-three-fiber combo without Three.js", () => {
-    const combos = detectCombos(["react", "@react-three/fiber"]);
-    ok(!combos.some((c) => c.id === "react-react-three-fiber"));
+    ok(
+      !detectCombos(["react", "@react-three/fiber"]).some(
+        (c) => c.id === "react-react-three-fiber",
+      ),
+    );
   });
 
   it("does not detect nextjs-clerk combo without clerk", () => {
-    const combos = detectCombos(["nextjs"]);
-    ok(!combos.some((c) => c.id === "nextjs-clerk"));
+    ok(!detectCombos(["nextjs"]).some((c) => c.id === "nextjs-clerk"));
   });
 
   it("detects react-router-clerk combo", () => {
-    const combos = detectCombos(["react-router", "clerk"]);
-    ok(combos.some((c) => c.id === "react-router-clerk"));
+    ok(detectCombos(["react-router", "clerk"]).some((c) => c.id === "react-router-clerk"));
   });
 
   it("does not detect react-router-clerk combo without clerk", () => {
-    const combos = detectCombos(["react-router"]);
-    ok(!combos.some((c) => c.id === "react-router-clerk"));
+    ok(!detectCombos(["react-router"]).some((c) => c.id === "react-router-clerk"));
   });
 
   it("detects tanstack-clerk combo", () => {
-    const combos = detectCombos(["tanstack-start", "clerk"]);
-    ok(combos.some((c) => c.id === "tanstack-clerk"));
+    ok(detectCombos(["tanstack-start", "clerk"]).some((c) => c.id === "tanstack-clerk"));
   });
 
   it("does not detect tanstack-clerk combo without tanstack-start", () => {
-    const combos = detectCombos(["clerk"]);
-    ok(!combos.some((c) => c.id === "tanstack-clerk"));
+    ok(!detectCombos(["clerk"]).some((c) => c.id === "tanstack-clerk"));
   });
 
   it("detects chrome-extension-clerk combo", () => {
-    const combos = detectCombos(["chrome-extension", "clerk"]);
-    ok(combos.some((c) => c.id === "chrome-extension-clerk"));
+    ok(detectCombos(["chrome-extension", "clerk"]).some((c) => c.id === "chrome-extension-clerk"));
   });
 
   it("does not detect chrome-extension-clerk combo without chrome-extension", () => {
-    const combos = detectCombos(["clerk"]);
-    ok(!combos.some((c) => c.id === "chrome-extension-clerk"));
+    ok(!detectCombos(["clerk"]).some((c) => c.id === "chrome-extension-clerk"));
   });
 
   it("detects swiftui-clerk combo", () => {
-    const combos = detectCombos(["swiftui", "clerk"]);
-    ok(combos.some((c) => c.id === "swiftui-clerk"));
+    ok(detectCombos(["swiftui", "clerk"]).some((c) => c.id === "swiftui-clerk"));
   });
 
   it("does not detect swiftui-clerk combo without clerk", () => {
-    const combos = detectCombos(["swiftui"]);
-    ok(!combos.some((c) => c.id === "swiftui-clerk"));
+    ok(!detectCombos(["swiftui"]).some((c) => c.id === "swiftui-clerk"));
   });
 
   it("detects android-clerk combo", () => {
-    const combos = detectCombos(["android", "clerk"]);
-    ok(combos.some((c) => c.id === "android-clerk"));
+    ok(detectCombos(["android", "clerk"]).some((c) => c.id === "android-clerk"));
   });
 
   it("does not detect android-clerk combo without clerk", () => {
-    const combos = detectCombos(["android"]);
-    ok(!combos.some((c) => c.id === "android-clerk"));
+    ok(!detectCombos(["android"]).some((c) => c.id === "android-clerk"));
   });
 
   it("detects rails-rspec combo", () => {
-    const combos = detectCombos(["rails", "rspec"]);
-    ok(combos.some((c) => c.id === "rails-rspec"));
+    ok(detectCombos(["rails", "rspec"]).some((c) => c.id === "rails-rspec"));
   });
 
   it("detects rails-sidekiq combo", () => {
-    const combos = detectCombos(["rails", "sidekiq"]);
-    ok(combos.some((c) => c.id === "rails-sidekiq"));
+    ok(detectCombos(["rails", "sidekiq"]).some((c) => c.id === "rails-sidekiq"));
   });
 
   it("does not detect rails-rspec combo without rspec", () => {
-    const combos = detectCombos(["rails"]);
-    ok(!combos.some((c) => c.id === "rails-rspec"));
+    ok(!detectCombos(["rails"]).some((c) => c.id === "rails-rspec"));
   });
 });
