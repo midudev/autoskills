@@ -510,7 +510,7 @@ export const SKILLS_MAP: Technology[] = [
     id: "swiftui",
     name: "SwiftUI",
     detect: {
-      configFiles: ["Package.swift"],
+      configFiles: ["Package.swift", "Podfile"],
     },
     skills: [
       "avdlee/swiftui-agent-skill/swiftui-expert-skill",
