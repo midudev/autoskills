@@ -85,12 +85,12 @@ Add one entry to `SKILLS_MAP` in `packages/autoskills/skills-map.mjs`:
 
 Every entry requires these four fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Stable, unique, lowercase. Use `-` as separator. |
-| `name` | `string` | User-facing display name. |
-| `detect` | `object` | At least one detection signal (see below). |
-| `skills` | `string[]` | One or more skill references. |
+| Field    | Type       | Description                                      |
+| -------- | ---------- | ------------------------------------------------ |
+| `id`     | `string`   | Stable, unique, lowercase. Use `-` as separator. |
+| `name`   | `string`   | User-facing display name.                        |
+| `detect` | `object`   | At least one detection signal (see below).       |
+| `skills` | `string[]` | One or more skill references.                    |
 
 #### Detection signals — choose the simplest one that works
 
@@ -182,18 +182,26 @@ Common mistakes:
 
 ```js
 // ✗ packages is empty
-detect: { packages: [] }
+detect: {
+  packages: [];
+}
 
 // ✗ skill ref is missing owner/repo
-skills: ["react-best-practices"]
+skills: ["react-best-practices"];
 
 // ✗ packagePattern is a string, not a RegExp
-detect: { packagePatterns: ["^@aws-sdk/"] }
+detect: {
+  packagePatterns: ["^@aws-sdk/"];
+}
 
 // ✓ correct
-detect: { packages: ["react"] }
-skills: ["vercel-labs/agent-skills/vercel-react-best-practices"]
-detect: { packagePatterns: [/^@aws-sdk\//] }
+detect: {
+  packages: ["react"];
+}
+skills: ["vercel-labs/agent-skills/vercel-react-best-practices"];
+detect: {
+  packagePatterns: [/^@aws-sdk\//];
+}
 ```
 
 ---
@@ -215,12 +223,12 @@ Add one entry to `COMBO_SKILLS_MAP` in `packages/autoskills/skills-map.mjs`:
 
 Add a combo only when it provides skills that are not already covered by the individual technology entries. A combo that just duplicates standalone skills adds noise.
 
-| Field | Requirement |
-|-------|-------------|
-| `id` | Unique, lowercase, hyphen-separated. |
-| `name` | User-facing, e.g. `"Next.js + Supabase"`. |
+| Field      | Requirement                                     |
+| ---------- | ----------------------------------------------- |
+| `id`       | Unique, lowercase, hyphen-separated.            |
+| `name`     | User-facing, e.g. `"Next.js + Supabase"`.       |
 | `requires` | Array of two or more existing `SKILLS_MAP` ids. |
-| `skills` | At least one valid skill reference. |
+| `skills`   | At least one valid skill reference.             |
 
 If you reference an id that doesn't exist in `SKILLS_MAP`, the test fails:
 
