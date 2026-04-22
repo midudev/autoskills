@@ -344,6 +344,37 @@ export function resolveWorkspaces(projectDir: string, preloaded?: PreloadedManif
 
 // ── Detection ─────────────────────────────────────────────────
 
+export function existsDeep(
+  dir: string,
+  fileNames: string[],
+  maxDepth: number = 3,
+): boolean {
+  const nameSet = new Set(fileNames);
+
+  function scan(current: string, depth: number): boolean {
+    let entries: import("node:fs").Dirent[];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+    for (const entry of entries) {
+      if (entry.isFile() && nameSet.has(entry.name)) return true;
+      if (
+        entry.isDirectory() &&
+        depth < maxDepth &&
+        !entry.name.startsWith(".") &&
+        !SCAN_SKIP_DIRS.has(entry.name)
+      ) {
+        if (scan(join(current, entry.name), depth + 1)) return true;
+      }
+    }
+    return false;
+  }
+
+  return scan(dir, 0);
+}
+
 export function readGemfile(dir: string): string[] {
   const gemfilePath = join(dir, "Gemfile");
   if (!existsSync(gemfilePath)) return [];
@@ -468,6 +499,9 @@ function detectTechnologiesInDir(
 
     if (!found && tech.detect.configFiles) {
       found = tech.detect.configFiles.some((f) => cachedExists(join(dir, f)));
+      if (!found) {
+        found = existsDeep(dir, tech.detect.configFiles);
+      }
     }
 
     if (!found && tech.detect.gems) {

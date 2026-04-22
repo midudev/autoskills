@@ -9,6 +9,7 @@ import {
   detectTechnologies,
   detectCombos,
   parseSettingsGradleModules,
+  existsDeep,
 } from "../lib.ts";
 import { useTmpDir, writePackageJson, writeJson, writeFile, addWorkspace } from "./helpers.ts";
 
@@ -1631,5 +1632,74 @@ describe("detectCombos", () => {
 
   it("does not detect rails-rspec combo without rspec", () => {
     ok(!detectCombos(["rails"]).some((c) => c.id === "rails-rspec"));
+  });
+});
+
+// ── existsDeep ───────────────────────────────────────────────
+
+describe("existsDeep", () => {
+  const tmp = useTmpDir();
+
+  it("finds a file at the root level", () => {
+    writeFile(tmp.path, "Package.swift", "");
+    ok(existsDeep(tmp.path, ["Package.swift"]));
+  });
+
+  it("finds a file one level deep", () => {
+    writeFile(tmp.path, "Packages/DesignSystem/Package.swift", "");
+    ok(existsDeep(tmp.path, ["Package.swift"]));
+  });
+
+  it("finds a file two levels deep", () => {
+    writeFile(tmp.path, "ios/App/Podfile", "");
+    ok(existsDeep(tmp.path, ["Podfile"]));
+  });
+
+  it("returns false when file is absent", () => {
+    ok(!existsDeep(tmp.path, ["Package.swift", "Podfile"]));
+  });
+
+  it("returns false when file exceeds maxDepth", () => {
+    writeFile(tmp.path, "a/b/c/d/Package.swift", "");
+    ok(!existsDeep(tmp.path, ["Package.swift"], 3));
+  });
+
+  it("skips node_modules directories", () => {
+    writeFile(tmp.path, "node_modules/some-pkg/Package.swift", "");
+    ok(!existsDeep(tmp.path, ["Package.swift"]));
+  });
+
+  it("matches any name from the provided list", () => {
+    writeFile(tmp.path, "ios/Podfile", "");
+    ok(existsDeep(tmp.path, ["Package.swift", "Podfile"]));
+  });
+});
+
+// ── detectTechnologies — configFiles deep scan (SwiftUI) ──────
+
+describe("detectTechnologies — configFiles deep scan (SwiftUI)", () => {
+  const tmp = useTmpDir();
+
+  it("detects swiftui when Package.swift is at root", () => {
+    writeFile(tmp.path, "Package.swift", "");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "swiftui"));
+  });
+
+  it("detects swiftui when Package.swift is in a subdirectory (e.g. Packages/)", () => {
+    writeFile(tmp.path, "Packages/DesignSystem/Package.swift", "");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "swiftui"));
+  });
+
+  it("detects swiftui when Podfile is nested under ios/", () => {
+    writeFile(tmp.path, "ios/Podfile", "");
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "swiftui"));
+  });
+
+  it("does not detect swiftui when neither Package.swift nor Podfile exist", () => {
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "swiftui"));
   });
 });
