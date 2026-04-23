@@ -1,0 +1,28 @@
+---
+import type { Sponsor } from "@/constants/featured-sponsors";
+
+interface Props {
+  s: Sponsor;
+  i: number;
+}
+
+const { s, i } = Astro.props;
+---
+
+<a
+  href={`https://github.com/${s.login}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  class="sponsor-avatar relative hover:z-10"
+  style={`--i: ${i}`}
+>
+  <img
+    src={`https://unavatar.io/github/${s.login}`}
+    alt={s.login}
+    width="32"
+    height="32"
+    class="size-8 rounded-full border-2 border-zinc-900 shadow-sm shadow-black/30"
+    loading="lazy"
+  />
+  <span class="sponsor-tip">@{s.login}</span>
+</a>

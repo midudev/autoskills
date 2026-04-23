@@ -1,4 +1,4 @@
-import { featuredSponsors, type Sponsor } from "@/constants/featuredSponsors";
+import { featuredSponsors, type Sponsor } from "@/constants/featured-sponsors";
 
 export async function fetchSponsors() {
   let sponsors: Sponsor[] = featuredSponsors;
