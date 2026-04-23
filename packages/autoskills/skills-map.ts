@@ -20,6 +20,8 @@ export interface Technology {
   name: string;
   detect: DetectConfig;
   skills: string[];
+  aliases?: string[];
+  description?: string;
 }
 
 export interface ComboSkill {
