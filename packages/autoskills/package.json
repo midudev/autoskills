@@ -25,7 +25,8 @@
   },
   "files": [
     "index.mjs",
-    "dist/"
+    "dist/",
+    "prompts"
   ],
   "type": "module",
   "scripts": {
