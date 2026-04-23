@@ -2,8 +2,18 @@ import { resolve, dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { detectTechnologies, collectSkills, detectAgents, getInstalledSkillNames } from "./lib.ts";
+import {
+  detectTechnologies,
+  detectCombos,
+  collectSkills,
+  detectAgents,
+  getInstalledSkillNames,
+  loadMarkdownSources,
+  mergeMarkdownDetections,
+} from "./lib.ts";
 import type { SkillEntry, Technology, ComboSkill } from "./lib.ts";
+import { scanMarkdown } from "./markdown-scanner.ts";
+import { SKILLS_MAP } from "./skills-map.ts";
 import {
   log,
   write,
@@ -48,6 +58,8 @@ interface CliArgs {
   verbose: boolean;
   help: boolean;
   agents: string[];
+  fromSpec?: string;
+  scanDocs: boolean;
 }
 
 function parseArgs(): CliArgs {
@@ -60,12 +72,23 @@ function parseArgs(): CliArgs {
       agents.push(args[i]);
     }
   }
+  const fromSpecIdx = args.findIndex((a) => a === "--from-spec");
+  let fromSpec: string | undefined;
+  if (fromSpecIdx !== -1) {
+    const next = args[fromSpecIdx + 1];
+    if (!next || next.startsWith("-")) {
+      throw new Error("--from-spec requires a path argument");
+    }
+    fromSpec = next;
+  }
   return {
     autoYes: args.includes("-y") || args.includes("--yes"),
     dryRun: args.includes("--dry-run"),
     verbose: args.includes("--verbose") || args.includes("-v"),
     help: args.includes("--help") || args.includes("-h"),
     agents,
+    fromSpec,
+    scanDocs: args.includes("--scan-docs"),
   };
 }
 
@@ -80,11 +103,13 @@ function showHelp(): void {
     npx autoskills ${dim("-a cursor claude-code")} Install for specific IDEs only
 
   ${bold("Options:")}
-    -y, --yes       Skip confirmation prompt
-    --dry-run       Show skills without installing
-    -v, --verbose   Show error details on failure
-    -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
-    -h, --help      Show this help message
+    -y, --yes           Skip confirmation prompt
+    --dry-run           Show skills without installing
+    -v, --verbose       Show error details on failure
+    -a, --agent         Install for specific IDEs only (e.g. cursor, claude-code)
+    --from-spec <path>  Detect tech from a markdown spec file
+    --scan-docs         Auto-scan CLAUDE.md / AGENTS.md in project root
+    -h, --help          Show this help message
 `);
 }
 
@@ -361,7 +386,7 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { autoYes, dryRun, verbose, help, agents } = parseArgs();
+  const { autoYes, dryRun, verbose, help, agents, fromSpec, scanDocs } = parseArgs();
 
   if (help) {
     showHelp();
@@ -373,8 +398,37 @@ async function main(): Promise<void> {
   const projectDir = resolve(".");
 
   write(dim("   Scanning project...\r"));
-  const { detected, isFrontend, combos } = detectTechnologies(projectDir);
+  const core = detectTechnologies(projectDir);
   write("\x1b[K");
+
+  // Merge markdown-scanner results (opt-in) — default path unchanged.
+  let detected: Technology[] = core.detected;
+  let combos: ComboSkill[] = core.combos;
+  let isFrontend = core.isFrontend;
+
+  if (fromSpec || scanDocs) {
+    const sources = loadMarkdownSources({
+      fromSpec,
+      scanDocs,
+      projectDir,
+    });
+    if (scanDocs && !fromSpec && sources.length === 0) {
+      console.error(yellow("   warning: no CLAUDE.md or AGENTS.md found"));
+    }
+    if (sources.length > 0) {
+      const mdMatches = sources.flatMap(s => scanMarkdown(s.content, SKILLS_MAP));
+      const coreIds = core.detected.map(t => t.id);
+      const mergedIds = mergeMarkdownDetections(coreIds, mdMatches);
+      // mergeMarkdownDetections only appends; length !== means scanner contributed new ids.
+      if (mergedIds.length !== coreIds.length) {
+        detected = mergedIds
+          .map(id => SKILLS_MAP.find(t => t.id === id))
+          .filter((t): t is Technology => t !== undefined);
+        combos = detectCombos(mergedIds);
+        // isFrontend stays as core.isFrontend — core's heuristic is file-system based, not ID-based
+      }
+    }
+  }
 
   if (detected.length === 0 && !isFrontend) {
     log(yellow("   ⚠ No supported technologies detected."));
