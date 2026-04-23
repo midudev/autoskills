@@ -1,4 +1,6 @@
 ---
+import SkillList from "@/components/skill-list.astro";
+
 const { getSkillsMap } = await import("@/utils/get-skills-map.ts");
 const { skillsMap } = await getSkillsMap();
 
@@ -56,30 +58,7 @@ function getIcon(name: string): string | undefined {
                 {tech.name}
               </span>
             </div>
-            <div class="flex-1 min-w-0">
-              {tech.skills.length > 0 ? (
-                <div class="flex flex-wrap gap-x-3 gap-y-0.5">
-                  {tech.skills.map((skill) => (
-                    <a
-                      href={
-                        skill.startsWith("http")
-                          ? skill
-                          : `https://skills.sh/${skill}`
-                      }
-                      target="_blank"
-                      rel="noopener"
-                      class="text-xs text-zinc-600 hover:text-cyan-400 transition-colors"
-                    >
-                      {skill.startsWith("http")
-                        ? new URL(skill).hostname + new URL(skill).pathname
-                        : skill.split("/").slice(2).join("/")}
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <span class="text-xs text-zinc-700 italic">no skills yet</span>
-              )}
-            </div>
+            <SkillList skills={tech.skills} />
           </div>
         </div>
       ))
