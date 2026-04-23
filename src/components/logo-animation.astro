@@ -1,0 +1,77 @@
+<pre
+  id="ascii-logo"
+  class="text-[10px] sm:text-xs lg:text-[9px] leading-none mb-8 h-[6lh] overflow-hidden"
+  aria-hidden="true">
+</pre>
+
+
+
+<script>
+  // ── ASCII logo animation ─────────────────────────────────
+  {
+    const LOGO_LINES = [
+      " █████╗ ██╗   ██╗████████╗ ██████╗ ███████╗██╗  ██╗██╗██╗     ██╗     ███████╗",
+      "██╔══██╗██║   ██║╚══██╔══╝██╔═══██╗██╔════╝██║ ██╔╝██║██║     ██║     ██╔════╝",
+      "███████║██║   ██║   ██║   ██║   ██║███████╗█████╔╝ ██║██║     ██║     ███████╗",
+      "██╔══██║██║   ██║   ██║   ██║   ██║╚════██║██╔═██╗ ██║██║     ██║     ╚════██║",
+      "██║  ██║╚██████╔╝   ██║   ╚██████╔╝███████║██║  ██╗██║███████╗███████╗███████║",
+      "╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝",
+    ];
+
+    const START_COLOR = "#3f3f46"; // zinc-700 (gris clarito)
+    const END_COLOR = "#f4f4f5"; // zinc-100 (blanco)
+
+    const logo = document.getElementById("ascii-logo")!;
+    const cols = Math.max(...LOGO_LINES.map((l) => l.length));
+    const rows = LOGO_LINES.length;
+
+    // Build grid
+    const grid: HTMLSpanElement[][] = [];
+    for (const line of LOGO_LINES) {
+      const row: HTMLSpanElement[] = [];
+      const lineEl = document.createElement("div");
+      lineEl.style.height = "1lh";
+      for (let c = 0; c < cols; c++) {
+        const ch = line[c] ?? " ";
+        const span = document.createElement("span");
+        span.textContent = ch;
+        span.style.color = START_COLOR;
+        lineEl.appendChild(span);
+        row.push(span);
+      }
+      logo.appendChild(lineEl);
+      grid.push(row);
+    }
+
+    // Diagonal sweep: top-left to bottom-right, gray → white
+    const maxDist = cols + rows;
+    const SPEED = 0.9;
+    let frame = 0;
+    const totalFrames = Math.ceil((maxDist + 10) / SPEED);
+
+    function animate() {
+      const waveFront = frame * SPEED;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          const dist = c + r * 3;
+          const progress = Math.max(0, Math.min(1, (waveFront - dist) / 10));
+
+          const gray = Math.round(63 + progress * (244 - 63));
+          grid[r][c].style.color = `rgb(${gray},${gray},${gray})`;
+        }
+      }
+
+      frame++;
+      if (frame <= totalFrames) {
+        requestAnimationFrame(animate);
+      } else {
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < grid[r].length; c++)
+            grid[r][c].style.color = END_COLOR;
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+</script>
