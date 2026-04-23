@@ -1,5 +1,6 @@
 ---
-const { cliVersion } = Astro.props;
+import { getCliVersion } from "@/utils/get-cli-version";
+const cliVersion = getCliVersion();
 ---
 
 <div

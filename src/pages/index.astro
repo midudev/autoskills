@@ -70,11 +70,6 @@ try {
   // Falls back to featuredSponsors
 }
 
-const { default: cliPkg } = await import(
-  "../../packages/autoskills/package.json",
-  { with: { type: "json" } }
-);
-const cliVersion = cliPkg.version;
 ---
 
 <Layout>
@@ -90,7 +85,7 @@ const cliVersion = cliPkg.version;
     </h1>
 
     <CopyButton />
-    <TerminalAnimation cliVersion={cliVersion} />
+    <TerminalAnimation />
 
     <Separator />
     <HowItWorks />
