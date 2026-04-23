@@ -1,0 +1,44 @@
+---
+import { fetchSponsors } from "@/utils/fetch-sponsors";
+import Sponsor from "@/components/ui/sponsor.astro";
+
+const { sponsors } = await fetchSponsors();
+
+// this should be a server island because the way it is right now the sponsors are load only in the build time, i do not implement it yet because it has some deployment considerations and it will a cache rule too.
+// export const prerender = false
+---
+
+<p>
+  Made by <a
+    href="https://midu.dev"
+    target="_blank"
+    rel="noopener"
+    class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors"
+    >midudev</a
+  >{sponsors.length > 0 && " with the support of"}
+</p>
+
+<div class="flex items-center -space-x-1.5">
+  {sponsors.map((s, i) => <Sponsor s={s} i={i} />)}
+
+  <a
+    href="https://github.com/sponsors/midudev"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="relative hover:z-10 transition-transform hover:scale-110 flex items-center justify-center size-8 rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+    title="Support this project"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      ><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg
+    >
+  </a>
+</div>
