@@ -9,55 +9,12 @@ import HowItWorks from "@/sections/how-it-works.astro";
 import Footer from "@/sections/footer.astro";
 import SupportedTechnologiesSkills from "@/sections/supported-technologies-skills.astro";
 import LogoAnimation from "@/components/logo-animation.astro";
-import { featuredSponsors, type Sponsor } from "@/constants/featuredSponsors";
-
-let sponsors: Sponsor[] = featuredSponsors;
-
-try {
-  const token = import.meta.env.GITHUB_TOKEN;
-  if (token) {
-    const res = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers: {
-        Authorization: `bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `{
-          user(login: "midudev") {
-            sponsorshipsAsMaintainer(first: 100, activeOnly: true) {
-              nodes {
-                sponsorEntity {
-                  ... on User { login databaseId }
-                  ... on Organization { login databaseId }
-                }
-              }
-            }
-          }
-        }`,
-      }),
-    });
-    const data = await res.json();
-    const live = (data?.data?.user?.sponsorshipsAsMaintainer?.nodes ?? [])
-      .map((n: any) => ({
-        login: n.sponsorEntity?.login,
-        id: n.sponsorEntity?.databaseId,
-      }))
-      .filter((s: Sponsor) => s.login && s.id);
-    if (live.length > 0) sponsors = live;
-  }
-} catch {
-  // Falls back to featuredSponsors
-}
-
 ---
 
 <Layout>
-  <!-- Left column: scrollable content -->
   <main
     class="text-sm leading-relaxed px-6 py-12 lg:w-1/2 lg:pl-12 lg:pr-8 lg:py-16"
   >
-    <!-- ASCII Logo (animated reveal) -->
     <LogoAnimation />
     <h1 class="text-zinc-400 mb-8">
       Auto-detect your tech stack and install the best<br />
@@ -77,6 +34,6 @@ try {
     <SupportedTechnologiesSkills />
 
     <Separator />
-    <Footer sponsors={sponsors} />
+    <Footer />
   </main>
 </Layout>
