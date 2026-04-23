@@ -1,29 +1,9 @@
 ---
 import SkillList from "@/components/skill-list.astro";
+import TechList from "@/components/tech-list.astro";
 
 const { getSkillsMap } = await import("@/utils/get-skills-map.ts");
 const { skillsMap } = await getSkillsMap();
-
-const iconFiles = import.meta.glob<string>("../icons/*.svg", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
-
-function toFilename(name: string) {
-  return (
-    name
-      .toLowerCase()
-      .replace(/\//g, "-")
-      .replace(/\s+/g, "-")
-      .replace(/\./g, "") + ".svg"
-  );
-}
-
-function getIcon(name: string): string | undefined {
-  const key = `../icons/${toFilename(name)}`;
-  return iconFiles[key];
-}
 ---
 
 <!-- Supported Technologies & Skills -->
@@ -45,19 +25,7 @@ function getIcon(name: string): string | undefined {
       skillsMap.map((tech) => (
         <div class="group border-b border-zinc-800/40 py-2.5 first:border-t">
           <div class="flex items-start gap-3">
-            <div class="flex items-center gap-2 w-32 shrink-0 pt-px">
-              {getIcon(tech.name) ? (
-                <span
-                  class={`w-3.5 h-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity [&>svg]:w-full [&>svg]:h-full`}
-                  set:html={getIcon(tech.name)}
-                />
-              ) : (
-                <span class="w-3.5 h-3.5 shrink-0" />
-              )}
-              <span class="text-zinc-300 group-hover:text-zinc-100 transition-colors text-xs">
-                {tech.name}
-              </span>
-            </div>
+            <TechList name={tech.name} />
             <SkillList skills={tech.skills} />
           </div>
         </div>

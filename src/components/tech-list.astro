@@ -1,0 +1,45 @@
+---
+interface Props {
+  name: string;
+}
+const { name } = Astro.props;
+
+const iconFiles = import.meta.glob<string>("../icons/*.svg", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
+
+function toFilename(name: string) {
+  return (
+    name
+      .toLowerCase()
+      .replace(/\//g, "-")
+      .replace(/\s+/g, "-")
+      .replace(/\./g, "") + ".svg"
+  );
+}
+
+function getIcon(name: string): string | undefined {
+  const key = `../icons/${toFilename(name)}`;
+  return iconFiles[key];
+}
+---
+
+<div class="flex items-center gap-2 w-32 shrink-0 pt-px">
+  {
+    getIcon(name) ? (
+      <span
+        class={`w-3.5 h-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity [&>svg]:w-full [&>svg]:h-full`}
+        set:html={getIcon(name)}
+      />
+    ) : (
+      <span class="w-3.5 h-3.5 shrink-0" />
+    )
+  }
+  <span
+    class="text-zinc-300 group-hover:text-zinc-100 transition-colors text-xs"
+  >
+    {name}
+  </span>
+</div>
