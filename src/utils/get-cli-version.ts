@@ -5,5 +5,5 @@ export async function getCliVersion() {
   );
   const cliVersion = cliPkg.version;
 
-
+  return { cliVersion }
 }
