@@ -3,6 +3,7 @@ import Layout from '@/layouts/Layout.astro';
 import '@/styles/global.css';
 import TerminalAnimation from '@/components/terminal-animation.astro';
 import Options from '@/sections/options.astro';
+import Separator from '@/components/separator.astro';
 
 const iconFiles = import.meta.glob<string>('../icons/*.svg', { query: '?raw', import: 'default', eager: true });
 
@@ -170,7 +171,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     <TerminalAnimation cliVersion={cliVersion} />
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <Separator />
 
     <!-- How it works -->
     <div class="mb-12">
@@ -201,12 +202,12 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     </div>
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <Separator />
 
     <Options />
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <Separator />
 
     <!-- Supported Technologies & Skills -->
     <div class="mb-12">
@@ -247,7 +248,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     </div>
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <Separator />
 
     <!-- Footer -->
     <footer class="text-zinc-600 space-y-4 pb-8">
