@@ -1,0 +1,19 @@
+---
+interface Props {
+  number: number;
+  title: string;
+  description: string;
+}
+
+const { number, title, description } = Astro.props;
+---
+
+<div class="flex gap-4">
+  <span class="text-zinc-600 shrink-0">[{number}]</span>
+  <div>
+    <p class="text-zinc-200">{title}</p>
+    <p class="text-zinc-500">
+      {description}
+    </p>
+  </div>
+</div>
