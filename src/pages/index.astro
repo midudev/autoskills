@@ -7,27 +7,7 @@ import Separator from "@/components/separator.astro";
 import CopyButton from "@/components/copy-button.astro";
 import HowItWorks from "@/sections/how-it-works.astro";
 import Footer from "@/sections/footer.astro";
-
-const iconFiles = import.meta.glob<string>("../icons/*.svg", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
-
-function toFilename(name: string) {
-  return (
-    name
-      .toLowerCase()
-      .replace(/\//g, "-")
-      .replace(/\s+/g, "-")
-      .replace(/\./g, "") + ".svg"
-  );
-}
-
-function getIcon(name: string): string | undefined {
-  const key = `../icons/${toFilename(name)}`;
-  return iconFiles[key];
-}
+import SupportedTechnologiesSkills from "@/sections/supported-technologies-skills.astro";
 
 interface Sponsor {
   login: string;
@@ -89,67 +69,11 @@ try {
   // Falls back to featuredSponsors
 }
 
-const { SKILLS_MAP } = await import("../../packages/autoskills/skills-map.ts");
 const { default: cliPkg } = await import(
   "../../packages/autoskills/package.json",
   { with: { type: "json" } }
 );
 const cliVersion = cliPkg.version;
-
-const popularityOrder = [
-  "typescript",
-  "zod",
-  "react-hook-form",
-  "react",
-  "nextjs",
-  "node",
-  "tailwind",
-  "vue",
-  "angular",
-  "vite",
-  "astro",
-  "nuxt",
-  "svelte",
-  "expo",
-  "react-native",
-  "bun",
-  "deno",
-  "supabase",
-  "cloudflare",
-  "cloudflare-agents",
-  "cloudflare-durable-objects",
-  "cloudflare-ai",
-  "terraform",
-  "vercel-deploy",
-  "vercel-ai",
-  "shadcn",
-  "playwright",
-  "turborepo",
-  "better-auth",
-  "clerk",
-  "pinia",
-  "neon",
-  "remotion",
-  "gsap",
-  "oxlint",
-  "express",
-  "go",
-  "swiftui",
-  "azure",
-  "aws",
-  "elevenlabs",
-  "kotlin-multiplatform",
-  "android",
-  "java",
-  "springboot",
-  "threejs",
-];
-
-const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
-  const ai = popularityOrder.indexOf(a.id);
-  const bi = popularityOrder.indexOf(b.id);
-  return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
-});
 ---
 
 <Layout>
@@ -170,88 +94,17 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     </h1>
 
     <CopyButton />
-
     <TerminalAnimation cliVersion={cliVersion} />
 
-    <!-- Separator -->
     <Separator />
-
     <HowItWorks />
 
-    <!-- Separator -->
     <Separator />
-
     <Options />
 
-    <!-- Separator -->
     <Separator />
+    <SupportedTechnologiesSkills />
 
-    <!-- Supported Technologies & Skills -->
-    <div class="mb-12">
-      <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs">
-        Supported technologies & skills
-      </p>
-      <p class="text-zinc-600 mb-6">
-        Each technology auto-installs these skills from <a
-          href="https://skills.sh"
-          target="_blank"
-          rel="noopener"
-          class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors"
-          >skills.sh</a
-        >.
-      </p>
-      <div class="space-y-0">
-        {
-          skillsMap.map((tech) => (
-            <div class="group border-b border-zinc-800/40 py-2.5 first:border-t">
-              <div class="flex items-start gap-3">
-                <div class="flex items-center gap-2 w-32 shrink-0 pt-px">
-                  {getIcon(tech.name) ? (
-                    <span
-                      class={`w-3.5 h-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity [&>svg]:w-full [&>svg]:h-full`}
-                      set:html={getIcon(tech.name)}
-                    />
-                  ) : (
-                    <span class="w-3.5 h-3.5 shrink-0" />
-                  )}
-                  <span class="text-zinc-300 group-hover:text-zinc-100 transition-colors text-xs">
-                    {tech.name}
-                  </span>
-                </div>
-                <div class="flex-1 min-w-0">
-                  {tech.skills.length > 0 ? (
-                    <div class="flex flex-wrap gap-x-3 gap-y-0.5">
-                      {tech.skills.map((skill) => (
-                        <a
-                          href={
-                            skill.startsWith("http")
-                              ? skill
-                              : `https://skills.sh/${skill}`
-                          }
-                          target="_blank"
-                          rel="noopener"
-                          class="text-xs text-zinc-600 hover:text-cyan-400 transition-colors"
-                        >
-                          {skill.startsWith("http")
-                            ? new URL(skill).hostname + new URL(skill).pathname
-                            : skill.split("/").slice(2).join("/")}
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <span class="text-xs text-zinc-700 italic">
-                      no skills yet
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
-        }
-      </div>
-    </div>
-
-    <!-- Separator -->
     <Separator />
     <Footer sponsors={sponsors} />
   </main>
