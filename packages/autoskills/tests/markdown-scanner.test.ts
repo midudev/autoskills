@@ -1,5 +1,5 @@
 import { describe, it } from "node:test";
-import { deepEqual, equal } from "node:assert/strict";
+import { deepEqual, equal, ok } from "node:assert/strict";
 import { scanMarkdown } from "../markdown-scanner.ts";
 import { SKILLS_MAP } from "../skills-map.ts";
 
@@ -148,5 +148,38 @@ describe("scanMarkdown — stack headings", () => {
   it("does NOT match prose mid-paragraph", () => {
     const md = "# Intro\n\nOur tech stack includes React but we also use Vue.\n";
     deepEqual(scanMarkdown(md, SKILLS_MAP), []);
+  });
+});
+
+describe("scanMarkdown — dedupe and edge cases", () => {
+  it("one match when tech appears in both fence and heading (source = stack-heading, headings scanned first)", () => {
+    const md = "## Stack\n- React\n\n```bash\npnpm add react\n```\n";
+    const matches = scanMarkdown(md, SKILLS_MAP);
+    equal(matches.length, 1);
+    equal(matches[0].techId, "react");
+    equal(matches[0].source, "stack-heading");
+  });
+
+  it("returns [] for empty input", () => {
+    deepEqual(scanMarkdown("", SKILLS_MAP), []);
+  });
+
+  it("does not throw on 100KB input and returns no matches for non-tech prose", () => {
+    const big = "lorem ipsum ".repeat(10000);
+    const matches = scanMarkdown(big, SKILLS_MAP);
+    equal(matches.length, 0);
+  });
+
+  it("does not throw on unterminated fence", () => {
+    const md = "```json\n{\"dependencies\":{\"react\":\"^19\"}}\n";
+    const matches = scanMarkdown(md, SKILLS_MAP);
+    ok(Array.isArray(matches));
+  });
+
+  it("deduplicates same tech appearing in two separate fences", () => {
+    const md = "```bash\npnpm add react\n```\n```json\n{\"dependencies\":{\"react\":\"^19\"}}\n```";
+    const matches = scanMarkdown(md, SKILLS_MAP);
+    equal(matches.length, 1);
+    equal(matches[0].techId, "react");
   });
 });
