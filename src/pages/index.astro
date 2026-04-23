@@ -2,6 +2,7 @@
 import Layout from '@/layouts/Layout.astro';
 import '@/styles/global.css';
 import TerminalAnimation from '@/components/terminal-animation.astro';
+import Options from '@/sections/options.astro';
 
 const iconFiles = import.meta.glob<string>('../icons/*.svg', { query: '?raw', import: 'default', eager: true });
 
@@ -202,32 +203,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     <!-- Separator -->
     <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
 
-    <!-- Options -->
-    <div class="mb-12">
-      <p class="text-zinc-600 mb-6 uppercase tracking-widest text-xs">Options</p>
-      <div class="space-y-2">
-        <div class="flex gap-2">
-          <span class="text-cyan-400 w-40 shrink-0">-y, --yes</span>
-          <span class="text-zinc-500">Skip confirmation prompt</span>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-cyan-400 w-40 shrink-0">--dry-run</span>
-          <span class="text-zinc-500">Show skills without installing</span>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-cyan-400 w-40 shrink-0">-v, --verbose</span>
-          <span class="text-zinc-500">Show error details on failure</span>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-cyan-400 w-40 shrink-0">-a, --agent</span>
-          <span class="text-zinc-500">Install for specific IDEs only (e.g. cursor, claude-code)</span>
-        </div>
-        <div class="flex gap-2">
-          <span class="text-cyan-400 w-40 shrink-0">-h, --help</span>
-          <span class="text-zinc-500">Show help message</span>
-        </div>
-      </div>
-    </div>
+    <Options />
 
     <!-- Separator -->
     <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
