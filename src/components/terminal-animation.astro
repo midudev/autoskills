@@ -1,0 +1,320 @@
+---
+const { cliVersion } = Astro.props;
+---
+
+<div
+  class="mb-16 lg:fixed lg:top-0 lg:right-0 lg:w-1/2 lg:h-screen lg:mb-0 lg:flex lg:flex-col lg:p-8 xl:p-12 lg:border-l lg:border-zinc-800/50 lg:z-10"
+>
+  <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs lg:hidden">
+    Output
+  </p>
+  <div
+    class="border border-zinc-800 bg-zinc-950 lg:w-full lg:rounded-lg lg:overflow-hidden lg:shadow-2xl lg:shadow-black/20 lg:flex lg:flex-col lg:max-h-full"
+    id="terminal"
+    data-version={cliVersion}
+  >
+    <div
+      class="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-800 shrink-0"
+    >
+      <span class="w-2.5 h-2.5 rounded-full bg-zinc-800"></span>
+      <span class="w-2.5 h-2.5 rounded-full bg-zinc-800"></span>
+      <span class="w-2.5 h-2.5 rounded-full bg-zinc-800"></span>
+    </div>
+    <div
+      class="p-4 text-xs leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre h-[420px] lg:h-auto lg:min-h-0 lg:flex-1"
+      id="term-body"
+    >
+    </div>
+  </div>
+</div>
+<script>
+  // ── Terminal animation ────────────────────────────────────
+  const C = {
+    z4: "color:#a1a1aa", // zinc-400
+    z5: "color:#71717a", // zinc-500
+    z6: "color:#52525b", // zinc-600
+    z7: "color:#3f3f46", // zinc-700
+    cy: "color:#22d3ee", // cyan-400
+    c3: "color:#67e8f9", // cyan-300
+    em: "color:#34d399", // emerald-400
+    wh: "color:#f4f4f5", // zinc-100
+    gn: "color:#22c55e", // green-500
+    yw: "color:#facc15", // yellow-400
+    pk: "color:#f472b6", // pink-400
+  };
+
+  function s(style: string, text: string) {
+    return `<span style="${style}">${text}</span>`;
+  }
+
+  type Step =
+    | { html: string; delay: number; class?: string }
+    | {
+        type: "char";
+        text: string;
+        target: string;
+        charDelay: number;
+        delay: number;
+      };
+
+  const version =
+    document.getElementById("terminal")?.dataset.version || "0.0.0";
+  const ver = `v${version}`;
+  const bannerTitle = "   autoskills";
+  const bannerGap = " ".repeat(
+    Math.max(1, 39 - bannerTitle.length - ver.length - 3),
+  );
+
+  const BANNER = [
+    s(C.cy, "   ╔═══════════════════════════════════════╗"),
+    s(C.cy, "   ║") +
+      s(C.yw, bannerTitle) +
+      bannerGap +
+      s(C.z6, ver) +
+      "   " +
+      s(C.cy, "║"),
+    s(C.cy, "   ║") +
+      s(C.z5, "   Auto-install the best AI skills     ") +
+      s(C.cy, "║"),
+    s(C.cy, "   ║") +
+      s(C.z5, "   for your project                    ") +
+      s(C.cy, "║"),
+    s(C.cy, "   ╚═══════════════════════════════════════╝"),
+  ];
+
+  const TECH_NAMES = [
+    "Next.js",
+    "React",
+    "Tailwind CSS",
+    "TypeScript",
+    "Supabase",
+    "Astro",
+  ];
+  const COL_WIDTH = Math.max(...TECH_NAMES.map((n) => n.length)) + 3;
+  const TECH_ROWS: string[] = [];
+  for (let i = 0; i < TECH_NAMES.length; i += 3) {
+    const row = TECH_NAMES.slice(i, i + 3)
+      .map((n) => s(C.gn, "✔") + " " + n.padEnd(COL_WIDTH))
+      .join("");
+    TECH_ROWS.push("     " + row);
+  }
+
+  const SKILL_LIST = [
+    { skill: "vercel-react-best-practices", source: "React" },
+    { skill: "vercel-composition-patterns", source: "React" },
+    { skill: "next-best-practices", source: "Next.js" },
+    { skill: "next-cache-components", source: "Next.js" },
+    { skill: "next-upgrade", source: "Next.js" },
+    { skill: "astro", source: "Astro" },
+    { skill: "tailwind-css-patterns", source: "Tailwind CSS" },
+    { skill: "typescript-advanced-types", source: "TypeScript" },
+    { skill: "react-hook-form-zod", source: "React Hook Form + Zod" },
+    { skill: "supabase-postgres-best-practices", source: "Supabase" },
+    { skill: "frontend-design", source: "Frontend" },
+  ];
+
+  const maxSkillLen = Math.max(...SKILL_LIST.map((sk) => sk.skill.length));
+  const SKILLS = SKILL_LIST.map((sk, i) => {
+    const num = String(i + 1).padStart(2, " ");
+    const pad = " ".repeat(maxSkillLen - sk.skill.length);
+    return (
+      s(C.z6, `   ${num}.`) +
+      " " +
+      s(C.c3, sk.skill) +
+      pad +
+      "  " +
+      s(C.z7, `← ${sk.source}`)
+    );
+  });
+
+  function buildSteps(): Step[] {
+    const steps: Step[] = [];
+    const d = (delay: number, html: string, cls?: string) =>
+      steps.push({ html, delay, class: cls });
+
+    steps.push({
+      type: "char",
+      text: "$ npx autoskills",
+      target: "cmd-line",
+      charDelay: 60,
+      delay: 400,
+    });
+
+    // Banner
+    d(500, "");
+    for (const line of BANNER) d(30, line);
+    d(0, "");
+
+    // Detected technologies
+    d(400, s(C.cy, "   ▸ ") + s(C.wh, "Detected technologies:"));
+    d(200, "");
+    for (const row of TECH_ROWS) d(120, row);
+    d(0, "");
+
+    // Skills to install
+    d(
+      400,
+      s(C.cy, "   ▸ ") +
+        s(C.wh, "Skills to install ") +
+        s(C.z6, `(${SKILL_LIST.length})`),
+    );
+    d(200, "");
+    for (const r of SKILLS) d(100, r);
+    d(0, "");
+
+    // Confirm prompt
+    d(
+      400,
+      "   Install " +
+        s(C.wh, String(SKILL_LIST.length)) +
+        " skills? " +
+        s(C.z6, "[Y/n]") +
+        ' <span id="term-cursor" class="animate-pulse" style="' +
+        C.z4 +
+        '">▋</span>',
+    );
+    d(800, "__ANSWER_Y__");
+
+    // Installing
+    d(300, "");
+    d(0, s(C.cy, "   ▸ ") + s(C.wh, "Installing skills..."));
+    d(200, "");
+    for (const sk of SKILL_LIST) {
+      d(0, "__SPINNER__" + sk.skill);
+      d(400 + Math.random() * 500, "__DONE__" + JSON.stringify(sk));
+    }
+
+    // Summary
+    d(400, "");
+    d(0, s(C.gn, `   ✔ Done! ${SKILL_LIST.length} skills installed in 3.2s.`));
+    d(200, "");
+    d(
+      0,
+      s(
+        C.pk,
+        "   Enjoyed autoskills? Consider sponsoring → https://github.com/sponsors/midudev",
+      ),
+    );
+    d(0, "");
+
+    return steps;
+  }
+
+  async function sleep(ms: number) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
+  async function runAnimation() {
+    const body = document.getElementById("term-body")!;
+    body.innerHTML = "";
+
+    const steps = buildSteps();
+
+    for (const step of steps) {
+      if ("type" in step && step.type === "char") {
+        const line = document.createElement("p");
+        line.id = step.target;
+        body.appendChild(line);
+        const cursor =
+          '<span class="animate-pulse" style="' + C.z4 + '">▋</span>';
+        for (let i = 0; i < step.text.length; i++) {
+          const ch = step.text[i];
+          const sofar = step.text.slice(0, i + 1);
+          const colored = sofar.startsWith("$ ")
+            ? '<span style="' +
+              C.z6 +
+              '">$ </span><span style="' +
+              C.z4 +
+              '">' +
+              sofar.slice(2) +
+              "</span>"
+            : sofar;
+          line.innerHTML = colored + cursor;
+          await sleep(step.charDelay);
+        }
+        line.innerHTML =
+          '<span style="' +
+          C.z6 +
+          '">$ </span><span style="' +
+          C.z4 +
+          '">npx autoskills</span>';
+        await sleep(step.delay);
+        continue;
+      }
+
+      const { html, delay } = step as {
+        html: string;
+        delay: number;
+        class?: string;
+      };
+
+      // Special: answer Y
+      if (html === "__ANSWER_Y__") {
+        const cursor = document.getElementById("term-cursor");
+        if (cursor) cursor.outerHTML = s(C.wh, "Y");
+        await sleep(delay);
+        continue;
+      }
+
+      // Special: spinner
+      if (html.startsWith("__SPINNER__")) {
+        const skill = html.replace("__SPINNER__", "");
+        const line = document.createElement("p");
+        line.id = "install-line";
+        line.innerHTML = s(C.z6, "   ◌ ") + s(C.z5, skill + "...");
+        body.appendChild(line);
+        body.scrollTop = body.scrollHeight;
+        await sleep(delay);
+        continue;
+      }
+
+      // Special: done
+      if (html.startsWith("__DONE__")) {
+        const inst = JSON.parse(html.replace("__DONE__", ""));
+        const line = document.getElementById("install-line");
+        if (line) {
+          line.innerHTML = s(C.em, "   ✔ " + inst.skill);
+          line.removeAttribute("id");
+        }
+        body.scrollTop = body.scrollHeight;
+        await sleep(delay);
+        continue;
+      }
+
+      const line = document.createElement("p");
+      line.innerHTML = html || "&nbsp;";
+      if ((step as any).class) line.className = (step as any).class;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+      if (delay > 0) await sleep(delay);
+    }
+  }
+
+  // Desktop: start immediately. Mobile: start when terminal scrolls into view.
+  const terminal = document.getElementById("terminal");
+  const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+
+  async function loop() {
+    while (true) {
+      await runAnimation();
+      await sleep(4000);
+    }
+  }
+
+  if (isDesktop) {
+    loop();
+  } else if (terminal) {
+    let running = false;
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (entries[0].isIntersecting && !running) {
+          running = true;
+          observer.disconnect();
+          loop();
+        }
+      },
+      { threshold: 0.3 },
+    );
+    observer.observe(terminal);
+  }
+</script>
