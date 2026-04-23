@@ -1,0 +1,98 @@
+---
+interface Sponsor {
+  login: string;
+  id: number;
+}
+
+interface Props {
+  sponsors: Sponsor[];
+}
+
+const { sponsors } = Astro.props;
+---
+
+<!-- Footer -->
+<footer class="text-zinc-600 space-y-4 pb-8">
+  <p>
+    Made by <a
+      href="https://midu.dev"
+      target="_blank"
+      rel="noopener"
+      class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors"
+      >midudev</a
+    >{sponsors.length > 0 && " with the support of"}
+  </p>
+
+  <div class="flex items-center -space-x-1.5">
+    {
+      sponsors.map((s, i) => (
+        <a
+          href={`https://github.com/${s.login}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="sponsor-avatar relative hover:z-10"
+          style={`--i: ${i}`}
+        >
+          <img
+            src={`https://unavatar.io/github/${s.login}`}
+            alt={s.login}
+            width="32"
+            height="32"
+            class="size-8 rounded-full border-2 border-zinc-900 shadow-sm shadow-black/30"
+            loading="lazy"
+          />
+          <span class="sponsor-tip">@{s.login}</span>
+        </a>
+      ))
+    }
+
+    <a
+      href="https://github.com/sponsors/midudev"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="relative hover:z-10 transition-transform hover:scale-110 flex items-center justify-center size-8 rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+      title="Support this project"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        ><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg
+      >
+    </a>
+  </div>
+
+  <a
+    href="https://github.com/sponsors/midudev"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-pink-400 transition-colors no-underline group"
+  >
+    <svg
+      class="w-3.5 h-3 text-pink-600 group-hover:text-pink-400 transition-colors"
+      viewBox="0 0 12 10"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      ><path
+        d="M2 0h2v1H2zM8 0h2v1H8zM1 1h4v1H1zM7 1h4v1H7zM0 2h12v1H0zM1 3h10v1H1zM2 4h8v1H2zM3 5h6v1H3zM4 6h4v1H4zM5 7h2v1H5z"
+      ></path></svg
+    >
+    Support this project on GitHub Sponsors
+  </a>
+
+  <p>
+    <a
+      href="https://github.com/midudev/autoskills"
+      target="_blank"
+      rel="noopener"
+      class="text-zinc-500 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 hover:text-zinc-300 transition-colors"
+      >github</a
+    >
+  </p>
+</footer>
