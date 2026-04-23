@@ -73,6 +73,19 @@ interface InstallResult {
 }
 
 export function installSkill(skillPath: string, agents: string[] = []): Promise<InstallResult> {
+  /**
+   * @internal — test-only hook. Bypasses the real spawn and returns a synthetic success result.
+   * Set by the test harness; do not rely on this env var from user-facing code.
+   */
+  if (process.env.AUTOSKILLS_MOCK_INSTALL === "1") {
+    return Promise.resolve({
+      success: true,
+      output: `mock-installed ${skillPath}`,
+      stderr: "",
+      exitCode: 0,
+      command: "mock",
+    });
+  }
   const bin = resolveSkillsBin();
 
   let cmd: string;
