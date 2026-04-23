@@ -42,12 +42,65 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 
 ## Options
 
-| Flag              | Description                                           |
-| ----------------- | ----------------------------------------------------- |
-| `-y`, `--yes`     | Skip confirmation prompt, install all detected skills |
-| `--dry-run`       | Show detected skills without installing anything      |
-| `-v`, `--verbose` | Show error details if any installation fails          |
-| `-h`, `--help`    | Show help message                                     |
+| Flag                       | Description                                                                 |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `-y`, `--yes`              | Skip confirmation prompt, install all detected skills                       |
+| `--dry-run`                | Show detected skills without installing                                     |
+| `--json`                   | Emit structured JSON (used with `--dry-run` or subcommands; errors return `{error:{code,message}}`) |
+| `--from-spec <path>`       | Scan a markdown spec file for tech (code fences + Tech Stack headings)      |
+| `--scan-docs`              | Auto-scan `CLAUDE.md` / `AGENTS.md` in the project root                     |
+| `-v`, `--verbose`          | Show error details if any installation fails                                |
+| `-a`, `--agent <ids>`      | Install for specific IDEs only (e.g. `cursor`, `claude-code`)               |
+| `-h`, `--help`             | Show help message                                                           |
+
+## Markdown scanner (opt-in)
+
+Detect tech from structured markdown docs — feature specs, `CLAUDE.md`,
+`AGENTS.md` — without having to populate `package.json`.
+
+```bash
+# Scan a specific spec file
+npx autoskills --from-spec ./docs/feature-spec.md
+
+# Auto-scan CLAUDE.md / AGENTS.md in the current project
+npx autoskills --scan-docs
+
+# Combine with default detection (union)
+npx autoskills --scan-docs --dry-run
+```
+
+The scanner recognizes two structures:
+
+- **Code fences** — `json` (reads `dependencies`/`devDependencies`), `bash`/`sh`/`shell`/`zsh` (extracts `npm|pnpm|yarn|bun add/install` packages), `yaml`/`yml`/`toml`, `ruby`/`gemfile` (`gem '<name>'`).
+- **Stack headings** — `## Tech Stack`, `## Stack`, `## Dependencies`, `## Built With`, `## Technologies`, `## Tecnologías` (English + Spanish, case-insensitive, h1–h3). Bullets under the heading are matched against technology names and aliases.
+
+Prose ("we'll use React") outside these structures is ignored to prevent false positives.
+
+**Default behavior is unchanged.** No markdown is read unless `--from-spec` or `--scan-docs` is passed.
+
+## Subcommands (for LLM integration)
+
+Atomic subcommands let an external LLM CLI (Claude Code, Cursor, Codex) drive autoskills over prose specs that the structural scanner cannot parse.
+
+```bash
+# List the full catalog as JSON
+npx autoskills list --json
+npx autoskills list --filter react          # or: npx autoskills list react
+
+# Print the shipped skill-selection prompt (LLM guidance)
+npx autoskills prompt                       # stdout the prompt
+npx autoskills prompt --path                # print absolute path
+
+# Install specific skills by id
+npx autoskills install --only react,tailwind -y
+npx autoskills install --only react -a claude-code cursor
+```
+
+Typical LLM workflow: fetch the guide (`autoskills prompt`) + catalog (`autoskills list --json`), reason over the user's spec, propose skills, then call `autoskills install --only <ids>` after confirmation.
+
+The skill-selection prompt is shipped at `prompts/skill-selection.md` inside the package and covers workflow, category inference, matching rules, and alias resolution.
+
+All subcommands emit structured JSON errors when `--json` is passed, for programmatic parsing. Error codes include `unknown-subcommand`, `install-missing-only`, `install-empty-only`, `install-unknown-id` (with fuzzy-match suggestion), `json-requires-subcommand-or-dry-run`, `cli-arg-invalid`, `internal-error`, and `prompt-file-missing`.
 
 ## Supported Technologies
 

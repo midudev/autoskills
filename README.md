@@ -34,10 +34,25 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 ## Options
 
 ```
--y, --yes       Skip confirmation prompt
---dry-run       Show what would be installed without installing
--h, --help      Show help message
+-y, --yes             Skip confirmation prompt
+--dry-run             Show what would be installed without installing
+--json                Emit structured JSON (with --dry-run or subcommands)
+--from-spec <path>    Detect tech from a markdown spec file
+--scan-docs           Auto-scan CLAUDE.md / AGENTS.md in the project
+-h, --help            Show help message
 ```
+
+## LLM-driven mode
+
+Beyond structural detection, `autoskills` exposes atomic subcommands so an external LLM CLI (Claude Code, Cursor, Codex) can reason over prose specs and drive installation:
+
+```bash
+npx autoskills list --json         # full catalog
+npx autoskills prompt              # shipped selection guide
+npx autoskills install --only <ids>
+```
+
+See the [package README](./packages/autoskills/README.md) for details.
 
 ## Supported Technologies
 
