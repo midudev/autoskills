@@ -1,0 +1,53 @@
+<!-- Install command -->
+<div class="mb-12">
+  <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs">Try it now</p>
+  <div
+    class="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 px-4 py-3 w-fit cursor-pointer group"
+    id="install-cmd"
+  >
+    <span class="text-zinc-600">$</span>
+    <span class="text-zinc-100">npx autoskills</span>
+    <button
+      class="ml-6 text-zinc-600 hover:text-zinc-300 transition-colors"
+      aria-label="Copy command"
+      id="copy-btn"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+        ></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  // ── Copy button ───────────────────────────────────────────
+  document.getElementById("copy-btn")?.addEventListener("click", async () => {
+    await navigator.clipboard.writeText("npx autoskills");
+    const btn = document.getElementById("copy-btn");
+    if (btn) {
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      setTimeout(() => {
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+      }, 2000);
+    }
+  });
+
+  document
+    .getElementById("install-cmd")
+    ?.addEventListener("click", async (e) => {
+      if ((e.target as HTMLElement).closest("#copy-btn")) return;
+      await navigator.clipboard.writeText("npx autoskills");
+    });
+</script>

@@ -1,14 +1,26 @@
 ---
-import Layout from '@/layouts/Layout.astro';
-import '@/styles/global.css';
-import TerminalAnimation from '@/components/terminal-animation.astro';
-import Options from '@/sections/options.astro';
-import Separator from '@/components/separator.astro';
+import Layout from "@/layouts/Layout.astro";
+import "@/styles/global.css";
+import TerminalAnimation from "@/components/terminal-animation.astro";
+import Options from "@/sections/options.astro";
+import Separator from "@/components/separator.astro";
+import CopyButton from "@/components/copy-button.astro";
+import HowItWorks from "@/sections/how-it-works.astro";
 
-const iconFiles = import.meta.glob<string>('../icons/*.svg', { query: '?raw', import: 'default', eager: true });
+const iconFiles = import.meta.glob<string>("../icons/*.svg", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
 function toFilename(name: string) {
-  return name.toLowerCase().replace(/\//g, '-').replace(/\s+/g, '-').replace(/\./g, '') + '.svg';
+  return (
+    name
+      .toLowerCase()
+      .replace(/\//g, "-")
+      .replace(/\s+/g, "-")
+      .replace(/\./g, "") + ".svg"
+  );
 }
 
 function getIcon(name: string): string | undefined {
@@ -22,19 +34,19 @@ interface Sponsor {
 }
 
 const featuredSponsors: Sponsor[] = [
-  { login: 'crisvegadev', id: 17342446 },
-  { login: 'pmNiko', id: 18277737 },
-  { login: 'santiagohernandezs', id: 68081080 },
-  { login: 'joelguizado', id: 71227026 },
-  { login: 'SergioAcostaTer', id: 98357160 },
-  { login: 'Bykhe', id: 141531098 },
-  { login: 'ChristianUtria', id: 164814299 },
-  { login: 'x1xhlol', id: 185671340 },
-  { login: 'Gjusev', id: 71157156 },
-  { login: 'meogiegieuax', id: 207284467 },
-  { login: 'sneugoeanxuer', id: 212690065 },
-  { login: 'cereauaioer', id: 264738581 },
-  { login: 'architest8', id: 264739452 },
+  { login: "crisvegadev", id: 17342446 },
+  { login: "pmNiko", id: 18277737 },
+  { login: "santiagohernandezs", id: 68081080 },
+  { login: "joelguizado", id: 71227026 },
+  { login: "SergioAcostaTer", id: 98357160 },
+  { login: "Bykhe", id: 141531098 },
+  { login: "ChristianUtria", id: 164814299 },
+  { login: "x1xhlol", id: 185671340 },
+  { login: "Gjusev", id: 71157156 },
+  { login: "meogiegieuax", id: 207284467 },
+  { login: "sneugoeanxuer", id: 212690065 },
+  { login: "cereauaioer", id: 264738581 },
+  { login: "architest8", id: 264739452 },
 ];
 
 let sponsors: Sponsor[] = featuredSponsors;
@@ -42,11 +54,11 @@ let sponsors: Sponsor[] = featuredSponsors;
 try {
   const token = import.meta.env.GITHUB_TOKEN;
   if (token) {
-    const res = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
+    const res = await fetch("https://api.github.com/graphql", {
+      method: "POST",
       headers: {
         Authorization: `bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         query: `{
@@ -76,57 +88,60 @@ try {
   // Falls back to featuredSponsors
 }
 
-const { SKILLS_MAP } = await import('../../packages/autoskills/skills-map.ts');
-const { default: cliPkg } = await import('../../packages/autoskills/package.json', { with: { type: 'json' } });
+const { SKILLS_MAP } = await import("../../packages/autoskills/skills-map.ts");
+const { default: cliPkg } = await import(
+  "../../packages/autoskills/package.json",
+  { with: { type: "json" } }
+);
 const cliVersion = cliPkg.version;
 
 const popularityOrder = [
-  'typescript',
-  'zod',
-  'react-hook-form',
-  'react',
-  'nextjs',
-  'node',
-  'tailwind',
-  'vue',
-  'angular',
-  'vite',
-  'astro',
-  'nuxt',
-  'svelte',
-  'expo',
-  'react-native',
-  'bun',
-  'deno',
-  'supabase',
-  'cloudflare',
-  'cloudflare-agents',
-  'cloudflare-durable-objects',
-  'cloudflare-ai',
-  'terraform',
-  'vercel-deploy',
-  'vercel-ai',
-  'shadcn',
-  'playwright',
-  'turborepo',
-  'better-auth',
-  'clerk',
-  'pinia',
-  'neon',
-  'remotion',
-  'gsap',
-  'oxlint',
-  'express',
-  'go',
-  'swiftui',
-  'azure',
-  'aws',
-  'elevenlabs',
-  'kotlin-multiplatform',
-  'android',
-  'java',
-  'springboot',
-  'threejs'
+  "typescript",
+  "zod",
+  "react-hook-form",
+  "react",
+  "nextjs",
+  "node",
+  "tailwind",
+  "vue",
+  "angular",
+  "vite",
+  "astro",
+  "nuxt",
+  "svelte",
+  "expo",
+  "react-native",
+  "bun",
+  "deno",
+  "supabase",
+  "cloudflare",
+  "cloudflare-agents",
+  "cloudflare-durable-objects",
+  "cloudflare-ai",
+  "terraform",
+  "vercel-deploy",
+  "vercel-ai",
+  "shadcn",
+  "playwright",
+  "turborepo",
+  "better-auth",
+  "clerk",
+  "pinia",
+  "neon",
+  "remotion",
+  "gsap",
+  "oxlint",
+  "express",
+  "go",
+  "swiftui",
+  "azure",
+  "aws",
+  "elevenlabs",
+  "kotlin-multiplatform",
+  "android",
+  "java",
+  "springboot",
+  "threejs",
 ];
 
 const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
@@ -134,72 +149,33 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
   const bi = popularityOrder.indexOf(b.id);
   return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
 });
-
 ---
 
 <Layout>
   <!-- Left column: scrollable content -->
-  <main class="text-sm leading-relaxed px-6 py-12 lg:w-1/2 lg:pl-12 lg:pr-8 lg:py-16">
-
+  <main
+    class="text-sm leading-relaxed px-6 py-12 lg:w-1/2 lg:pl-12 lg:pr-8 lg:py-16"
+  >
     <!-- ASCII Logo (animated reveal) -->
-    <pre id="ascii-logo" class="text-[10px] sm:text-xs lg:text-[9px] leading-none mb-8 h-[6lh] overflow-hidden" aria-hidden="true"></pre>
+    <pre
+      id="ascii-logo"
+      class="text-[10px] sm:text-xs lg:text-[9px] leading-none mb-8 h-[6lh] overflow-hidden"
+      aria-hidden="true">
+    </pre>
 
     <h1 class="text-zinc-400 mb-8">
-      Auto-detect your tech stack and install the best<br/>
+      Auto-detect your tech stack and install the best<br />
       AI agent skills for your project.
     </h1>
 
-    <!-- Install command -->
-    <div class="mb-12">
-      <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs">Try it now</p>
-      <div class="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 px-4 py-3 w-fit cursor-pointer group" id="install-cmd">
-        <span class="text-zinc-600">$</span>
-        <span class="text-zinc-100">npx autoskills</span>
-        <button
-          class="ml-6 text-zinc-600 hover:text-zinc-300 transition-colors"
-          aria-label="Copy command"
-          id="copy-btn"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
+    <CopyButton />
 
     <TerminalAnimation cliVersion={cliVersion} />
 
     <!-- Separator -->
     <Separator />
 
-    <!-- How it works -->
-    <div class="mb-12">
-      <p class="text-zinc-600 mb-6 uppercase tracking-widest text-xs">How it works</p>
-      <div class="space-y-4">
-        <div class="flex gap-4">
-          <span class="text-zinc-600 shrink-0">[1]</span>
-          <div>
-            <p class="text-zinc-200">Run the command</p>
-            <p class="text-zinc-500">Execute <span class="text-zinc-400">npx autoskills</span> in your project root.</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <span class="text-zinc-600 shrink-0">[2]</span>
-          <div>
-            <p class="text-zinc-200">Auto-detect</p>
-            <p class="text-zinc-500">Scans your package.json and config files to detect your stack.</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <span class="text-zinc-600 shrink-0">[3]</span>
-          <div>
-            <p class="text-zinc-200">Install skills</p>
-            <p class="text-zinc-500">The best AI agent skills are installed automatically via <span class="text-zinc-400">skills.sh</span>.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <HowItWorks />
 
     <!-- Separator -->
     <Separator />
@@ -211,39 +187,66 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
 
     <!-- Supported Technologies & Skills -->
     <div class="mb-12">
-      <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs">Supported technologies & skills</p>
-      <p class="text-zinc-600 mb-6">Each technology auto-installs these skills from <a href="https://skills.sh" target="_blank" rel="noopener" class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors">skills.sh</a>.</p>
+      <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs">
+        Supported technologies & skills
+      </p>
+      <p class="text-zinc-600 mb-6">
+        Each technology auto-installs these skills from <a
+          href="https://skills.sh"
+          target="_blank"
+          rel="noopener"
+          class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors"
+          >skills.sh</a
+        >.
+      </p>
       <div class="space-y-0">
-        {skillsMap.map((tech) => (
-          <div class="group border-b border-zinc-800/40 py-2.5 first:border-t">
-            <div class="flex items-start gap-3">
-              <div class="flex items-center gap-2 w-32 shrink-0 pt-px">
-                {getIcon(tech.name) ? (
-                  <span class={`w-3.5 h-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity [&>svg]:w-full [&>svg]:h-full`} set:html={getIcon(tech.name)} />
-                ) : (
-                  <span class="w-3.5 h-3.5 shrink-0"></span>
-                )}
-                <span class="text-zinc-300 group-hover:text-zinc-100 transition-colors text-xs">{tech.name}</span>
-              </div>
-              <div class="flex-1 min-w-0">
-                {tech.skills.length > 0 ? (
-                  <div class="flex flex-wrap gap-x-3 gap-y-0.5">
-                    {tech.skills.map((skill) => (
-                      <a
-                        href={skill.startsWith('http') ? skill : `https://skills.sh/${skill}`}
-                        target="_blank"
-                        rel="noopener"
-                        class="text-xs text-zinc-600 hover:text-cyan-400 transition-colors"
-                      >{skill.startsWith('http') ? new URL(skill).hostname + new URL(skill).pathname : skill.split('/').slice(2).join('/')}</a>
-                    ))}
-                  </div>
-                ) : (
-                  <span class="text-xs text-zinc-700 italic">no skills yet</span>
-                )}
+        {
+          skillsMap.map((tech) => (
+            <div class="group border-b border-zinc-800/40 py-2.5 first:border-t">
+              <div class="flex items-start gap-3">
+                <div class="flex items-center gap-2 w-32 shrink-0 pt-px">
+                  {getIcon(tech.name) ? (
+                    <span
+                      class={`w-3.5 h-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity [&>svg]:w-full [&>svg]:h-full`}
+                      set:html={getIcon(tech.name)}
+                    />
+                  ) : (
+                    <span class="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span class="text-zinc-300 group-hover:text-zinc-100 transition-colors text-xs">
+                    {tech.name}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  {tech.skills.length > 0 ? (
+                    <div class="flex flex-wrap gap-x-3 gap-y-0.5">
+                      {tech.skills.map((skill) => (
+                        <a
+                          href={
+                            skill.startsWith("http")
+                              ? skill
+                              : `https://skills.sh/${skill}`
+                          }
+                          target="_blank"
+                          rel="noopener"
+                          class="text-xs text-zinc-600 hover:text-cyan-400 transition-colors"
+                        >
+                          {skill.startsWith("http")
+                            ? new URL(skill).hostname + new URL(skill).pathname
+                            : skill.split("/").slice(2).join("/")}
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <span class="text-xs text-zinc-700 italic">
+                      no skills yet
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        }
       </div>
     </div>
 
@@ -253,29 +256,37 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     <!-- Footer -->
     <footer class="text-zinc-600 space-y-4 pb-8">
       <p>
-        Made by <a href="https://midu.dev" target="_blank" rel="noopener" class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors">midudev</a>{sponsors.length > 0 && ' with the support of'}
+        Made by <a
+          href="https://midu.dev"
+          target="_blank"
+          rel="noopener"
+          class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors"
+          >midudev</a
+        >{sponsors.length > 0 && " with the support of"}
       </p>
 
       <div class="flex items-center -space-x-1.5">
-        {sponsors.map((s, i) => (
-          <a
-            href={`https://github.com/${s.login}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="sponsor-avatar relative hover:z-10"
-            style={`--i: ${i}`}
-          >
-            <img
-              src={`https://unavatar.io/github/${s.login}`}
-              alt={s.login}
-              width="32"
-              height="32"
-              class="size-8 rounded-full border-2 border-zinc-900 shadow-sm shadow-black/30"
-              loading="lazy"
-            />
-            <span class="sponsor-tip">@{s.login}</span>
-          </a>
-        ))}
+        {
+          sponsors.map((s, i) => (
+            <a
+              href={`https://github.com/${s.login}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="sponsor-avatar relative hover:z-10"
+              style={`--i: ${i}`}
+            >
+              <img
+                src={`https://unavatar.io/github/${s.login}`}
+                alt={s.login}
+                width="32"
+                height="32"
+                class="size-8 rounded-full border-2 border-zinc-900 shadow-sm shadow-black/30"
+                loading="lazy"
+              />
+              <span class="sponsor-tip">@{s.login}</span>
+            </a>
+          ))
+        }
 
         <a
           href="https://github.com/sponsors/midudev"
@@ -284,7 +295,18 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
           class="relative hover:z-10 transition-transform hover:scale-110 flex items-center justify-center size-8 rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
           title="Support this project"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg
+          >
         </a>
       </div>
 
@@ -294,101 +316,97 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
         rel="noopener noreferrer"
         class="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-pink-400 transition-colors no-underline group"
       >
-        <svg class="w-3.5 h-3 text-pink-600 group-hover:text-pink-400 transition-colors" viewBox="0 0 12 10" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2 0h2v1H2zM8 0h2v1H8zM1 1h4v1H1zM7 1h4v1H7zM0 2h12v1H0zM1 3h10v1H1zM2 4h8v1H2zM3 5h6v1H3zM4 6h4v1H4zM5 7h2v1H5z"/></svg>
+        <svg
+          class="w-3.5 h-3 text-pink-600 group-hover:text-pink-400 transition-colors"
+          viewBox="0 0 12 10"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          ><path
+            d="M2 0h2v1H2zM8 0h2v1H8zM1 1h4v1H1zM7 1h4v1H7zM0 2h12v1H0zM1 3h10v1H1zM2 4h8v1H2zM3 5h6v1H3zM4 6h4v1H4zM5 7h2v1H5z"
+          ></path></svg
+        >
         Support this project on GitHub Sponsors
       </a>
 
       <p>
-        <a href="https://github.com/midudev/autoskills" target="_blank" rel="noopener" class="text-zinc-500 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 hover:text-zinc-300 transition-colors">github</a>
+        <a
+          href="https://github.com/midudev/autoskills"
+          target="_blank"
+          rel="noopener"
+          class="text-zinc-500 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 hover:text-zinc-300 transition-colors"
+          >github</a
+        >
       </p>
     </footer>
-
   </main>
 
   <script>
-    // ── Copy button ───────────────────────────────────────────
-    document.getElementById('copy-btn')?.addEventListener('click', async () => {
-      await navigator.clipboard.writeText('npx autoskills')
-      const btn = document.getElementById('copy-btn')
-      if (btn) {
-        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
-        setTimeout(() => {
-          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`
-        }, 2000)
-      }
-    })
-
-    document.getElementById('install-cmd')?.addEventListener('click', async (e) => {
-      if ((e.target as HTMLElement).closest('#copy-btn')) return
-      await navigator.clipboard.writeText('npx autoskills')
-    })
-
     // ── ASCII logo animation ─────────────────────────────────
     {
       const LOGO_LINES = [
-        ' █████╗ ██╗   ██╗████████╗ ██████╗ ███████╗██╗  ██╗██╗██╗     ██╗     ███████╗',
-        '██╔══██╗██║   ██║╚══██╔══╝██╔═══██╗██╔════╝██║ ██╔╝██║██║     ██║     ██╔════╝',
-        '███████║██║   ██║   ██║   ██║   ██║███████╗█████╔╝ ██║██║     ██║     ███████╗',
-        '██╔══██║██║   ██║   ██║   ██║   ██║╚════██║██╔═██╗ ██║██║     ██║     ╚════██║',
-        '██║  ██║╚██████╔╝   ██║   ╚██████╔╝███████║██║  ██╗██║███████╗███████╗███████║',
-        '╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝',
-      ]
+        " █████╗ ██╗   ██╗████████╗ ██████╗ ███████╗██╗  ██╗██╗██╗     ██╗     ███████╗",
+        "██╔══██╗██║   ██║╚══██╔══╝██╔═══██╗██╔════╝██║ ██╔╝██║██║     ██║     ██╔════╝",
+        "███████║██║   ██║   ██║   ██║   ██║███████╗█████╔╝ ██║██║     ██║     ███████╗",
+        "██╔══██║██║   ██║   ██║   ██║   ██║╚════██║██╔═██╗ ██║██║     ██║     ╚════██║",
+        "██║  ██║╚██████╔╝   ██║   ╚██████╔╝███████║██║  ██╗██║███████╗███████╗███████║",
+        "╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝",
+      ];
 
-      const START_COLOR = '#3f3f46'  // zinc-700 (gris clarito)
-      const END_COLOR = '#f4f4f5'    // zinc-100 (blanco)
+      const START_COLOR = "#3f3f46"; // zinc-700 (gris clarito)
+      const END_COLOR = "#f4f4f5"; // zinc-100 (blanco)
 
-      const logo = document.getElementById('ascii-logo')!
-      const cols = Math.max(...LOGO_LINES.map(l => l.length))
-      const rows = LOGO_LINES.length
+      const logo = document.getElementById("ascii-logo")!;
+      const cols = Math.max(...LOGO_LINES.map((l) => l.length));
+      const rows = LOGO_LINES.length;
 
       // Build grid
-      const grid: HTMLSpanElement[][] = []
+      const grid: HTMLSpanElement[][] = [];
       for (const line of LOGO_LINES) {
-        const row: HTMLSpanElement[] = []
-        const lineEl = document.createElement('div')
-        lineEl.style.height = '1lh'
+        const row: HTMLSpanElement[] = [];
+        const lineEl = document.createElement("div");
+        lineEl.style.height = "1lh";
         for (let c = 0; c < cols; c++) {
-          const ch = line[c] ?? ' '
-          const span = document.createElement('span')
-          span.textContent = ch
-          span.style.color = START_COLOR
-          lineEl.appendChild(span)
-          row.push(span)
+          const ch = line[c] ?? " ";
+          const span = document.createElement("span");
+          span.textContent = ch;
+          span.style.color = START_COLOR;
+          lineEl.appendChild(span);
+          row.push(span);
         }
-        logo.appendChild(lineEl)
-        grid.push(row)
+        logo.appendChild(lineEl);
+        grid.push(row);
       }
 
       // Diagonal sweep: top-left to bottom-right, gray → white
-      const maxDist = cols + rows
-      const SPEED = 0.9
-      let frame = 0
-      const totalFrames = Math.ceil((maxDist + 10) / SPEED)
+      const maxDist = cols + rows;
+      const SPEED = 0.9;
+      let frame = 0;
+      const totalFrames = Math.ceil((maxDist + 10) / SPEED);
 
       function animate() {
-        const waveFront = frame * SPEED
+        const waveFront = frame * SPEED;
 
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < grid[r].length; c++) {
-            const dist = c + r * 3
-            const progress = Math.max(0, Math.min(1, (waveFront - dist) / 10))
+            const dist = c + r * 3;
+            const progress = Math.max(0, Math.min(1, (waveFront - dist) / 10));
 
-            const gray = Math.round(63 + progress * (244 - 63))
-            grid[r][c].style.color = `rgb(${gray},${gray},${gray})`
+            const gray = Math.round(63 + progress * (244 - 63));
+            grid[r][c].style.color = `rgb(${gray},${gray},${gray})`;
           }
         }
 
-        frame++
+        frame++;
         if (frame <= totalFrames) {
-          requestAnimationFrame(animate)
+          requestAnimationFrame(animate);
         } else {
           for (let r = 0; r < rows; r++)
             for (let c = 0; c < grid[r].length; c++)
-              grid[r][c].style.color = END_COLOR
+              grid[r][c].style.color = END_COLOR;
         }
       }
 
-      requestAnimationFrame(animate)
+      requestAnimationFrame(animate);
     }
   </script>
 </Layout>
