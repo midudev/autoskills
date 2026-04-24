@@ -37,12 +37,12 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 -y, --yes             Skip confirmation prompt
 --dry-run             Show what would be installed without installing
 --json                Emit structured JSON (with --dry-run or subcommands)
---from-spec <path>    Detect tech from a markdown spec file
---scan-docs           Auto-scan CLAUDE.md / AGENTS.md in the project
+--from-spec <path>    Detect tech from a markdown spec file (any extension)
+--scan-docs           Auto-scan CLAUDE.md / AGENTS.md / README.md in the project
 -h, --help            Show help message
 ```
 
-> `--from-spec` and `--scan-docs` only parse code fences (`json`, `bash`/`sh`, `yaml`/`toml`, `ruby`) and **bullet lists** under headings like `## Tech Stack` / `## Stack` / `## Dependencies`. Markdown tables are ignored. See [Markdown scanner](./packages/autoskills/README.md#markdown-scanner-opt-in) for bullet shapes and examples.
+> `--from-spec` and `--scan-docs` parse **code fences** (`json`, `bash`/`sh`/`shell`/`zsh`, `yaml`/`yml`/`toml`, `ruby`/`gemfile`) plus content under **stack headings** (`## Tech Stack`, `## Stack`, `## Dependencies`, `## Built With`, `## Technologies`). Under a heading we accept dash/numbered bullets, GFM tables, and comma-separated inline lists. Decorated headings (`## 2. Tech Stack`, `## 🚀 Stack`, `## **Dependencies**`) are recognized. Markdown tables outside a stack heading are ignored. See [Markdown scanner](./packages/autoskills/README.md#markdown-scanner-opt-in) for details.
 
 ## LLM-driven mode
 

@@ -48,7 +48,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | `--dry-run`                | Show detected skills without installing                                     |
 | `--json`                   | Emit structured JSON (used with `--dry-run` or subcommands; errors return `{error:{code,message}}`) |
 | `--from-spec <path>`       | Scan a markdown spec file for tech (code fences + Tech Stack headings)      |
-| `--scan-docs`              | Auto-scan `CLAUDE.md` / `AGENTS.md` in the project root                     |
+| `--scan-docs`              | Auto-scan `CLAUDE.md` / `AGENTS.md` / `README.md` in the project root       |
 | `-v`, `--verbose`          | Show error details if any installation fails                                |
 | `-a`, `--agent <ids>`      | Install for specific IDEs only (e.g. `cursor`, `claude-code`)               |
 | `-h`, `--help`             | Show help message                                                           |
@@ -56,7 +56,11 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 ## Markdown scanner (opt-in)
 
 Detect tech from structured markdown docs — feature specs, `CLAUDE.md`,
-`AGENTS.md` — without having to populate `package.json`.
+`AGENTS.md`, or `README.md` — without having to populate `package.json`.
+
+`--from-spec <path>` reads the file's contents regardless of extension.
+`.md`, `.mdx`, `.markdown`, or `.txt` all work as long as the content uses
+markdown code fences and headings.
 
 ```bash
 # Scan a specific spec file
@@ -72,49 +76,82 @@ npx autoskills --scan-docs --dry-run
 The scanner recognizes two structures:
 
 - **Code fences** — `json` (reads `dependencies`/`devDependencies`), `bash`/`sh`/`shell`/`zsh` (extracts `npm|pnpm|yarn|bun add/install` packages), `yaml`/`yml`/`toml`, `ruby`/`gemfile` (`gem '<name>'`).
-- **Stack headings** — `## Tech Stack`, `## Stack`, `## Dependencies`, `## Built With`, `## Technologies`, `## Tecnologías` (English + Spanish, case-insensitive, h1–h3). Bullets under the heading are matched against technology names and aliases.
+- **Stack headings** — `## Tech Stack`, `## Stack`, `## Dependencies`, `## Built With`, `## Technologies` (case-insensitive, h1–h3). Content under the heading is matched against technology names and aliases — see "Supported formats under stack headings" below for bullet, table, numbered-list, and inline shapes.
 
 Prose ("we'll use React") outside these structures is ignored to prevent false positives.
 
-### Bullet format (under stack headings)
+### Supported formats under stack headings
 
-Only bullet lists are parsed. **Markdown tables are not recognized** — convert to bullets or add a code fence.
-
-Each bullet must resolve to a `name` or alias in the catalog (`autoskills list --json`). The following shapes all match **Astro**:
+**Heading shapes recognized** (h1–h3, case-insensitive, keyword must be exact after stripping decoration):
 
 ```markdown
 ## Tech Stack
-
-- Astro
-- Astro (SSR)
-- Astro — 4.0
-- Astro - 4.0
-- Astro 4.0.1
+## 2. Tech Stack
+## 1) Stack
+## 🚀 Tech Stack
+## **Dependencies**
+## __Dependencies__
+## [Stack]
+## Tech Stack:
+## Tech Stack (frontend)
 ```
 
-Normalization rules applied to each bullet:
+Prose narrative headings like `## Why we chose our Stack` are rejected (decoration is stripped but the keyword itself must be the whole title).
+
+Valid keywords (after normalization, case-insensitive): `Tech Stack`, `Stack`, `Dependencies`, `Built With`, `Technologies`.
+
+**Content shapes recognized under the heading:**
+
+1. **Dash / asterisk / plus bullets**
+
+   ```markdown
+   ## Tech Stack
+   - Astro
+   - Tailwind CSS
+   ```
+
+2. **Numbered bullets** (`1.` or `1)`)
+
+   ```markdown
+   ## Tech Stack
+   1. Astro
+   2. Tailwind CSS
+   ```
+
+3. **GFM tables** — first column by default; if the header row contains a column matching `tech|technology|technologies|framework|library|libraries|package|packages|dependency|dependencies|name|stack` (case-insensitive), that column is used instead.
+
+   ```markdown
+   ## Tech Stack
+
+   | Category | Framework | Notes      |
+   | -------- | --------- | ---------- |
+   | UI       | React     | renderer   |
+   | Styling  | Tailwind  | utility    |
+   ```
+
+   Cell content is normalized: links (`[Astro](https://astro.build)` → `Astro`), bold/italic wrappers, backticks, images, and leading emoji are stripped. Multi-tech cells are split on commas (`| Astro, Tailwind |`).
+
+4. **Comma-separated inline** — a non-bullet line with commas is split and each piece is matched
+
+   ```markdown
+   ## Tech Stack
+
+   Astro, Tailwind CSS, TypeScript
+   ```
+
+   Note: prefixes like `"Also: Astro, Tailwind"` are NOT parsed — `normalizeBullet` does not strip colon-prefixed labels. Use plain `"Astro, Tailwind"`.
+
+**Bullet / inline-piece / cell normalization**
+
+After the format-specific extraction, each candidate string goes through:
 
 1. Parenthetical annotations are dropped — `Astro (SSR)` → `Astro`.
-2. Em-dash / en-dash / hyphen + trailing text is dropped — `Astro — 4.0` → `Astro`.
-3. A trailing version token is dropped — `Astro 4.0.1` → `Astro`.
+2. Em-dash, en-dash, or space-hyphen-space + trailing text is dropped — `Astro — 4.0` → `Astro`; `Astro - 4.0` → `Astro`. (Inline hyphens without surrounding spaces are preserved — `shadcn/ui` is kept intact.)
+3. A trailing digit-leading version token is dropped — `Astro 4.0.1` → `Astro`. (Non-digit trailing tokens like `latest` are not stripped yet.)
 
-Tables are ignored, even under a supported heading:
+The resulting string must match a technology `name` or `alias` exactly (run `autoskills list --json` to see the catalog).
 
-```markdown
-## Tech Stack
-
-| Tech  | Version |
-| ----- | ------- |
-| Astro | 4.0     |
-```
-
-For tables or free-form docs, add a fenced block with dependencies instead:
-
-````markdown
-```json
-{ "devDependencies": { "astro": "^4.0.0" } }
-```
-````
+Tables, bullets, inline comma-separated lines, and numbered lists **only** parse under a recognized stack heading — free-floating tables or lists elsewhere in the document are ignored.
 
 **Default behavior is unchanged.** No markdown is read unless `--from-spec` or `--scan-docs` is passed.
 

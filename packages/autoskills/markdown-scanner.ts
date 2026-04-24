@@ -122,8 +122,6 @@ const STACK_KEYWORDS = new Set([
   "dependencies",
   "built with",
   "technologies",
-  "tecnologías",
-  "tecnologias",
 ]);
 
 function isStackHeading(line: string): { level: number } | null {

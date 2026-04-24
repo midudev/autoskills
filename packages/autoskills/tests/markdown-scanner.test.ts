@@ -118,8 +118,8 @@ describe("scanMarkdown — stack headings", () => {
     deepEqual(ids, ["react", "tailwind"].sort());
   });
 
-  it("accepts Stack | Dependencies | Built With | Technologies | Tecnologías", () => {
-    for (const title of ["Stack", "Dependencies", "Built With", "Technologies", "Tecnologías"]) {
+  it("accepts Stack | Dependencies | Built With | Technologies", () => {
+    for (const title of ["Stack", "Dependencies", "Built With", "Technologies"]) {
       const md = `## ${title}\n- React\n`;
       equal(scanMarkdown(md, SKILLS_MAP)[0]?.techId, "react");
     }
