@@ -69,13 +69,13 @@ interface CliArgs {
   agents: string[];
   fromSpec?: string;
   scanDocs: boolean;
-  copyPrompt: boolean;
+  copySpecgenPrompt: boolean;
+  showSpecgenPrompt: boolean;
   // subcommand dispatch
   subcommand?: string;
   json: boolean;
   only?: string;
   filter?: string;
-  promptPath: boolean;
 }
 
 function parseArgs(): CliArgs {
@@ -150,12 +150,12 @@ function parseArgs(): CliArgs {
     agents,
     fromSpec,
     scanDocs: args.includes("--scan-docs"),
-    copyPrompt: args.includes("--copy-prompt"),
+    copySpecgenPrompt: args.includes("--copy-specgen-prompt"),
+    showSpecgenPrompt: args.includes("--show-specgen-prompt"),
     subcommand,
     json: args.includes("--json"),
     only,
     filter,
-    promptPath: args.includes("--path"),
   };
 }
 
@@ -169,23 +169,23 @@ function showHelp(): void {
     npx autoskills ${dim("--dry-run")} ${dim("[--json]")}            Show what would be installed
     npx autoskills ${dim("-a cursor claude-code")}          Install for specific IDEs only
     npx autoskills ${dim("list")} ${dim("[--json] [--filter <id>]")}  List catalog
-    npx autoskills ${dim("prompt")} ${dim("[--path]")}               Print spec-generator prompt
-    npx autoskills ${dim("--copy-prompt")}                  Copy spec-generator prompt to clipboard
+    npx autoskills ${dim("--show-specgen-prompt")}          Print spec-generator prompt to stdout
+    npx autoskills ${dim("--copy-specgen-prompt")}          Copy spec-generator prompt to clipboard
     npx autoskills ${dim("install --only <ids>")} ${dim("[-a agents] [-y] [--json]")}
 
   ${bold("Options:")}
-    -y, --yes           Skip confirmation prompt
-    --dry-run           Show skills without installing
-    -v, --verbose       Show error details on failure
-    -a, --agent         Install for specific IDEs only (e.g. cursor, claude-code)
-    --from-spec <path>  Detect tech from a markdown spec file
-    --scan-docs         Auto-scan CLAUDE.md / AGENTS.md in project root
-    --copy-prompt       Copy spec-generator prompt to clipboard
-    --json              JSON output (subcommands / dry-run)
-    --only <ids>        Comma-separated tech ids for 'install'
-    --filter <id>       Filter catalog for 'list'
-    --path              Print prompt file path (for 'prompt')
-    -h, --help          Show this help message
+    -y, --yes              Skip confirmation prompt
+    --dry-run              Show skills without installing
+    -v, --verbose          Show error details on failure
+    -a, --agent            Install for specific IDEs only (e.g. cursor, claude-code)
+    --from-spec <path>     Detect tech from a markdown spec file
+    --scan-docs            Auto-scan CLAUDE.md / AGENTS.md in project root
+    --show-specgen-prompt  Print spec-generator prompt to stdout
+    --copy-specgen-prompt  Copy spec-generator prompt to clipboard
+    --json                 JSON output (subcommands / dry-run)
+    --only <ids>           Comma-separated tech ids for 'install'
+    --filter <id>          Filter catalog for 'list'
+    -h, --help             Show this help message
 `);
 }
 
@@ -470,14 +470,20 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  if (args.copyPrompt) {
+  // show wins over copy if both passed — cheaper, no clipboard side effect, no failure mode.
+  if (args.showSpecgenPrompt) {
+    const code = runPrompt();
+    process.exit(code);
+  }
+
+  if (args.copySpecgenPrompt) {
     const code = await runCopyPrompt();
     process.exit(code);
   }
 
   // ── Subcommand dispatch (BEFORE any default-flow side-effects) ──
   if (args.subcommand !== undefined) {
-    const KNOWN = new Set(["list", "prompt", "install"]);
+    const KNOWN = new Set(["list", "install"]);
     if (!KNOWN.has(args.subcommand)) {
       const msg = {
         code: "unknown-subcommand",
@@ -495,9 +501,6 @@ async function main(): Promise<void> {
     switch (args.subcommand) {
       case "list":
         code = runList({ json: args.json, filter: args.filter, version: VERSION });
-        break;
-      case "prompt":
-        code = runPrompt({ printPath: args.promptPath });
         break;
       case "install":
         code = await runInstall({

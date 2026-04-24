@@ -36,7 +36,6 @@ export function runList(args: RunListArgs): number {
 }
 
 export interface RunPromptArgs {
-  printPath: boolean;
   /** Override the prompt file path (for tests). Normally resolved from the package layout. */
   promptPath?: string;
 }
@@ -63,7 +62,7 @@ function resolvePromptPath(): string {
   return candidates[0];
 }
 
-export function runPrompt(args: RunPromptArgs): number {
+export function runPrompt(args: RunPromptArgs = {}): number {
   const promptPath = args.promptPath ?? resolvePromptPath();
   let content: string;
   try {
@@ -83,11 +82,7 @@ export function runPrompt(args: RunPromptArgs): number {
     }
     throw err;
   }
-  if (args.printPath) {
-    write(promptPath + "\n");
-  } else {
-    write(content);
-  }
+  write(content);
   return 0;
 }
 
@@ -134,7 +129,7 @@ export async function runCopyPrompt(args: RunCopyPromptArgs = {}): Promise<numbe
     return 0;
   }
 
-  console.error(yellow(`warning: ${result.error ?? "clipboard copy failed"}. prompt printed below — pipe to your clipboard tool (e.g. 'autoskills --copy-prompt | pbcopy')`));
+  console.error(yellow(`warning: ${result.error ?? "clipboard copy failed"}. prompt printed below — pipe to your clipboard tool (e.g. 'autoskills --show-specgen-prompt | pbcopy')`));
   write(content);
   return 0;
 }

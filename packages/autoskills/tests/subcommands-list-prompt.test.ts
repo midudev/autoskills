@@ -114,28 +114,16 @@ describe("runPrompt", () => {
   const PROMPT_PATH = resolve(import.meta.dirname!, "..", "prompts", "spec-generator-prompt.md");
 
   it("stdouts the prompt file when it exists", () => {
-    if (!existsSync(PROMPT_PATH)) {
-      // File may not exist yet if T15 hasn't run. The other runPrompt test (path mode) will handle that.
-      return;
-    }
+    if (!existsSync(PROMPT_PATH)) return;
     const expected = readFileSync(PROMPT_PATH, "utf-8");
-    const { out, result } = captureStdio(() => runPrompt({ printPath: false }));
+    const { out, result } = captureStdio(() => runPrompt());
     equal(result, 0);
     equal(out, expected);
   });
 
-  it("--path prints absolute path of the shipped prompt", () => {
-    if (!existsSync(PROMPT_PATH)) {
-      return; // guarded: file-missing path is tested below
-    }
-    const { out, result } = captureStdio(() => runPrompt({ printPath: true }));
-    equal(result, 0);
-    ok(out.trim().endsWith("prompts/spec-generator-prompt.md"));
-  });
-
   it("emits prompt-file-missing JSON envelope (exit 1) when the injected path does not exist", () => {
     const { err, result } = captureStdio(() =>
-      runPrompt({ printPath: false, promptPath: "/definitely/does/not/exist/spec-generator-prompt.md" }),
+      runPrompt({ promptPath: "/definitely/does/not/exist/spec-generator-prompt.md" }),
     );
     equal(result, 1);
     const parsed = JSON.parse(err.trim());

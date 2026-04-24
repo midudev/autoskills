@@ -39,7 +39,8 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 --json                Emit structured JSON (with --dry-run or subcommands)
 --from-spec <path>    Detect tech from a markdown spec file (any extension)
 --scan-docs           Auto-scan CLAUDE.md / AGENTS.md / README.md in the project
---copy-prompt         Copy the shipped spec-generator prompt to the OS clipboard
+--show-specgen-prompt Print the shipped spec-generator prompt to stdout
+--copy-specgen-prompt Copy the shipped spec-generator prompt to the OS clipboard
 -h, --help            Show help message
 ```
 
@@ -50,13 +51,39 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 Beyond structural detection, `autoskills` exposes atomic subcommands so an external LLM CLI (Claude Code, Cursor, Codex) can reason over your requirement and produce a parseable spec:
 
 ```bash
-npx autoskills list --json         # full catalog
-npx autoskills prompt              # shipped spec-generator prompt (stdout)
-npx autoskills --copy-prompt       # copy spec-generator prompt to clipboard
-npx autoskills install --only <ids>
+npx autoskills list --json             # full catalog
+npx autoskills --show-specgen-prompt   # spec-generator prompt to stdout
+npx autoskills --copy-specgen-prompt   # spec-generator prompt to clipboard
 ```
 
-**Spec-doc flow:** run `--copy-prompt`, paste it under your requirement in any LLM chat, and the LLM writes `docs/specs-initial.md` for you to feed back via `autoskills --from-spec`. See the [package README](./packages/autoskills/README.md#subcommands-for-llm-integration) for the full workflow.
+**Spec-doc flow:** run `--copy-specgen-prompt` (or `--show-specgen-prompt`), paste it under your requirement in any LLM chat, and the LLM writes `docs/specs-initial.md` for you to feed back via `autoskills --from-spec`.
+
+What you actually type in the LLM chat — describe the project, not the stack. The LLM picks the techs.
+
+If your chat has a `bash` tool (Claude Code, Cursor, Codex), one message is enough:
+
+```text
+I'm building an internal task manager for a small remote team.
+Users sign in, create tasks, assign them to teammates, and see live
+updates when someone changes status. Web + mobile-friendly, free-tier
+deploy, end-to-end typed.
+
+Run `autoskills --show-specgen-prompt` and follow the instructions it prints.
+```
+
+In any chat (no tools required), paste the prompt under your requirement:
+
+```text
+I'm building an internal task manager for a small remote team.
+Users sign in, create tasks, assign them to teammates, and see live
+updates when someone changes status. We want it on the web and
+mobile-friendly. Need to ship a working demo this week, deploy
+on a free tier, and keep the codebase typed end-to-end.
+
+<paste the output of `autoskills --copy-specgen-prompt` here>
+```
+
+See the [package README](./packages/autoskills/README.md#subcommands-for-llm-integration) for the full workflow.
 
 ## Supported Technologies
 
