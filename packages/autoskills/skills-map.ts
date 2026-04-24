@@ -1009,17 +1009,6 @@ export const SKILLS_MAP: Technology[] = [
     ],
   },
   {
-    id: "flask",
-    name: "Flask",
-    detect: {
-      configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
-        patterns: ["flask", "Flask"],
-      },
-    },
-    skills: [],
-  },
-  {
     id: "python",
     name: "Python",
     detect: {
@@ -1062,7 +1051,7 @@ export const SKILLS_MAP: Technology[] = [
     name: "Flask",
     detect: {
       configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
         patterns: ["flask", "Flask"],
       },
     },
