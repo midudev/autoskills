@@ -38,7 +38,7 @@ describe("--from-spec / --scan-docs", () => {
     writePackageJson(tmp.path, { dependencies: { react: "^19" } });
     const { stdout, stderr } = run(["--dry-run", "--scan-docs"], tmp.path);
     ok(stdout.toLowerCase().includes("react"));
-    ok(stderr.includes("no CLAUDE.md or AGENTS.md found"), "expected warning in stderr, got: " + stderr);
+    ok(stderr.includes("no CLAUDE.md, AGENTS.md, or README.md found"), "expected warning in stderr, got: " + stderr);
   });
 
   it("--from-spec nonexistent exits 1 with clear error", () => {

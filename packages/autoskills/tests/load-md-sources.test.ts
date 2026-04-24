@@ -65,4 +65,19 @@ describe("loadMarkdownSources", () => {
     equal(sources.length, 1);
     ok(sources[0].path.endsWith("CLAUDE.md"));
   });
+
+  it("reads README.md when scanDocs is true", () => {
+    writeFile(tmp.path, "README.md", "# Hello\n\n## Tech Stack\n- React\n");
+    const sources = loadMarkdownSources({ scanDocs: true, projectDir: tmp.path });
+    equal(sources.length, 1);
+    equal(sources[0].content.includes("Tech Stack"), true);
+  });
+
+  it("reads CLAUDE.md + AGENTS.md + README.md together", () => {
+    writeFile(tmp.path, "CLAUDE.md", "# a\n");
+    writeFile(tmp.path, "AGENTS.md", "# b\n");
+    writeFile(tmp.path, "README.md", "# c\n");
+    const sources = loadMarkdownSources({ scanDocs: true, projectDir: tmp.path });
+    equal(sources.length, 3);
+  });
 });

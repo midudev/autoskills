@@ -540,7 +540,7 @@ async function main(): Promise<void> {
       projectDir,
     });
     if (scanDocs && !fromSpec && sources.length === 0) {
-      console.error(yellow("   warning: no CLAUDE.md or AGENTS.md found"));
+      console.error(yellow("   warning: no CLAUDE.md, AGENTS.md, or README.md found"));
     }
     if (sources.length > 0) {
       const mdMatches = sources.flatMap(s => scanMarkdown(s.content, SKILLS_MAP));

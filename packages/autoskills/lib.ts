@@ -684,7 +684,7 @@ export function loadMarkdownSources(args: {
   }
 
   if (args.scanDocs) {
-    for (const name of ["CLAUDE.md", "AGENTS.md"]) {
+    for (const name of ["CLAUDE.md", "AGENTS.md", "README.md"]) {
       const p = resolve(args.projectDir, name);
       if (existsSync(p) && !seen.has(p)) {
         out.push({ path: p, content: readFileSync(p, "utf-8") });
