@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Gradle Build Logic"
+  short_description: "Shape Android build logic with Gradle, version catalogs, plugins, convention patterns, and toolchain compatibility"
+  default_prompt: "Use $android-gradle-build-logic when the request is about shape Android build logic with Gradle, version catalogs, plugins, convention patterns, and toolchain compatibility."

@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentskills.local/wp-project-triage/triage.schema.json",
+  "title": "WP Project Triage Report",
+  "type": "object",
+  "required": ["tool", "project", "signals", "tooling"],
+  "properties": {
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "const": "detect_wp_project" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "project": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "wp-plugin",
+              "wp-mu-plugin",
+              "wp-theme",
+              "wp-block-theme",
+              "wp-block-plugin",
+              "wp-site",
+              "wp-core",
+              "gutenberg"
+            ]
+          }
+        },
+        "primary": { "type": "string" },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "signals": {
+      "type": "object",
+      "required": ["paths"],
+      "properties": {
+        "paths": {
+          "type": "object",
+          "properties": {
+            "repoRoot": { "type": "string" },
+            "wpContent": { "type": "string" },
+            "pluginsDir": { "type": "string" },
+            "themesDir": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+        ,
+        "usesInteractivityApi": { "type": "boolean" },
+        "usesAbilitiesApi": { "type": "boolean" },
+        "usesInnerBlocks": { "type": "boolean" },
+        "usesWpCli": { "type": "boolean" },
+        "performanceHints": { "type": "object", "additionalProperties": true },
+        "interactivityHints": { "type": "object", "additionalProperties": true },
+        "abilitiesHints": { "type": "object", "additionalProperties": true },
+        "innerBlocksHints": { "type": "object", "additionalProperties": true },
+        "wpCliHints": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": true
+    },
+    "tooling": {
+      "type": "object",
+      "required": ["php", "node", "tests"],
+      "properties": {
+        "php": {
+          "type": "object",
+          "properties": {
+            "hasComposerJson": { "type": "boolean" },
+            "hasVendorDir": { "type": "boolean" },
+            "phpunitXml": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "node": {
+          "type": "object",
+          "properties": {
+            "hasPackageJson": { "type": "boolean" },
+            "packageManager": { "type": ["string", "null"], "enum": ["npm", "yarn", "pnpm", "bun", null] },
+            "usesWordpressScripts": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "tests": {
+          "type": "object",
+          "properties": {
+            "hasPhpUnit": { "type": "boolean" },
+            "hasWpEnv": { "type": "boolean" },
+            "hasPlaywright": { "type": "boolean" },
+            "hasJest": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "versions": {
+      "type": "object",
+      "properties": {
+        "wordpress": {
+          "type": "object",
+          "properties": {
+            "core": {
+              "type": "object",
+              "properties": {
+                "value": { "type": ["string", "null"] },
+                "source": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "gutenberg": {
+          "type": "object",
+          "properties": {
+            "value": { "type": ["string", "null"] },
+            "source": { "type": ["string", "null"] }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "recommendations": {
+      "type": "object",
+      "properties": {
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

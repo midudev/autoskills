@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Kotlin Core"
+  short_description: "Use Kotlin idioms safely in Android apps, including nullability, data classes, sealed types, extension functions, and collection pipelines"
+  default_prompt: "Use $android-kotlin-core when the request is about use Kotlin idioms safely in Android apps, including nullability, data classes, sealed types, extension functions, and collection pipelines."

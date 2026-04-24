@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Networking Retrofit OkHttp"
+  short_description: "Build Android networking stacks with Retrofit, OkHttp, interceptors, API contracts, and resilient error handling"
+  default_prompt: "Use $android-networking-retrofit-okhttp when the request is about build Android networking stacks with Retrofit, OkHttp, interceptors, API contracts, and resilient error handling."

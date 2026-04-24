@@ -1,0 +1,95 @@
+version: "7.1"
+description: "Breaking change patterns for Rails 7.0 → 7.1 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "cache_classes deprecated"
+      pattern: "cache_classes"
+      exclude: ""
+      search_paths:
+        - "config/environments/"
+      explanation: "config.cache_classes is replaced by config.enable_reloading with inverted boolean logic in Rails 7.1"
+      fix: "Replace cache_classes = false with enable_reloading = true, and cache_classes = true with enable_reloading = false"
+      variable_name: "CACHE_CLASSES"
+
+    - name: "legacy_connection_handling removed"
+      pattern: "legacy_connection_handling"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "config.active_record.legacy_connection_handling was deprecated in Rails 7.0 and is completely removed in Rails 7.1. Setting it will raise an error on boot."
+      fix: "Remove the line entirely. If relying on legacy behavior, migrate to connects_to/connected_to before upgrading."
+      variable_name: "LEGACY_CONNECTION_HANDLING"
+
+    - name: "preview_path singular deprecated"
+      pattern: "preview_path\\s*="
+      exclude: "preview_paths"
+      search_paths:
+        - "config/"
+      explanation: "config.action_mailer.preview_path (singular) is replaced by preview_paths (plural, array) in Rails 7.1"
+      fix: "Change preview_path = 'path' to preview_paths = ['path']"
+      variable_name: "PREVIEW_PATH"
+
+    - name: "Force SSL default changed"
+      pattern: "force_ssl\\s*=\\s*false"
+      exclude: ""
+      search_paths:
+        - "config/environments/production.rb"
+      explanation: "config.force_ssl is now true by default in production in Rails 7.1"
+      fix: "If not using SSL, explicitly set config.force_ssl = false. Otherwise remove the line."
+      variable_name: "FORCE_SSL"
+
+    - name: "lib/ autoloading changes"
+      pattern: "autoload_paths.*lib|eager_load_paths.*lib"
+      exclude: "autoload_lib"
+      search_paths:
+        - "config/application.rb"
+      explanation: "Rails 7.1 autoloads lib/ by default via autoload_lib. Manual autoload_paths additions for lib/ may conflict."
+      fix: "Replace manual autoload_paths/eager_load_paths with config.autoload_lib(ignore: %w[assets tasks])"
+      variable_name: "LIB_AUTOLOAD"
+
+  medium_priority:
+    - name: "SQLite database in db/ directory"
+      pattern: "database:\\s*db/.*\\.sqlite3"
+      exclude: ""
+      search_paths:
+        - "config/database.yml"
+      explanation: "Rails 7.1 defaults SQLite databases to storage/ instead of db/"
+      fix: "Either keep existing db/ path explicitly or move databases to storage/"
+      variable_name: "SQLITE_LOCATION"
+
+    - name: "Query log tags configuration"
+      pattern: "query_log_tags_enabled"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 7.1 adds new query_log_tags_format option (:sqlcommenter or :legacy)"
+      fix: "Add config.active_record.query_log_tags_format = :sqlcommenter alongside existing config"
+      variable_name: "QUERY_LOG_TAGS"
+
+    - name: "inspect output dependency"
+      pattern: "\\.inspect"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "ActiveRecord inspect output now respects attributes_for_inspect configuration in Rails 7.1"
+      fix: "If tests rely on inspect output, configure config.active_record.attributes_for_inspect = :all"
+      variable_name: "INSPECT_OUTPUT"
+
+    - name: "secrets.yml.enc usage"
+      pattern: "secrets\\.yml\\.enc|Rails\\.application\\.secrets"
+      exclude: ""
+      search_paths:
+        - "config/"
+        - "app/"
+        - "lib/"
+      explanation: "Encrypted secrets file location changed in Rails 7.1. secrets is further deprecated."
+      fix: "Migrate to Rails.application.credentials"
+      variable_name: "SECRETS_YML_ENC"
+
+dependencies:
+  ruby:
+    minimum: "2.7.0"
+    recommended: "3.2.0"
+    message: "Rails 7.1 requires Ruby 2.7+ (3.2 recommended)"

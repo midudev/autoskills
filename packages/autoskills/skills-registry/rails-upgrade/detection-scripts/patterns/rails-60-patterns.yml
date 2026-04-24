@@ -1,0 +1,121 @@
+version: "6.0"
+description: "Breaking change patterns for Rails 5.2 → 6.0 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "require_dependency usage"
+      pattern: "require_dependency"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 6.0 uses Zeitwerk autoloader - require_dependency is no longer needed"
+      fix: "Remove require_dependency calls. Zeitwerk auto-loads all files in app/ and lib/"
+      variable_name: "REQUIRE_DEPENDENCY"
+
+    - name: "Classic autoloader configuration"
+      pattern: "config.autoloader\\s*=\\s*:classic"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 6.0 defaults to Zeitwerk. Classic autoloader is deprecated"
+      fix: "Remove this line or set to :zeitwerk. Fix any naming issues."
+      variable_name: "CLASSIC_AUTOLOADER"
+
+    - name: "ActiveRecord belongs_to required"
+      pattern: "belongs_to.*optional:\\s*false"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 6.0 makes belongs_to required by default (optional: false is now redundant)"
+      fix: "Remove optional: false as it's now the default. Add optional: true only where needed."
+      variable_name: "BELONGS_TO_REQUIRED"
+
+    - name: "protect_from_forgery"
+      pattern: "protect_from_forgery.*with:\\s*:exception"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "Rails 6.0 changes default CSRF protection to :exception"
+      fix: "Remove explicit with: :exception as it's now the default"
+      variable_name: "CSRF_PROTECTION"
+
+    - name: "update_attributes deprecated"
+      pattern: "update_attributes[^_]"
+      exclude: "update_attribute"
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "update_attributes is deprecated in Rails 6.0"
+      fix: "Replace update_attributes with update"
+      variable_name: "UPDATE_ATTRIBUTES"
+
+  medium_priority:
+    - name: "ActionCable configuration"
+      pattern: "config.action_cable"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "ActionCable configuration changes in Rails 6.0"
+      fix: "Review ActionCable settings for compatibility"
+      variable_name: "ACTION_CABLE_CONFIG"
+
+    - name: "ActiveStorage direct upload"
+      pattern: "ActiveStorage::Blob\\.create_after_upload"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "ActiveStorage API changes in Rails 6.0"
+      fix: "Use ActiveStorage::Blob.create_and_upload! instead"
+      variable_name: "ACTIVE_STORAGE_UPLOAD"
+
+    - name: "before_filter deprecated"
+      pattern: "before_filter"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "before_filter was removed in Rails 5.1 and fully deprecated"
+      fix: "Replace before_filter with before_action"
+      variable_name: "BEFORE_FILTER"
+
+    - name: "skip_before_filter deprecated"
+      pattern: "skip_before_filter"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "skip_before_filter was removed in Rails 5.1 and fully deprecated"
+      fix: "Replace skip_before_filter with skip_before_action"
+      variable_name: "SKIP_BEFORE_FILTER"
+
+    - name: "render nothing: true"
+      pattern: "render.*nothing:\\s*true"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "render nothing: true is deprecated"
+      fix: "Replace with head :ok or head :no_content"
+      variable_name: "RENDER_NOTHING"
+
+    - name: "Ruby version requirement"
+      pattern: "ruby.*['\"]2\\.[0-6]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - ".ruby-version"
+      explanation: "Rails 6.0 requires Ruby 2.5.0 or newer"
+      fix: "Upgrade Ruby to 2.5.0+ (2.7+ recommended)"
+      variable_name: "RUBY_VERSION"
+
+dependencies:
+  zeitwerk:
+    check: true
+    gem_name: "zeitwerk"
+    message: "Rails 6.0 uses Zeitwerk for code loading"
+    url: "https://github.com/fxn/zeitwerk"
+
+  webpacker:
+    check: true
+    gem_name: "webpacker"
+    message: "Rails 6.0 uses Webpacker for JavaScript by default"
+    url: "https://github.com/rails/webpacker"

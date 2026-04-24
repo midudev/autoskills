@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Coroutines Flow"
+  short_description: "Use coroutines, Flow, structured concurrency, dispatchers, and cancellation-safe Android async pipelines"
+  default_prompt: "Use $android-coroutines-flow when the request is about use coroutines, Flow, structured concurrency, dispatchers, and cancellation-safe Android async pipelines."

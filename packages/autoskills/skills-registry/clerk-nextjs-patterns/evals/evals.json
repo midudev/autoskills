@@ -1,0 +1,82 @@
+{
+  "skill_name": "clerk-nextjs-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "my dashboard page uses useAuth and useUser hooks with useEffect for redirect. this causes a flash of unauthenticated content. convert it to a server component using auth() from @clerk/nextjs/server instead.",
+      "expected_output": "Converts dashboard from client component with hooks to server component with auth(), removes useEffect redirect pattern",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Removes 'use client' directive from dashboard page",
+        "Replaces useAuth/useUser hooks with auth() from @clerk/nextjs/server",
+        "Uses server-side redirect() from next/navigation instead of useEffect + router.push",
+        "Removes useEffect, useRouter, isLoaded checks",
+        "Page still displays user data (userId from auth or currentUser)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "my api route at app/api/data/route.ts has no auth protection. anyone can access the data. add clerk auth to this api route so only authenticated users can get the data, and return 401 for unauthenticated requests.",
+      "expected_output": "Adds auth() check to API route, returns 401 for unauthenticated requests",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Imports auth from @clerk/nextjs/server",
+        "Calls auth() at the top of the GET handler",
+        "Returns 401 status when userId is null",
+        "Only returns data when user is authenticated",
+        "Does NOT use client-side hooks in the API route"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "my homepage is a client component that uses useUser to check if the user is signed in. convert it to use clerk's Show component pattern instead so it can be a server component with conditional rendering.",
+      "expected_output": "Converts home page to use SignedIn/SignedOut or Show components instead of useUser hook",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Removes 'use client' directive from home page",
+        "Removes useUser hook import and usage",
+        "Uses SignedIn/SignedOut components from @clerk/nextjs for conditional rendering",
+        "Preserves the same visual output (welcome message when signed in, sign-in prompt when not)",
+        "Page works as a server component"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "i need to protect all routes under /dashboard with clerk middleware instead of checking auth in each page component. update the middleware to use createRouteMatcher so only / and /sign-in are public.",
+      "expected_output": "Updates middleware.ts to use createRouteMatcher with public routes, protecting /dashboard and all sub-routes",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Imports createRouteMatcher from @clerk/nextjs/server",
+        "Defines public routes array including / and /sign-in",
+        "Uses auth.protect() for non-public routes inside clerkMiddleware callback",
+        "Middleware protects /dashboard, /profile, and /api routes",
+        "Does NOT remove the clerkMiddleware wrapper"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i need to call an external API (Hasura GraphQL) from my Next.js server component. get a custom JWT using a template called 'hasura' and pass it in the Authorization header.",
+      "expected_output": "Uses getToken with template parameter from auth() server-side, passes as Bearer token to external API",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Uses getToken with a template parameter (e.g. 'hasura') to get a custom JWT",
+        "Uses either auth() server-side or useAuth() client-side to access getToken",
+        "Passes the token as Authorization Bearer header to the external API call",
+        "Handles the case where getToken returns null (user not authenticated)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "i have a standalone Node.js API server that receives requests with a Clerk session token in the Authorization header. i need to verify the JWT signature and check if the user is authenticated. i don't want to use Clerk middleware, just manual verification.",
+      "expected_output": "Manually verifies Clerk JWT using jsonwebtoken or @clerk/backend verifyToken, checks claims",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Extracts the token from the Authorization Bearer header",
+        "Verifies the token using either jsonwebtoken with CLERK_PEM_PUBLIC_KEY or @clerk/backend verifyToken",
+        "Checks token expiration (exp claim) and not-before (nbf claim)",
+        "Returns 401 for invalid or expired tokens",
+        "Returns the decoded claims or user data on successful verification"
+      ]
+    }
+  ]
+}

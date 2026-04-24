@@ -1,0 +1,20 @@
+{
+  "name": "react-router-basic-auth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "react-router dev",
+    "build": "react-router build"
+  },
+  "dependencies": {
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router": "latest",
+    "@clerk/react-router": "latest"
+  },
+  "devDependencies": {
+    "@react-router/dev": "latest",
+    "@react-router/node": "latest",
+    "vite": "latest"
+  }
+}

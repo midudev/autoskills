@@ -1,0 +1,145 @@
+version: "7.0"
+description: "Breaking change patterns for Rails 6.1 → 7.0 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "Ruby version requirement"
+      pattern: "ruby.*['\"]2\\.[0-6]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - ".ruby-version"
+      explanation: "Rails 7.0 requires Ruby 2.7.0 or newer"
+      fix: "Upgrade Ruby to 2.7.0+ (3.0+ recommended)"
+      variable_name: "RUBY_VERSION"
+
+    - name: "Webpacker usage"
+      pattern: "webpacker|javascript_pack_tag"
+      exclude: "importmap"
+      search_paths:
+        - "Gemfile"
+        - "config/"
+        - "app/views/"
+      explanation: "Rails 7.0 replaces Webpacker with Import Maps or jsbundling-rails"
+      fix: "Migrate to Import Maps, esbuild, or rollup. Remove Webpacker."
+      variable_name: "WEBPACKER"
+
+    - name: "Spring usage"
+      pattern: "gem ['\"]spring['\"]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+      explanation: "Spring is no longer included by default in Rails 7.0"
+      fix: "Keep if needed, or remove for simpler boot process"
+      variable_name: "SPRING"
+
+    - name: "form_with local option"
+      pattern: "form_with.*local:\\s*(true|false)"
+      exclude: ""
+      search_paths:
+        - "app/views/"
+      explanation: "Rails 7.0 changes form_with to submit remotely by default with Turbo"
+      fix: "Remove local: true (now default is remote with Turbo). Add data: { turbo: false } if needed."
+      variable_name: "FORM_WITH_LOCAL"
+
+    - name: "ActionController::Base.allow_forgery_protection"
+      pattern: "allow_forgery_protection"
+      exclude: ""
+      search_paths:
+        - "config/"
+        - "spec/"
+        - "test/"
+      explanation: "Forgery protection behavior changes in Rails 7.0"
+      fix: "Review CSRF configuration. ensure protect_from_forgery settings are correct"
+      variable_name: "FORGERY_PROTECTION"
+
+  medium_priority:
+    - name: "secrets.yml usage"
+      pattern: "Rails\\.application\\.secrets"
+      exclude: "credentials"
+      search_paths:
+        - "app/"
+        - "lib/"
+        - "config/"
+      explanation: "Rails.application.secrets is deprecated in favor of credentials"
+      fix: "Migrate to Rails.application.credentials"
+      variable_name: "SECRETS_YML"
+
+    - name: "ActiveRecord enum prefix/suffix"
+      pattern: "enum.*:.*\\{"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 7.0 changes enum syntax - hash syntax preferred"
+      fix: "Review enums. New syntax: enum status: { draft: 0, published: 1 }"
+      variable_name: "ENUM_SYNTAX"
+
+    - name: "image_tag skip_pipeline"
+      pattern: "image_tag.*skip_pipeline"
+      exclude: ""
+      search_paths:
+        - "app/views/"
+        - "app/helpers/"
+      explanation: "image_tag skip_pipeline option removed in Rails 7.0"
+      fix: "Remove skip_pipeline option from image_tag calls"
+      variable_name: "IMAGE_TAG_PIPELINE"
+
+    - name: "ActiveStorage variant syntax"
+      pattern: "\\.variant\\(.*resize:"
+      exclude: ""
+      search_paths:
+        - "app/"
+      explanation: "ActiveStorage variant syntax changes in Rails 7.0"
+      fix: "Use new syntax: variant(resize_to_limit: [100, 100])"
+      variable_name: "ACTIVE_STORAGE_VARIANT"
+
+    - name: "Turbolinks"
+      pattern: "turbolinks|Turbolinks"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "app/javascript/"
+        - "app/assets/"
+      explanation: "Turbolinks replaced by Turbo in Rails 7.0"
+      fix: "Replace turbolinks with @hotwired/turbo. Update event listeners."
+      variable_name: "TURBOLINKS"
+
+    - name: "UJS (rails-ujs)"
+      pattern: "rails-ujs|@rails/ujs"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "app/javascript/"
+        - "package.json"
+      explanation: "Rails UJS is replaced by Turbo and Stimulus in Rails 7.0"
+      fix: "Remove rails-ujs. Use Turbo for remote forms and Stimulus for JavaScript."
+      variable_name: "RAILS_UJS"
+
+    - name: "to_s(:format) deprecation"
+      pattern: "\\.to_s\\(:"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "to_s(:format) is deprecated in favor of to_fs(:format)"
+      fix: "Replace to_s(:format) with to_fs(:format)"
+      variable_name: "TO_S_FORMAT"
+
+dependencies:
+  importmap:
+    check: true
+    gem_name: "importmap-rails"
+    message: "Rails 7.0 uses Import Maps by default for JavaScript"
+    url: "https://github.com/rails/importmap-rails"
+
+  turbo:
+    check: true
+    gem_name: "turbo-rails"
+    message: "Rails 7.0 uses Turbo (Hotwire) for SPA-like navigation"
+    url: "https://github.com/hotwired/turbo-rails"
+
+  stimulus:
+    check: true
+    gem_name: "stimulus-rails"
+    message: "Rails 7.0 uses Stimulus for JavaScript behaviors"
+    url: "https://github.com/hotwired/stimulus-rails"

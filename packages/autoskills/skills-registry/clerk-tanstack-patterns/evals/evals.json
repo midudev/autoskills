@@ -1,0 +1,83 @@
+{
+  "skill_name": "clerk-tanstack-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i have a tanstack react start app and want to protect the /dashboard route. unauthenticated users should be redirected to /sign-in. how do i add an auth guard to the route?",
+      "expected_output": "Uses beforeLoad with createServerFn that calls auth() and throws redirect for unauthenticated users",
+      "scaffold": "tanstack-basic-auth",
+      "expectations": [
+        "Creates a createServerFn that calls auth() from @clerk/tanstack-react-start/server",
+        "Throws redirect({ to: '/sign-in' }) when isAuthenticated is false",
+        "Calls the server function in the route's beforeLoad",
+        "Imports are from the correct package paths",
+        "Does NOT use client-only hooks for the auth check"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i need a server function that fetches the current user's orders from my database. it should only work for authenticated users and return the userId alongside the orders.",
+      "expected_output": "Creates a createServerFn that uses auth() to get userId, fetches data, throws if not authenticated",
+      "scaffold": "tanstack-basic-auth",
+      "expectations": [
+        "Uses createServerFn from @tanstack/react-start",
+        "Calls auth() from @clerk/tanstack-react-start/server inside the handler",
+        "Checks isAuthenticated and throws an error or redirect if false",
+        "Returns userId with the data payload",
+        "Server function is called from a route loader or component"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i want a layout route that wraps all /app/* routes and protects them. the layout should check auth once and all child routes inherit the protection without repeating the check.",
+      "expected_output": "Creates a layout route file with beforeLoad auth check that child routes inherit via route context",
+      "scaffold": "tanstack-basic-auth",
+      "expectations": [
+        "Creates a layout route (e.g. src/routes/app.tsx or _layout.tsx pattern)",
+        "Uses beforeLoad at the layout level with auth() check",
+        "Passes userId or auth data through route context for child routes to access",
+        "Child routes can access the auth context without re-fetching",
+        "Throws redirect to /sign-in for unauthenticated access"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "my app needs to show org-specific data. when a user has an active org, load org projects in the route loader. if no org is selected, show a message to select one.",
+      "expected_output": "Route loader uses auth() to get orgId, conditionally fetches org data, handles missing org case",
+      "scaffold": "tanstack-basic-auth",
+      "expectations": [
+        "Uses auth() in a createServerFn or loader to get orgId",
+        "Handles null orgId case by returning empty state or redirecting",
+        "Fetches org-scoped data using orgId",
+        "Component handles both states: org selected and no org selected",
+        "Shows OrganizationSwitcher or prompt when no org is active"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i want to build a custom sign-in page using clerk's useSignIn hook instead of the prebuilt component. create a page with email/password fields.",
+      "expected_output": "Creates a sign-in page using useSignIn hook with signIn.create() for email/password authentication",
+      "scaffold": "tanstack-basic-auth",
+      "expectations": [
+        "Uses useSignIn hook from @clerk/tanstack-react-start",
+        "Calls signIn.create({ identifier, password }) to initiate sign-in",
+        "Handles the complete() or firstFactorVerification result",
+        "Shows loading state during sign-in",
+        "Handles errors from the sign-in attempt"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "i have a tanstack start api route that needs to verify the user is authenticated before processing a webhook or mutation. show me how to protect it.",
+      "expected_output": "API route handler using auth() from server package to verify auth state, returns 401 if not authenticated",
+      "scaffold": "tanstack-basic-auth",
+      "expectations": [
+        "Uses auth() from @clerk/tanstack-react-start/server in the handler",
+        "Returns a 401 response for unauthenticated requests",
+        "Extracts userId or sessionId from the auth result",
+        "Does NOT use client-side hooks in the server handler",
+        "Correct import path used: @clerk/tanstack-react-start/server"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Architecture Clean"
+  short_description: "Apply clean architecture boundaries, use cases, repositories, and lifecycle-aware presentation models in Android projects"
+  default_prompt: "Use $android-architecture-clean when the request is about apply clean architecture boundaries, use cases, repositories, and lifecycle-aware presentation models in Android projects."

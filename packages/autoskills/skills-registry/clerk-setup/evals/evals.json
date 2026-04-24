@@ -1,0 +1,74 @@
+{
+  "skill_name": "clerk-setup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "hey i just created a new next.js app with create-next-app and i want to add auth. i heard clerk is good, can you set it up? im using the app router btw and tailwind. project is at ./my-saas-app",
+      "expected_output": "Installs @clerk/nextjs, wraps layout with ClerkProvider inside <body>, creates middleware.ts with clerkMiddleware, sets up .env.local with publishable and secret keys, detects shadcn if present",
+      "files": [],
+      "expectations": [
+        "Installs @clerk/nextjs via npm/pnpm/bun",
+        "Adds ClerkProvider to root layout.tsx inside <body> tag, not wrapping <html>",
+        "Creates middleware.ts (or proxy.ts for Next.js 16+) with clerkMiddleware export",
+        "Creates or updates .env.local with NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY",
+        "Does NOT install @clerk/clerk-react or any non-Next.js Clerk package",
+        "Mentions getting API keys from dashboard.clerk.com or keyless dev mode"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "im building a rest api with express and typescript, no frontend. i need to protect some routes with authentication. can you add clerk? i want /api/public to be open and everything under /api/private/* to require auth",
+      "expected_output": "Installs @clerk/express, adds clerkMiddleware globally, uses requireAuth for protected routes, keeps public routes open",
+      "files": [],
+      "expectations": [
+        "Installs @clerk/express (not @clerk/nextjs)",
+        "Adds clerkMiddleware() to the Express app",
+        "Shows how to protect /api/private/* routes with requireAuth or getAuth check",
+        "Leaves /api/public accessible without auth",
+        "Does NOT create React components, ClerkProvider, or any frontend code",
+        "Sets up CLERK_SECRET_KEY (and optionally CLERK_PUBLISHABLE_KEY) env vars"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "we have a next.js app thats been using next-auth with google and github oauth for about a year. we want to switch to clerk because next-auth sessions keep expiring randomly. theres about 2000 users in our postgres db. how do we migrate without losing everyone?",
+      "expected_output": "Migration plan: audit current NextAuth setup, export users via Clerk Backend API, handle OAuth provider mapping, plan session transition",
+      "files": [],
+      "expectations": [
+        "Detects or acknowledges existing NextAuth/next-auth setup",
+        "Addresses user data migration (2000 users) - mentions Clerk Backend API import or trickle migration",
+        "Addresses OAuth provider continuity (Google and GitHub)",
+        "Mentions that existing sessions will terminate during switch",
+        "Suggests either big-bang or gradual migration strategy",
+        "Does NOT just install Clerk and ignore the existing auth system"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "setting up a react spa with vite for an internal tool at work. no ssr, no next.js. just plain react 19 + react-router. need login/logout. whats the quickest way to get clerk working?",
+      "expected_output": "Installs @clerk/react, wraps app with ClerkProvider, no middleware needed for SPA",
+      "files": [],
+      "expectations": [
+        "Installs @clerk/react (not @clerk/nextjs or @clerk/clerk-react)",
+        "Wraps app root with ClerkProvider and passes publishableKey",
+        "Does NOT create middleware.ts or proxy.ts (not applicable to SPAs)",
+        "Does NOT reference Next.js-specific patterns like server components or auth()",
+        "Shows SignIn/SignUp components or redirect-based auth flow",
+        "Sets up NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY or VITE_CLERK_PUBLISHABLE_KEY env var"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i have an astro site with some react islands, its mostly static but i want to add a members-only section. never used clerk before. using bun as my package manager",
+      "expected_output": "Installs @clerk/astro via bun, configures Astro integration, sets up protected routes for members-only section",
+      "files": [],
+      "expectations": [
+        "Installs @clerk/astro using bun (not npm or pnpm)",
+        "Configures Clerk as an Astro integration in astro.config",
+        "Shows how to protect specific routes for the members-only section",
+        "Sets up environment variables for Clerk keys",
+        "Does NOT install @clerk/nextjs or create Next.js-specific files"
+      ]
+    }
+  ]
+}

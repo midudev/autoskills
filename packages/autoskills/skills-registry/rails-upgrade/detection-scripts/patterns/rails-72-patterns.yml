@@ -1,0 +1,120 @@
+version: "7.2"
+description: "Breaking change patterns for Rails 7.1 → 7.2 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "Transaction-aware job enqueuing"
+      pattern: "perform_later|deliver_later"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+        - "app/controllers/"
+        - "app/services/"
+      explanation: "Rails 7.2 defers job enqueuing until after transaction commits by default"
+      fix: "Test jobs enqueued inside transactions. Jobs now wait for commit. Use perform_now for immediate execution."
+      variable_name: "TRANSACTION_JOBS"
+
+    - name: "show_exceptions configuration"
+      pattern: "show_exceptions\\s*=\\s*(true|false)"
+      exclude: ""
+      search_paths:
+        - "config/environments/"
+      explanation: "Rails 7.2 requires symbol values instead of booleans for show_exceptions"
+      fix: "Change true to :all, false to :none, or use :rescuable"
+      variable_name: "SHOW_EXCEPTIONS"
+
+    - name: "params comparison removed"
+      pattern: "params\\s*==|==\\s*params"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+        - "app/"
+      explanation: "ActionController::Parameters no longer compares equal to Hash"
+      fix: "Replace params == hash with params.to_h == hash"
+      variable_name: "PARAMS_COMPARISON"
+
+    - name: "ActiveRecord.connection deprecated"
+      pattern: "ActiveRecord::Base\\.connection(?!_pool)"
+      exclude: "with_connection"
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "ActiveRecord::Base.connection is deprecated in Rails 7.2"
+      fix: "Use with_connection block or lease_connection for connection pooling"
+      variable_name: "AR_CONNECTION"
+
+    - name: "Rails.application.secrets removed"
+      pattern: "Rails\\.application\\.secrets"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+        - "config/"
+      explanation: "Rails.application.secrets is completely removed in Rails 7.2"
+      fix: "Migrate all secrets to Rails.application.credentials"
+      variable_name: "SECRETS_REMOVED"
+
+  medium_priority:
+    - name: "serialize syntax change"
+      pattern: "serialize\\s+:\\w+(?!.*(?:type:|coder:))"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "serialize requires explicit type: or coder: parameter in Rails 7.2"
+      fix: "Add type: YAML or type: JSON to serialize declarations"
+      variable_name: "SERIALIZE_SYNTAX"
+
+    - name: "fixture_path deprecated"
+      pattern: "fixture_path[^s]"
+      exclude: "fixture_paths"
+      search_paths:
+        - "test/"
+        - "spec/"
+        - "config/"
+      explanation: "fixture_path singular is deprecated in favor of fixture_paths plural"
+      fix: "Change fixture_path to fixture_paths (array)"
+      variable_name: "FIXTURE_PATH"
+
+    - name: "query_constraints deprecated"
+      pattern: "query_constraints"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "query_constraints is deprecated in Rails 7.2"
+      fix: "Use foreign_key instead of query_constraints"
+      variable_name: "QUERY_CONSTRAINTS"
+
+    - name: "mailer test args syntax"
+      pattern: "args:\\s*\\["
+      exclude: ""
+      search_paths:
+        - "test/mailers/"
+        - "spec/mailers/"
+      explanation: "Mailer test helper changes args: to params: in Rails 7.2"
+      fix: "Replace args: with params: in mailer tests"
+      variable_name: "MAILER_TEST_ARGS"
+
+    - name: "autoload_lib syntax"
+      pattern: "autoload_lib.*%w\\("
+      exclude: ""
+      search_paths:
+        - "config/application.rb"
+      explanation: "autoload_lib syntax updated in Rails 7.2"
+      fix: "Change %w() to %w[] for consistency"
+      variable_name: "AUTOLOAD_LIB_SYNTAX"
+
+    - name: "Ruby version"
+      pattern: "ruby.*['\"]3\\.[0-1]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - ".ruby-version"
+      explanation: "Rails 7.2 works best with Ruby 3.1+"
+      fix: "Consider upgrading to Ruby 3.2+ for best performance"
+      variable_name: "RUBY_VERSION"
+
+dependencies:
+  ruby:
+    minimum: "3.1.0"
+    recommended: "3.3.0"
+    message: "Rails 7.2 requires Ruby 3.1+ (3.3 recommended)"

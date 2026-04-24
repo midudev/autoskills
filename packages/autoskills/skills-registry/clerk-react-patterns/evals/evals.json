@@ -1,0 +1,83 @@
+{
+  "skill_name": "clerk-react-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i created a new vite react app and want to add clerk authentication. show me how to set up ClerkProvider and add sign-in and sign-out buttons to my app.",
+      "expected_output": "Wraps app in ClerkProvider in main.tsx with publishableKey from VITE_CLERK_PUBLISHABLE_KEY, adds Show/SignInButton/UserButton to App.tsx",
+      "scaffold": "react-basic-auth",
+      "expectations": [
+        "Adds ClerkProvider to src/main.tsx wrapping the App component",
+        "Reads publishableKey from import.meta.env.VITE_CLERK_PUBLISHABLE_KEY",
+        "Uses Show when='signed-in' and Show when='signed-out' for conditional rendering",
+        "Adds UserButton for signed-in state and SignInButton for signed-out",
+        ".env file uses VITE_ prefix not NEXT_PUBLIC_"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i have a react spa with react router v6. i need to protect my /dashboard and /settings routes so only authenticated users can access them. unauthorized users should be redirected to /sign-in.",
+      "expected_output": "Creates ProtectedRoute component using useAuth with isLoaded and isSignedIn checks, wraps protected routes in React Router",
+      "scaffold": "react-basic-auth",
+      "expectations": [
+        "Creates a ProtectedRoute wrapper component",
+        "Uses useAuth() with isLoaded and isSignedIn checks",
+        "Shows loading state while isLoaded is false",
+        "Redirects to /sign-in using <Navigate replace> when not signed in",
+        "Wraps /dashboard and /settings using the ProtectedRoute in the router config"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i want to build a custom sign-in form with email and password fields instead of using the hosted sign-in page. use clerk's useSignIn hook.",
+      "expected_output": "Custom sign-in form using useSignIn() hook with signIn.password() or signIn.create(), then finalize() or setActive()",
+      "scaffold": "react-basic-auth",
+      "expectations": [
+        "Uses useSignIn hook from @clerk/react",
+        "Calls signIn.password({ identifier, password }) or signIn.create({ identifier, password }) to authenticate",
+        "Checks for success before activating the session (via status check, error check, or conditional after the auth call)",
+        "Activates the session using signIn.finalize() or setActive({ session: createdSessionId })",
+        "Catches and displays error messages from the sign-in response"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "i want a user profile page that shows the signed-in user's name, email address, and profile picture. use clerk hooks to get this data.",
+      "expected_output": "Profile page using useUser() hook accessing user.firstName, user.emailAddresses[0], user.imageUrl",
+      "scaffold": "react-basic-auth",
+      "expectations": [
+        "Uses useUser() hook from @clerk/react",
+        "Guards on isLoaded before rendering user data",
+        "Accesses user.firstName and user.lastName for name",
+        "Accesses user.emailAddresses[0].emailAddress for email",
+        "Displays user.imageUrl in an img element"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i need to add an organization switcher to my react spa so users can switch between their orgs. how do i render the switcher and read the active org id?",
+      "expected_output": "Renders OrganizationSwitcher from @clerk/react and reads orgId from useAuth()",
+      "scaffold": "react-basic-auth",
+      "expectations": [
+        "Imports and renders <OrganizationSwitcher /> from @clerk/react",
+        "Uses orgId from useAuth() to get the active organization ID",
+        "Handles the case where orgId is null (no org selected)",
+        "Places the switcher in a visible location (nav, header, or sidebar)",
+        "Imports from @clerk/react not @clerk/nextjs"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "my react app needs to call a protected backend API. how do i get the clerk session token to include in the Authorization header?",
+      "expected_output": "Uses getToken() from useAuth() and includes the token as Bearer in the Authorization header",
+      "scaffold": "react-basic-auth",
+      "expectations": [
+        "Uses getToken() from useAuth() hook",
+        "Awaits the getToken() call (it returns a Promise)",
+        "Null-checks the token before using it",
+        "Sets Authorization: Bearer <token> header on the fetch request",
+        "Shows a pattern for reuse (custom hook or utility function)"
+      ]
+    }
+  ]
+}
