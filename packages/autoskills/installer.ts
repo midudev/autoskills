@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, relative } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { parseSkillPath } from "./lib.ts";
@@ -32,6 +33,7 @@ import {
 
 const DEFAULT_REGISTRY_RAW_BASE_URL =
   "https://raw.githubusercontent.com/midudev/autoskills/main/packages/autoskills/skills-registry";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
 
 export interface RegistryEntry {
   source: string;
@@ -155,16 +157,31 @@ function sha256Buffer(buf: Buffer): string {
   return createHash("sha256").update(buf).digest("hex");
 }
 
-function getRegistryRawBaseUrl(opts: InstallOptions): string {
-  return (
-    opts.registryBaseUrl ||
-    process.env.AUTOSKILLS_REGISTRY_BASE_URL ||
-    DEFAULT_REGISTRY_RAW_BASE_URL
-  ).replace(/\/+$/, "");
+function getRegistryRawBaseUrls(opts: InstallOptions): string[] {
+  const configured = opts.registryBaseUrl || process.env.AUTOSKILLS_REGISTRY_BASE_URL;
+  return [(configured || DEFAULT_REGISTRY_RAW_BASE_URL).replace(/\/+$/, "")];
+}
+
+function getInstallRegistryDir(opts: InstallOptions): string {
+  return opts.registryDir || getRegistryDir();
+}
+
+function getCacheRegistryDir(entry: RegistryEntry): string {
+  const base = process.env.AUTOSKILLS_CACHE_DIR || join(homedir(), ".cache", "autoskills", "skills-registry");
+  return join(base, entry.bundleHash);
 }
 
 function encodeRawPath(skillName: string, rel: string): string {
   return [skillName, ...rel.split("/")].map(encodeURIComponent).join("/");
+}
+
+function githubDownloadHeaders(url: string): HeadersInit {
+  const headers: Record<string, string> = { "User-Agent": "autoskills" };
+  const host = new URL(url).hostname;
+  if (GITHUB_TOKEN && /(^|\.)githubusercontent\.com$/i.test(host)) {
+    headers.Authorization = `Bearer ${GITHUB_TOKEN}`;
+  }
+  return headers;
 }
 
 async function downloadRegistryFile(
@@ -178,22 +195,35 @@ async function downloadRegistryFile(
     throw new Error(`no recorded hash for ${rel}`);
   }
 
-  const baseUrl = getRegistryRawBaseUrl(opts);
-  const url = `${baseUrl}/${encodeRawPath(skillName, rel)}`;
   const fetchFile = opts.fetchImpl || fetch;
-  const res = await fetchFile(url, {
-    headers: { "User-Agent": "autoskills" },
-  });
-  if (!res.ok) {
-    throw new Error(`download failed for ${rel}: ${res.status} ${res.statusText}`);
+  const errors = [];
+  for (const baseUrl of getRegistryRawBaseUrls(opts)) {
+    const url = `${baseUrl}/${encodeRawPath(skillName, rel)}`;
+    const res = await fetchFile(url, {
+      headers: githubDownloadHeaders(url),
+    });
+    if (!res.ok) {
+      const resetAt = Number(res.headers.get("x-ratelimit-reset") || 0) * 1000;
+      const resetSuffix = resetAt ? ` (resets ${new Date(resetAt).toISOString()})` : "";
+      if (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0") {
+        throw new Error(
+          `GitHub rate limit exceeded${resetSuffix}. Set GITHUB_TOKEN or GH_TOKEN to increase the limit.`,
+        );
+      }
+      errors.push(`${res.status} ${res.statusText} from ${baseUrl}`);
+      continue;
+    }
+
+    const buf = Buffer.from(await res.arrayBuffer());
+    const actual = sha256Buffer(buf);
+    if (actual !== expected) {
+      errors.push(`hash mismatch from ${baseUrl}`);
+      continue;
+    }
+    return buf;
   }
 
-  const buf = Buffer.from(await res.arrayBuffer());
-  const actual = sha256Buffer(buf);
-  if (actual !== expected) {
-    throw new Error(`hash mismatch for ${rel}`);
-  }
-  return buf;
+  throw new Error(`download failed for ${rel}: ${errors.join("; ")}`);
 }
 
 async function downloadRegistryEntry(
@@ -202,12 +232,13 @@ async function downloadRegistryEntry(
   destDir: string,
   opts: InstallOptions,
 ): Promise<void> {
-  const files = await Promise.all(
-    entry.files.map(async (rel) => ({
+  const files = [];
+  for (const rel of entry.files) {
+    files.push({
       rel,
       buf: await downloadRegistryFile(skillName, entry, rel, opts),
-    })),
-  );
+    });
+  }
 
   const bundleHash = createHash("sha256")
     .update(
@@ -227,6 +258,42 @@ async function downloadRegistryEntry(
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, buf);
   }
+}
+
+function copyRegistryEntryFromLocal(
+  skillName: string,
+  entry: RegistryEntry,
+  destDir: string,
+  opts: InstallOptions,
+): boolean {
+  const registryDir = getInstallRegistryDir(opts);
+  const verdict = verifyRegistryEntry(skillName, entry, registryDir);
+  if (!verdict.ok) return false;
+
+  rmSync(destDir, { recursive: true, force: true });
+  copyDir(join(registryDir, skillName), destDir);
+  return true;
+}
+
+function copyRegistryEntryFromCache(skillName: string, entry: RegistryEntry, destDir: string): boolean {
+  const registryDir = getCacheRegistryDir(entry);
+  const verdict = verifyRegistryEntry(skillName, entry, registryDir);
+  if (!verdict.ok) return false;
+
+  rmSync(destDir, { recursive: true, force: true });
+  copyDir(join(registryDir, skillName), destDir);
+  return true;
+}
+
+async function downloadRegistryEntryToCache(
+  skillName: string,
+  entry: RegistryEntry,
+  opts: InstallOptions,
+): Promise<string> {
+  const registryDir = getCacheRegistryDir(entry);
+  const skillDir = join(registryDir, skillName);
+  await downloadRegistryEntry(skillName, entry, skillDir, opts);
+  return skillDir;
 }
 
 function ensureSymlinkTo(target: string, linkPath: string): void {
@@ -324,7 +391,20 @@ export async function installSkill(
 
   const canonicalDir = join(projectDir, ".agents", "skills", skillName);
   try {
-    await downloadRegistryEntry(skillName, entry, canonicalDir, opts);
+    const installedVerdict = verifyRegistryEntry(
+      skillName,
+      entry,
+      join(projectDir, ".agents", "skills"),
+    );
+    if (
+      !installedVerdict.ok &&
+      !copyRegistryEntryFromLocal(skillName, entry, canonicalDir, opts) &&
+      !copyRegistryEntryFromCache(skillName, entry, canonicalDir)
+    ) {
+      const cachedSkillDir = await downloadRegistryEntryToCache(skillName, entry, opts);
+      rmSync(canonicalDir, { recursive: true, force: true });
+      copyDir(cachedSkillDir, canonicalDir);
+    }
   } catch (err) {
     return fail(`download failed: ${(err as Error).message}`);
   }

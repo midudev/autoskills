@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import { ok, equal, deepEqual } from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 
@@ -175,6 +175,114 @@ describe("installSkill", () => {
     equal(lock.skills["hello-skill"].source, "owner/repo");
     equal(lock.skills["hello-skill"].sourceType, "autoskills-registry");
     ok(typeof lock.skills["hello-skill"].computedHash === "string");
+  });
+
+  it("installs from the local registry without fetching", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      { name: "local-skill", source: "owner/repo", files: { "SKILL.md": "# local" } },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/local-skill", [], {
+      projectDir,
+      registryDir: regDir,
+      fetchImpl: (async () => {
+        throw new Error("unexpected fetch");
+      }) as typeof fetch,
+    });
+
+    ok(result.success, result.output);
+    equal(
+      readFileSync(join(projectDir, ".agents", "skills", "local-skill", "SKILL.md"), "utf-8"),
+      "# local",
+    );
+  });
+
+  it("skips downloads when the installed skill already matches the manifest", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      { name: "cached-skill", source: "owner/repo", files: { "SKILL.md": "# cached" } },
+    ]);
+    const installedDir = join(projectDir, ".agents", "skills", "cached-skill");
+    mkdirSync(installedDir, { recursive: true });
+    writeFileSync(join(installedDir, "SKILL.md"), "# cached");
+    rmSync(join(regDir, "cached-skill"), { recursive: true, force: true });
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/cached-skill", [], {
+      projectDir,
+      registryDir: regDir,
+      fetchImpl: (async () => {
+        throw new Error("unexpected fetch");
+      }) as typeof fetch,
+    });
+
+    ok(result.success, result.output);
+  });
+
+  it("installs from the user cache without fetching", async () => {
+    const regDir = join(tmp.path, "registry");
+    const cacheDir = join(tmp.path, "cache");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      { name: "cached-remote-skill", source: "owner/repo", files: { "SKILL.md": "# cached remote" } },
+    ]);
+    const manifest = JSON.parse(readFileSync(join(regDir, "index.json"), "utf-8"));
+    const entry = manifest.skills["cached-remote-skill"] as RegistryEntry;
+    const cacheRegistryDir = join(cacheDir, entry.bundleHash);
+    mkdirSync(join(cacheRegistryDir, "cached-remote-skill"), { recursive: true });
+    writeFileSync(join(cacheRegistryDir, "cached-remote-skill", "SKILL.md"), "# cached remote");
+    rmSync(join(regDir, "cached-remote-skill"), { recursive: true, force: true });
+    _setRegistryDir(regDir);
+
+    const prevCacheDir = process.env.AUTOSKILLS_CACHE_DIR;
+    process.env.AUTOSKILLS_CACHE_DIR = cacheDir;
+    try {
+      const result = await installSkill("owner/repo/cached-remote-skill", [], {
+        projectDir,
+        registryDir: regDir,
+        fetchImpl: (async () => {
+          throw new Error("unexpected fetch");
+        }) as typeof fetch,
+      });
+
+      ok(result.success, result.output);
+    } finally {
+      if (prevCacheDir === undefined) delete process.env.AUTOSKILLS_CACHE_DIR;
+      else process.env.AUTOSKILLS_CACHE_DIR = prevCacheDir;
+    }
+  });
+
+  it("downloads from the raw GitHub registry by default", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      { name: "raw-skill", source: "owner/repo", files: { "AGENTS.md": "# raw" } },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/raw-skill", [], {
+      projectDir,
+      registryDir: join(tmp.path, "manifest-only"),
+      fetchImpl: (async (url: string | URL | Request) => {
+        const href = typeof url === "string" || url instanceof URL ? String(url) : url.url;
+        ok(href.startsWith("https://raw.githubusercontent.com/midudev/autoskills/main/"));
+        return fetchFromRegistry(regDir)(url);
+      }) as typeof fetch,
+    });
+
+    ok(result.success, result.output);
+    equal(
+      readFileSync(join(projectDir, ".agents", "skills", "raw-skill", "AGENTS.md"), "utf-8"),
+      "# raw",
+    );
   });
 
   it("creates symlinks for requested agents", async () => {

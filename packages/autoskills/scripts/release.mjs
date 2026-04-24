@@ -266,7 +266,19 @@ if (dirtyFiles.length) {
   fail(`Hay cambios sin commitear:\n${dirtyFiles.join("\n")}`);
 }
 
-// 2. Run tests
+// 2. Ensure every advertised skill is present and installable from the registry.
+console.log("🧭 Validando skills registry...");
+try {
+  runVisible(
+    "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/validate-registry.mjs",
+  );
+} catch {
+  fail(
+    "El registry no coincide con skills-map. Ejecuta sync:skills y corrige el registry antes de publicar.",
+  );
+}
+
+// 3. Run tests
 console.log("🧪 Ejecutando tests...");
 try {
   runVisible("node --test tests/*.test.ts");
@@ -274,7 +286,7 @@ try {
   fail("Los tests han fallado. Arregla los errores antes de publicar.");
 }
 
-// 3. Generate changelog
+// 4. Generate changelog
 console.log("\n📝 Generando changelog...");
 const lastTag = getLastTag();
 const commits = getCommitsSinceTag(lastTag);
@@ -289,16 +301,16 @@ const changelogEntry = buildChangelog(newVersion, categories, repoUrl);
 console.log(changelogEntry);
 
 try {
-  // 4. Update version in package.json
+  // 5. Update version in package.json
   pkg.version = newVersion;
   writeFileSync(PKG_PATH, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`✅ package.json actualizado a ${newVersion}`);
 
-  // 5. Update CHANGELOG.md
+  // 6. Update CHANGELOG.md
   updateChangelog(changelogEntry);
   console.log("✅ CHANGELOG.md actualizado");
 
-  // 6. Git commit + tag
+  // 7. Git commit + tag
   console.log("\n🔖 Creando commit y tag...");
   run(`git add package.json CHANGELOG.md`, { cwd: ROOT });
   run(`git commit -m "release: v${newVersion}"`, { cwd: REPO_ROOT });
@@ -306,12 +318,12 @@ try {
   run(`git tag -a v${newVersion} -m "v${newVersion}"`, { cwd: REPO_ROOT });
   tagCreated = true;
 
-  // 7. Build TypeScript
+  // 8. Build TypeScript
   console.log("\n🔨 Compilando TypeScript...");
   run("rm -rf dist");
   runVisible("npx tsc");
 
-  // 8. Publish to npm
+  // 9. Publish to npm
   console.log("\n🚀 Publicando en npm...");
   const cleanEnv = Object.fromEntries(
     Object.entries(process.env).filter(
@@ -327,7 +339,7 @@ try {
     env: cleanEnv,
   });
 
-  // 9. Push to GitHub
+  // 10. Push to GitHub
   console.log("\n📤 Pusheando a GitHub...");
   run("git push", { cwd: REPO_ROOT });
   run("git push --tags", { cwd: REPO_ROOT });
@@ -337,7 +349,7 @@ try {
   fail(`La release falló y se revirtieron los cambios locales.\n${message}`);
 }
 
-// 10. Create GitHub release
+// 11. Create GitHub release
 console.log("\n🏷️  Creando GitHub Release...");
 const releaseNotes = changelogEntry.replace(/^## .*\n\n/, "");
 const tempFile = resolve(ROOT, ".release-notes-tmp.md");
