@@ -42,6 +42,8 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 -h, --help            Show help message
 ```
 
+> `--from-spec` and `--scan-docs` only parse code fences (`json`, `bash`/`sh`, `yaml`/`toml`, `ruby`) and **bullet lists** under headings like `## Tech Stack` / `## Stack` / `## Dependencies`. Markdown tables are ignored. See [Markdown scanner](./packages/autoskills/README.md#markdown-scanner-opt-in) for bullet shapes and examples.
+
 ## LLM-driven mode
 
 Beyond structural detection, `autoskills` exposes atomic subcommands so an external LLM CLI (Claude Code, Cursor, Codex) can reason over prose specs and drive installation:

@@ -76,6 +76,46 @@ The scanner recognizes two structures:
 
 Prose ("we'll use React") outside these structures is ignored to prevent false positives.
 
+### Bullet format (under stack headings)
+
+Only bullet lists are parsed. **Markdown tables are not recognized** — convert to bullets or add a code fence.
+
+Each bullet must resolve to a `name` or alias in the catalog (`autoskills list --json`). The following shapes all match **Astro**:
+
+```markdown
+## Tech Stack
+
+- Astro
+- Astro (SSR)
+- Astro — 4.0
+- Astro - 4.0
+- Astro 4.0.1
+```
+
+Normalization rules applied to each bullet:
+
+1. Parenthetical annotations are dropped — `Astro (SSR)` → `Astro`.
+2. Em-dash / en-dash / hyphen + trailing text is dropped — `Astro — 4.0` → `Astro`.
+3. A trailing version token is dropped — `Astro 4.0.1` → `Astro`.
+
+Tables are ignored, even under a supported heading:
+
+```markdown
+## Tech Stack
+
+| Tech  | Version |
+| ----- | ------- |
+| Astro | 4.0     |
+```
+
+For tables or free-form docs, add a fenced block with dependencies instead:
+
+````markdown
+```json
+{ "devDependencies": { "astro": "^4.0.0" } }
+```
+````
+
 **Default behavior is unchanged.** No markdown is read unless `--from-spec` or `--scan-docs` is passed.
 
 ## Subcommands (for LLM integration)
