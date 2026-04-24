@@ -796,7 +796,7 @@ export const SKILLS_MAP: Technology[] = [
     skills: [
       "github/awesome-copilot/dotnet-best-practices",
       "github/awesome-copilot/dotnet-design-pattern-review",
-      "github/awesome-copilot/dotnet-upgrade"
+      "github/awesome-copilot/dotnet-upgrade",
     ],
   },
   {
@@ -827,10 +827,7 @@ export const SKILLS_MAP: Technology[] = [
         patterns: ["Microsoft.NET.Sdk.Web"],
       },
     },
-    skills: [
-      "github/awesome-copilot/containerize-aspnetcore",
-      "openai/skills/aspnet-core",
-    ],
+    skills: ["github/awesome-copilot/containerize-aspnetcore", "openai/skills/aspnet-core"],
   },
   {
     id: "aspnet-blazor",
@@ -841,9 +838,7 @@ export const SKILLS_MAP: Technology[] = [
         patterns: ["Microsoft.NET.Sdk.BlazorWebAssembly", "Microsoft.AspNetCore.Components"],
       },
     },
-    skills: [
-      "github/awesome-copilot/fluentui-blazor"
-    ],
+    skills: ["github/awesome-copilot/fluentui-blazor"],
   },
   {
     id: "aspnet-minimal-api",
@@ -857,7 +852,7 @@ export const SKILLS_MAP: Technology[] = [
     },
     skills: [
       "github/awesome-copilot/aspnet-minimal-api-openapi",
-      "dotnet/skills/minimal-api-file-upload"
+      "dotnet/skills/minimal-api-file-upload",
     ],
   },
   {
