@@ -173,7 +173,7 @@ function githubDownloadHeaders(url: string): HeadersInit {
 }
 
 function isDisallowedSkillFile(rel: string): boolean {
-  return rel.split("/").pop() === "Archive.zip";
+  return rel.toLowerCase().endsWith(".zip");
 }
 
 async function downloadRegistryFile(
