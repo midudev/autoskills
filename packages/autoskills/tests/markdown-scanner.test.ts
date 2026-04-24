@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import { deepEqual, equal, ok } from "node:assert/strict";
-import { scanMarkdown } from "../markdown-scanner.ts";
+import { scanMarkdown, normalizeHeadingTitle } from "../markdown-scanner.ts";
 import { SKILLS_MAP } from "../skills-map.ts";
 
 describe("scanMarkdown — json fences", () => {
@@ -133,6 +133,117 @@ describe("scanMarkdown — stack headings", () => {
     equal(scanMarkdown("#### Tech Stack\n- React\n", SKILLS_MAP).length, 0);
   });
 
+  it("accepts numbered heading (## 2. Tech Stack)", () => {
+    const md = "## 2. Tech Stack\n\n- React\n- Tailwind CSS\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind"].sort());
+  });
+  it("accepts emoji-prefixed heading (## 🚀 Tech Stack)", () => {
+    equal(scanMarkdown("## 🚀 Tech Stack\n- React\n", SKILLS_MAP)[0]?.techId, "react");
+  });
+  it("accepts bold-wrapped heading (## **Dependencies**)", () => {
+    equal(scanMarkdown("## **Dependencies**\n- React\n", SKILLS_MAP)[0]?.techId, "react");
+  });
+  it("accepts bracketed heading (## [Stack])", () => {
+    equal(scanMarkdown("## [Stack]\n- React\n", SKILLS_MAP)[0]?.techId, "react");
+  });
+  it("accepts trailing-colon heading (## Tech Stack:)", () => {
+    equal(scanMarkdown("## Tech Stack:\n- React\n", SKILLS_MAP)[0]?.techId, "react");
+  });
+  it("rejects prose narrative heading (## Why we picked our Stack)", () => {
+    deepEqual(scanMarkdown("## Why we picked our Stack\n- React\n", SKILLS_MAP), []);
+  });
+  it("still rejects h4+ after normalization (#### 1. Tech Stack)", () => {
+    deepEqual(scanMarkdown("#### 1. Tech Stack\n- React\n", SKILLS_MAP), []);
+  });
+
+  it("accepts numbered bullets with dot (1. Astro)", () => {
+    const md = "## Tech Stack\n\n1. React\n2. Tailwind CSS\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind"].sort());
+  });
+  it("accepts numbered bullets with paren (1) Astro)", () => {
+    const md = "## Stack\n1) React\n2) Tailwind CSS\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind"].sort());
+  });
+
+  it("accepts comma-separated inline list on one line", () => {
+    const md = "## Tech Stack\n\nReact, Tailwind CSS, TypeScript\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind", "typescript"].sort());
+  });
+  it("accepts comma-separated inline mixed with bullets", () => {
+    const md = "## Tech Stack\n\n- React\nTailwind CSS, TypeScript\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind", "typescript"].sort());
+  });
+  it("does not accept comma text outside a stack heading", () => {
+    deepEqual(scanMarkdown("Intro\n\nReact, Vue, Svelte — pick one.\n", SKILLS_MAP), []);
+  });
+
+  it("accepts simple 2-column table (Tech | Version)", () => {
+    const md =
+      "## Tech Stack\n\n" +
+      "| Tech | Version |\n" +
+      "|------|---------|\n" +
+      "| React | 19 |\n" +
+      "| Tailwind CSS | 4 |\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind"].sort());
+  });
+
+  it("picks 'Framework' column from 3-col table via header heuristic", () => {
+    const md =
+      "## Tech Stack\n\n" +
+      "| Category | Framework | Notes |\n" +
+      "|----------|-----------|-------|\n" +
+      "| UI | React | renderer |\n" +
+      "| Styling | Tailwind CSS | utility |\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind"].sort());
+  });
+
+  it("falls back to first column when no heuristic keyword in header", () => {
+    const md =
+      "## Stack\n\n" +
+      "| Name | Purpose |\n" +
+      "|------|---------|\n" +
+      "| React | UI |\n";
+    equal(scanMarkdown(md, SKILLS_MAP)[0]?.techId, "react");
+  });
+
+  it("normalizes cell content: links, bold, backticks", () => {
+    const md =
+      "## Tech Stack\n\n" +
+      "| Tech |\n" +
+      "|------|\n" +
+      "| [React](https://react.dev) |\n" +
+      "| **Tailwind CSS** |\n" +
+      "| `typescript` |\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind", "typescript"].sort());
+  });
+
+  it("splits comma-separated cell (| React, Tailwind |)", () => {
+    const md =
+      "## Tech Stack\n\n" +
+      "| Tech |\n" +
+      "|------|\n" +
+      "| React, Tailwind CSS |\n";
+    const ids = scanMarkdown(md, SKILLS_MAP).map(m => m.techId).sort();
+    deepEqual(ids, ["react", "tailwind"].sort());
+  });
+
+  it("ignores table outside stack heading", () => {
+    const md =
+      "## Overview\n\n" +
+      "| Tech | Version |\n" +
+      "|------|---------|\n" +
+      "| React | 19 |\n";
+    deepEqual(scanMarkdown(md, SKILLS_MAP), []);
+  });
+
   it("strips version numbers and parens from bullets", () => {
     equal(scanMarkdown("## Stack\n- React 19 (UI library)\n", SKILLS_MAP)[0]?.techId, "react");
   });
@@ -181,5 +292,50 @@ describe("scanMarkdown — dedupe and edge cases", () => {
     const matches = scanMarkdown(md, SKILLS_MAP);
     equal(matches.length, 1);
     equal(matches[0].techId, "react");
+  });
+});
+
+describe("normalizeHeadingTitle", () => {
+  it("returns plain title unchanged", () => {
+    equal(normalizeHeadingTitle("Tech Stack"), "Tech Stack");
+  });
+  it("strips leading numbering with dot (2. Tech Stack)", () => {
+    equal(normalizeHeadingTitle("2. Tech Stack"), "Tech Stack");
+  });
+  it("strips leading numbering with paren (1) Stack)", () => {
+    equal(normalizeHeadingTitle("1) Stack"), "Stack");
+  });
+  it("strips leading numbering with dash (3 - Dependencies)", () => {
+    equal(normalizeHeadingTitle("3 - Dependencies"), "Dependencies");
+  });
+  it("strips leading emoji prefix", () => {
+    equal(normalizeHeadingTitle("🚀 Tech Stack"), "Tech Stack");
+  });
+  it("strips trailing emoji", () => {
+    equal(normalizeHeadingTitle("Tech Stack 🚀"), "Tech Stack");
+  });
+  it("strips trailing colon", () => {
+    equal(normalizeHeadingTitle("Tech Stack:"), "Tech Stack");
+  });
+  it("unwraps bold **Tech Stack**", () => {
+    equal(normalizeHeadingTitle("**Tech Stack**"), "Tech Stack");
+  });
+  it("unwraps italic *Tech Stack*", () => {
+    equal(normalizeHeadingTitle("*Tech Stack*"), "Tech Stack");
+  });
+  it("unwraps underscore italic _Dependencies_", () => {
+    equal(normalizeHeadingTitle("_Dependencies_"), "Dependencies");
+  });
+  it("unwraps double-underscore __Dependencies__", () => {
+    equal(normalizeHeadingTitle("__Dependencies__"), "Dependencies");
+  });
+  it("unwraps brackets [Tech Stack]", () => {
+    equal(normalizeHeadingTitle("[Tech Stack]"), "Tech Stack");
+  });
+  it("strips trailing paren annotation", () => {
+    equal(normalizeHeadingTitle("Tech Stack (frontend)"), "Tech Stack");
+  });
+  it("combines numbering + bold + colon", () => {
+    equal(normalizeHeadingTitle("2. **Tech Stack**:"), "Tech Stack");
   });
 });
