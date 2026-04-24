@@ -302,6 +302,7 @@ async function materializeSkillsFromTree(repo, sha, skillNames, destRoot) {
     const filtered = pick === "" ? blobs.filter((t) => t.path === "SKILL.md") : blobs;
     for (const blob of filtered) {
       const rel = pick === "" ? blob.path : blob.path.slice(pick.length + 1);
+      if (shouldSkipSkillFile(rel)) continue;
       const dest = join(destRoot, skillName, rel);
       await downloadRawFile(repo, sha, blob.path, dest);
     }
@@ -406,6 +407,12 @@ const SKIP_DIRS = new Set([
   "example",
 ]);
 
+const SKIP_FILES = new Set(["Archive.zip"]);
+
+function shouldSkipSkillFile(rel) {
+  return SKIP_FILES.has(rel.split("/").pop());
+}
+
 function findSkillDir(repoRoot, skillName) {
   const candidates = [];
   (function walk(dir, depth) {
@@ -445,7 +452,7 @@ function listFilesRecursive(dir) {
       const p = join(current, e.name);
       if (e.isDirectory()) {
         walk(p);
-      } else if (e.isFile()) {
+      } else if (e.isFile() && !shouldSkipSkillFile(relative(dir, p).split("\\").join("/"))) {
         out.push(p);
       }
     }
