@@ -31,7 +31,7 @@ import {
 import { printBanner, multiSelect, formatTime } from "./ui.ts";
 import { installAll, resolveSkillsBin } from "./installer.ts";
 import { cleanupClaudeMd } from "./claude.ts";
-import { runList, runPrompt, runInstall } from "./subcommands.ts";
+import { runList, runPrompt, runInstall, runCopyPrompt } from "./subcommands.ts";
 import { serializeDryRun, serializeError } from "./cli-json.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -69,6 +69,7 @@ interface CliArgs {
   agents: string[];
   fromSpec?: string;
   scanDocs: boolean;
+  copyPrompt: boolean;
   // subcommand dispatch
   subcommand?: string;
   json: boolean;
@@ -149,6 +150,7 @@ function parseArgs(): CliArgs {
     agents,
     fromSpec,
     scanDocs: args.includes("--scan-docs"),
+    copyPrompt: args.includes("--copy-prompt"),
     subcommand,
     json: args.includes("--json"),
     only,
@@ -167,7 +169,8 @@ function showHelp(): void {
     npx autoskills ${dim("--dry-run")} ${dim("[--json]")}            Show what would be installed
     npx autoskills ${dim("-a cursor claude-code")}          Install for specific IDEs only
     npx autoskills ${dim("list")} ${dim("[--json] [--filter <id>]")}  List catalog
-    npx autoskills ${dim("prompt")} ${dim("[--path]")}               Print skill-selection prompt
+    npx autoskills ${dim("prompt")} ${dim("[--path]")}               Print spec-generator prompt
+    npx autoskills ${dim("--copy-prompt")}                  Copy spec-generator prompt to clipboard
     npx autoskills ${dim("install --only <ids>")} ${dim("[-a agents] [-y] [--json]")}
 
   ${bold("Options:")}
@@ -177,6 +180,7 @@ function showHelp(): void {
     -a, --agent         Install for specific IDEs only (e.g. cursor, claude-code)
     --from-spec <path>  Detect tech from a markdown spec file
     --scan-docs         Auto-scan CLAUDE.md / AGENTS.md in project root
+    --copy-prompt       Copy spec-generator prompt to clipboard
     --json              JSON output (subcommands / dry-run)
     --only <ids>        Comma-separated tech ids for 'install'
     --filter <id>       Filter catalog for 'list'
@@ -464,6 +468,11 @@ async function main(): Promise<void> {
   if (help) {
     showHelp();
     process.exit(0);
+  }
+
+  if (args.copyPrompt) {
+    const code = await runCopyPrompt();
+    process.exit(code);
   }
 
   // ── Subcommand dispatch (BEFORE any default-flow side-effects) ──

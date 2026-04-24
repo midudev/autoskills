@@ -111,7 +111,7 @@ describe("runList", () => {
 });
 
 describe("runPrompt", () => {
-  const PROMPT_PATH = resolve(import.meta.dirname!, "..", "prompts", "skill-selection.md");
+  const PROMPT_PATH = resolve(import.meta.dirname!, "..", "prompts", "spec-generator-prompt.md");
 
   it("stdouts the prompt file when it exists", () => {
     if (!existsSync(PROMPT_PATH)) {
@@ -130,12 +130,12 @@ describe("runPrompt", () => {
     }
     const { out, result } = captureStdio(() => runPrompt({ printPath: true }));
     equal(result, 0);
-    ok(out.trim().endsWith("prompts/skill-selection.md"));
+    ok(out.trim().endsWith("prompts/spec-generator-prompt.md"));
   });
 
   it("emits prompt-file-missing JSON envelope (exit 1) when the injected path does not exist", () => {
     const { err, result } = captureStdio(() =>
-      runPrompt({ printPath: false, promptPath: "/definitely/does/not/exist/skill-selection.md" }),
+      runPrompt({ printPath: false, promptPath: "/definitely/does/not/exist/spec-generator-prompt.md" }),
     );
     equal(result, 1);
     const parsed = JSON.parse(err.trim());

@@ -39,6 +39,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 --json                Emit structured JSON (with --dry-run or subcommands)
 --from-spec <path>    Detect tech from a markdown spec file (any extension)
 --scan-docs           Auto-scan CLAUDE.md / AGENTS.md / README.md in the project
+--copy-prompt         Copy the shipped spec-generator prompt to the OS clipboard
 -h, --help            Show help message
 ```
 
@@ -46,15 +47,16 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes 
 
 ## LLM-driven mode
 
-Beyond structural detection, `autoskills` exposes atomic subcommands so an external LLM CLI (Claude Code, Cursor, Codex) can reason over prose specs and drive installation:
+Beyond structural detection, `autoskills` exposes atomic subcommands so an external LLM CLI (Claude Code, Cursor, Codex) can reason over your requirement and produce a parseable spec:
 
 ```bash
 npx autoskills list --json         # full catalog
-npx autoskills prompt              # shipped selection guide
+npx autoskills prompt              # shipped spec-generator prompt (stdout)
+npx autoskills --copy-prompt       # copy spec-generator prompt to clipboard
 npx autoskills install --only <ids>
 ```
 
-See the [package README](./packages/autoskills/README.md) for details.
+**Spec-doc flow:** run `--copy-prompt`, paste it under your requirement in any LLM chat, and the LLM writes `docs/specs-initial.md` for you to feed back via `autoskills --from-spec`. See the [package README](./packages/autoskills/README.md#subcommands-for-llm-integration) for the full workflow.
 
 ## Supported Technologies
 

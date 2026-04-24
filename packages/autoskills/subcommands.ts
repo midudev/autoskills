@@ -3,9 +3,11 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { serializeList, serializeError, serializeInstall } from "./cli-json.ts";
 import type { ListJson } from "./cli-json.ts";
-import { log, write, green, red } from "./colors.ts";
+import { log, write, green, red, yellow, dim } from "./colors.ts";
 import { SKILLS_MAP } from "./skills-map.ts";
 import { installSkill as defaultInstallSkill } from "./installer.ts";
+import { copyToClipboard } from "./clipboard.ts";
+import type { CopyResult } from "./clipboard.ts";
 
 // AGENTS.md: never use console.log / process.stdout.write directly. Use log/write from colors.ts. Errors go to console.error.
 
@@ -40,14 +42,14 @@ export interface RunPromptArgs {
 }
 
 /**
- * Candidate paths for the shipped prompts/skill-selection.md.
+ * Candidate paths for the shipped prompts/spec-generator-prompt.md.
  * When running from TypeScript sources, SUBCOMMANDS_DIR is the package root.
  * When running from the built tarball, SUBCOMMANDS_DIR is <pkg>/dist/, so we walk up one level.
  */
 function resolvePromptPath(): string {
   const candidates = [
-    resolve(SUBCOMMANDS_DIR, "prompts", "skill-selection.md"),
-    resolve(SUBCOMMANDS_DIR, "..", "prompts", "skill-selection.md"),
+    resolve(SUBCOMMANDS_DIR, "prompts", "spec-generator-prompt.md"),
+    resolve(SUBCOMMANDS_DIR, "..", "prompts", "spec-generator-prompt.md"),
   ];
   for (const p of candidates) {
     try {
@@ -86,6 +88,54 @@ export function runPrompt(args: RunPromptArgs): number {
   } else {
     write(content);
   }
+  return 0;
+}
+
+// ── runCopyPrompt ────────────────────────────────────────────
+
+export interface RunCopyPromptArgs {
+  /** Override the prompt file path (for tests). */
+  promptPath?: string;
+  /** Inject clipboard fn (for tests). */
+  copyFn?: (text: string) => Promise<CopyResult>;
+  /** Override platform (for tests). */
+  platform?: NodeJS.Platform;
+}
+
+export async function runCopyPrompt(args: RunCopyPromptArgs = {}): Promise<number> {
+  const promptPath = args.promptPath ?? resolvePromptPath();
+  let content: string;
+  try {
+    content = readFileSync(promptPath, "utf-8");
+  } catch (err: unknown) {
+    const e = err as NodeJS.ErrnoException;
+    if (e.code === "ENOENT") {
+      console.error(
+        JSON.stringify(
+          serializeError({
+            code: "prompt-file-missing",
+            message: "prompt file missing from package (build issue). reinstall autoskills",
+          }),
+        ),
+      );
+      return 1;
+    }
+    throw err;
+  }
+
+  const platform = args.platform ?? process.platform;
+  const copy = args.copyFn ?? ((text: string) => copyToClipboard(text, { platform }));
+  const result = await copy(content);
+  const shortcut = platform === "darwin" ? "Cmd+V" : "Ctrl+V";
+
+  if (result.ok) {
+    log(green("✓ prompt copied to clipboard ") + dim(`(${content.length} chars)`));
+    log(dim(`  go to your LLM chat, write your requirement, then paste below (${shortcut})`));
+    return 0;
+  }
+
+  console.error(yellow(`warning: ${result.error ?? "clipboard copy failed"}. prompt printed below — pipe to your clipboard tool (e.g. 'autoskills --copy-prompt | pbcopy')`));
+  write(content);
   return 0;
 }
 

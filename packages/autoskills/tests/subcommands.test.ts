@@ -41,14 +41,14 @@ describe("subcommand dispatch", () => {
     writePackageJson(tmp.path, {});
     const { stdout, status } = run(["prompt", "--path"], tmp.path);
     equal(status, 0);
-    ok(stdout.trim().endsWith("skill-selection.md"));
+    ok(stdout.trim().endsWith("spec-generator-prompt.md"));
   });
 
   it("autoskills prompt outputs the prompt file contents", () => {
     writePackageJson(tmp.path, {});
     const { stdout, status } = run(["prompt"], tmp.path);
     equal(status, 0);
-    ok(stdout.includes("# autoskills — Skill Selection Guide"));
+    ok(stdout.includes("# autoskills — Spec-Doc Generator"));
   });
 
   it("autoskills install --only react-that-does-not-exist --json -> install-unknown-id", () => {
@@ -115,6 +115,26 @@ describe("subcommand dispatch", () => {
     ok(stdout.toLowerCase().includes("react"));
     // crude but effective: if only 1 tech printed, output should be small
     ok(stdout.split("\n").filter(l => l.trim()).length < 10, "expected compact single-row output");
+  });
+
+  it("autoskills --copy-prompt early-exits with success-or-fallback (does not run detection)", () => {
+    // No package.json — would normally trigger "no supported technologies detected".
+    // --copy-prompt must short-circuit before that path.
+    const { stdout, stderr, status } = run(["--copy-prompt"], tmp.path);
+    equal(status, 0);
+    const combined = stdout + stderr;
+    // Either clipboard succeeded OR clipboard failed and the prompt was printed as fallback.
+    const succeeded = stdout.includes("✓ prompt copied to clipboard");
+    const fellBack = stderr.includes("warning") && stdout.includes("# autoskills");
+    ok(succeeded || fellBack, `expected success or fallback, got: ${combined}`);
+    // Detection banner must NOT appear (we exited before main flow).
+    ok(!combined.includes("Detected technologies"), "detection ran but should not have");
+  });
+
+  it("autoskills --help mentions --copy-prompt", () => {
+    const { stdout, status } = run(["--help"], tmp.path);
+    equal(status, 0);
+    ok(stdout.includes("--copy-prompt"));
   });
 
   it("autoskills list --filter react extra-positional: explicit --filter wins, extra is ignored", () => {

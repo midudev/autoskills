@@ -49,6 +49,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | `--json`                   | Emit structured JSON (used with `--dry-run` or subcommands; errors return `{error:{code,message}}`) |
 | `--from-spec <path>`       | Scan a markdown spec file for tech (code fences + Tech Stack headings)      |
 | `--scan-docs`              | Auto-scan `CLAUDE.md` / `AGENTS.md` / `README.md` in the project root       |
+| `--copy-prompt`            | Copy the shipped spec-generator prompt to the OS clipboard                  |
 | `-v`, `--verbose`          | Show error details if any installation fails                                |
 | `-a`, `--agent <ids>`      | Install for specific IDEs only (e.g. `cursor`, `claude-code`)               |
 | `-h`, `--help`             | Show help message                                                           |
@@ -164,18 +165,25 @@ Atomic subcommands let an external LLM CLI (Claude Code, Cursor, Codex) drive au
 npx autoskills list --json
 npx autoskills list --filter react          # or: npx autoskills list react
 
-# Print the shipped skill-selection prompt (LLM guidance)
+# Print the shipped spec-generator prompt (LLM guidance)
 npx autoskills prompt                       # stdout the prompt
 npx autoskills prompt --path                # print absolute path
+npx autoskills --copy-prompt                # copy prompt to OS clipboard
 
 # Install specific skills by id
 npx autoskills install --only react,tailwind -y
 npx autoskills install --only react -a claude-code cursor
 ```
 
-Typical LLM workflow: fetch the guide (`autoskills prompt`) + catalog (`autoskills list --json`), reason over the user's spec, propose skills, then call `autoskills install --only <ids>` after confirmation.
+The shipped prompt drives a **spec-doc workflow**:
 
-The skill-selection prompt is shipped at `prompts/skill-selection.md` inside the package and covers workflow, category inference, matching rules, and alias resolution.
+1. Run `autoskills --copy-prompt` (clipboard gets the prompt).
+2. Open your LLM chat. Write your project requirement first ("I want a task manager with Next.js + Tailwind + Supabase"), then paste the prompt below it.
+3. The LLM fetches the catalog (`autoskills list --json`), matches techs from your requirement to canonical names, and writes `docs/specs-initial.md` with a `## Tech Stack` section the markdown scanner can parse.
+4. The LLM tells you to run `autoskills --from-spec docs/specs-initial.md` in another terminal — it does **not** install anything itself.
+5. You run `--from-spec`. autoskills detects + installs deterministically.
+
+The shipped prompt lives at `prompts/spec-generator-prompt.md` inside the package.
 
 All subcommands emit structured JSON errors when `--json` is passed, for programmatic parsing. Error codes include `unknown-subcommand`, `install-missing-only`, `install-empty-only`, `install-unknown-id` (with fuzzy-match suggestion), `json-requires-subcommand-or-dry-run`, `cli-arg-invalid`, `internal-error`, and `prompt-file-missing`.
 
