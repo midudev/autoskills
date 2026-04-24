@@ -162,23 +162,18 @@ Tables, bullets, inline comma-separated lines, and numbered lists **only** parse
 Atomic subcommands let an external LLM CLI (Claude Code, Cursor, Codex) drive autoskills over prose specs that the structural scanner cannot parse.
 
 ```bash
-# List the full catalog as JSON
+# Full catalog as JSON (LLM uses this to map your requirement to canonical tech names)
 npx autoskills list --json
-npx autoskills list --filter react          # or: npx autoskills list react
 
-# Print or copy the shipped spec-generator prompt (LLM guidance)
-npx autoskills --show-specgen-prompt        # stdout the prompt
-npx autoskills --copy-specgen-prompt        # copy prompt to OS clipboard
-
-# Install specific skills by id (manual path; the spec-doc flow uses --from-spec instead)
-npx autoskills install --only react,tailwind -y
-npx autoskills install --only react -a claude-code cursor
+# Spec-generator prompt (LLM guidance for writing docs/specs-initial.md)
+npx autoskills --show-specgen-prompt        # stdout
+npx autoskills --copy-specgen-prompt        # OS clipboard
 ```
 
 The shipped prompt drives a **spec-doc workflow**:
 
-1. Run `autoskills --copy-specgen-prompt` (clipboard) or `autoskills --show-specgen-prompt` (stdout — for terminal-only environments or when an LLM with a `bash` tool can fetch it itself).
-2. Open your LLM chat. Write your project requirement first ("I want a task manager with Next.js + Tailwind + Supabase"), then paste the prompt below it.
+1. Run `autoskills --show-specgen-prompt` (stdout) or `autoskills --copy-specgen-prompt` (clipboard).
+2. Open your LLM chat. Describe your project (the problem, not the stack), then attach the prompt below it.
 3. The LLM fetches the catalog (`autoskills list --json`), matches techs from your requirement to canonical names, and writes `docs/specs-initial.md` with a `## Tech Stack` section the markdown scanner can parse.
 4. The LLM tells you to run `autoskills --from-spec docs/specs-initial.md` in another terminal — it does **not** install anything itself.
 5. You run `--from-spec`. autoskills detects + installs deterministically.
@@ -188,7 +183,7 @@ The shipped prompt drives a **spec-doc workflow**:
 **Option A — let the LLM fetch the prompt** (Claude Code, Cursor, Codex — chats with a `bash` tool):
 
 ```text
-I want a task manager with Next.js, Tailwind CSS, and Supabase.
+<your project requirement here>
 
 Run `autoskills --show-specgen-prompt` and follow the instructions it prints.
 ```
@@ -196,7 +191,7 @@ Run `autoskills --show-specgen-prompt` and follow the instructions it prints.
 **Option B — paste from clipboard** (any chat, no tools required):
 
 ```text
-I want a task manager with Next.js, Tailwind CSS, and Supabase.
+<your project requirement here>
 
 <paste the output of `autoskills --copy-specgen-prompt` here>
 ```
