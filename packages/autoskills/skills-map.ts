@@ -1346,17 +1346,10 @@ export const FRONTEND_BONUS_SKILLS: string[] = [
 
 export const AGENT_FOLDER_MAP: Record<string, string> = {
   ".claude": "claude-code",
-  ".cursor": "cursor",
   ".cline": "cline",
-  ".codex": "codex",
-  ".opencode": "opencode",
-  ".antigravity": "antigravity",
   ".augment": "augment",
   ".copilot": "github-copilot",
-  ".gemini": "gemini-cli",
   ".junie": "junie",
-  ".amp": "amp",
-  ".supermaven": "supermaven",
   ".codebuddy": "codebuddy",
   ".continue": "continue",
   ".kiro": "kiro-cli",

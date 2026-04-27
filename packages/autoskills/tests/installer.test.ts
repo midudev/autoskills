@@ -11,7 +11,10 @@ import {
   _setRegistryDir,
 } from "../installer.ts";
 import type { RegistryEntry } from "../installer.ts";
-import { useTmpDir, writeFile } from "./helpers.ts";
+import { useTmpDir } from "./helpers.ts";
+
+const PACKAGE_VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"))
+  .version as string;
 
 function sha256(buf: string | Buffer): string {
   return createHash("sha256").update(buf).digest("hex");
@@ -95,6 +98,9 @@ describe("agentFolderFor", () => {
   });
   it("maps cursor to .cursor", () => {
     equal(agentFolderFor("cursor"), ".cursor");
+  });
+  it("does not map codex to a legacy .codex folder", () => {
+    equal(agentFolderFor("codex"), null);
   });
   it("returns null for unknown agents", () => {
     equal(agentFolderFor("nope"), null);
@@ -277,7 +283,7 @@ describe("installSkill", () => {
       registryDir: join(tmp.path, "manifest-only"),
       fetchImpl: (async (url: string | URL | Request) => {
         const href = typeof url === "string" || url instanceof URL ? String(url) : url.url;
-        ok(href.startsWith("https://raw.githubusercontent.com/midudev/autoskills/main/"));
+        ok(href.startsWith(`https://raw.githubusercontent.com/midudev/autoskills/v${PACKAGE_VERSION}/`));
         return fetchFromRegistry(regDir)(url);
       }) as typeof fetch,
     });

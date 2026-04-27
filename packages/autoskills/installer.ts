@@ -21,8 +21,8 @@ import { log, write, dim, green, cyan, red, HIDE_CURSOR, SHOW_CURSOR, SPINNER } 
 
 // ── Registry ─────────────────────────────────────────────────
 
-const DEFAULT_REGISTRY_RAW_BASE_URL =
-  "https://raw.githubusercontent.com/midudev/autoskills/main/packages/autoskills/skills-registry";
+const DEFAULT_REGISTRY_RAW_BASE_URL_PREFIX =
+  "https://raw.githubusercontent.com/midudev/autoskills";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
 
 export interface RegistryEntry {
@@ -53,6 +53,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let _cachedRegistry: Registry | null | undefined;
 let _cachedRegistryDir: string | null = null;
+let _cachedPackageVersion: string | null | undefined;
+
+function getPackageVersion(): string | null {
+  if (_cachedPackageVersion !== undefined) return _cachedPackageVersion;
+
+  const candidates = [join(__dirname, "package.json"), join(__dirname, "..", "package.json")];
+  for (const c of candidates) {
+    try {
+      const pkg = JSON.parse(readFileSync(c, "utf-8")) as { version?: unknown };
+      if (typeof pkg.version === "string" && pkg.version.length > 0) {
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion;
+      }
+    } catch {}
+  }
+
+  _cachedPackageVersion = null;
+  return _cachedPackageVersion;
+}
 
 export function getRegistryDir(): string {
   if (_cachedRegistryDir) return _cachedRegistryDir;
@@ -146,7 +165,16 @@ function sha256Buffer(buf: Buffer): string {
 
 function getRegistryRawBaseUrls(opts: InstallOptions): string[] {
   const configured = opts.registryBaseUrl || process.env.AUTOSKILLS_REGISTRY_BASE_URL;
-  return [(configured || DEFAULT_REGISTRY_RAW_BASE_URL).replace(/\/+$/, "")];
+  if (configured) return [configured.replace(/\/+$/, "")];
+
+  const version = getPackageVersion();
+  if (!version) {
+    throw new Error("could not resolve autoskills package version for registry download");
+  }
+
+  return [
+    `${DEFAULT_REGISTRY_RAW_BASE_URL_PREFIX}/v${version}/packages/autoskills/skills-registry`,
+  ];
 }
 
 function getInstallRegistryDir(opts: InstallOptions): string {

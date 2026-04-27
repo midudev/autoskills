@@ -37,13 +37,11 @@ describe("detectAgents", () => {
   it("detects multiple agents", () => {
     mkdirSync(join(tmp.path, ".claude", "skills"), { recursive: true });
     mkdirSync(join(tmp.path, ".cline", "skills"), { recursive: true });
-    mkdirSync(join(tmp.path, ".codex", "skills"), { recursive: true });
     const agents = detectAgents(tmp.path);
     equal(agents[0], "universal");
     ok(agents.includes("claude-code"));
     ok(agents.includes("cline"));
-    ok(agents.includes("codex"));
-    equal(agents.length, 4);
+    equal(agents.length, 3);
   });
 
   it("ignores agent folders without skills subdirectory", () => {
