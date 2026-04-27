@@ -11,7 +11,9 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt --write .",
-    "fmt:check": "oxfmt --check ."
+    "fmt:staged": "oxfmt --write --no-error-on-unmatched-pattern",
+    "fmt:check": "oxfmt --check .",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@tailwindcss/vite": "4.2.4",
