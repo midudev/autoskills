@@ -139,7 +139,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
   <main class="text-sm leading-relaxed px-6 py-12 lg:w-1/2 lg:pl-12 lg:pr-8 lg:py-16">
 
     <!-- ASCII Logo (animated reveal) -->
-    <pre id="ascii-logo" class="text-[10px] sm:text-xs lg:text-[9px] leading-none mb-8 h-[6lh] overflow-hidden" aria-hidden="true"></pre>
+    <pre id="ascii-logo" class="text-[6px] sm:text-xs lg:text-[9px] leading-none mb-8 h-[6lh] overflow-hidden" aria-hidden="true"></pre>
 
     <h1 class="text-zinc-400 mb-8">
       Auto-detect your tech stack and install the best<br/>
@@ -179,7 +179,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     </div>
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <div class="mb-12 h-0.5 w-full bg-zinc-700"></div>
 
     <!-- How it works -->
     <div class="mb-12">
@@ -202,15 +202,22 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
         <div class="flex gap-4">
           <span class="text-zinc-600 shrink-0">[3]</span>
           <div>
-            <p class="text-zinc-200">Install skills</p>
-            <p class="text-zinc-500">The best AI agent skills are installed automatically via <span class="text-zinc-400">skills.sh</span>.</p>
+            <p class="text-zinc-200">Use the curated registry</p>
+            <p class="text-zinc-500">Skills are synced, reviewed, and stored in the autoskills registry instead of installed directly from upstream sources.</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <span class="text-zinc-600 shrink-0">[4]</span>
+          <div>
+            <p class="text-zinc-200">Verify before writing</p>
+            <p class="text-zinc-500">Only the selected skill files are downloaded, checked against recorded SHA-256 hashes, and written locally.</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <div class="mb-12 h-0.5 w-full bg-zinc-700"></div>
 
     <!-- Options -->
     <div class="mb-12">
@@ -240,12 +247,12 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     </div>
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <div class="mb-12 h-0.5 w-full bg-zinc-700"></div>
 
     <!-- Supported Technologies & Skills -->
     <div class="mb-12">
       <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs">Supported technologies & skills</p>
-      <p class="text-zinc-600 mb-6">Each technology auto-installs these skills from <a href="https://skills.sh" target="_blank" rel="noopener" class="text-zinc-400 underline underline-offset-2 decoration-zinc-700 hover:decoration-zinc-400 transition-colors">skills.sh</a>.</p>
+      <p class="text-zinc-600 mb-6">Each technology auto-installs curated skills from the audited autoskills registry. Links open the original skill pages for context.</p>
       <div class="space-y-0">
         {skillsMap.map((tech) => (
           <div class="group border-b border-zinc-800/40 py-2.5 first:border-t">
@@ -281,7 +288,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     </div>
 
     <!-- Separator -->
-    <div class="text-zinc-700 mb-12">{'─'.repeat(48)}</div>
+    <div class="mb-12 h-0.5 w-full bg-zinc-700"></div>
 
     <!-- Footer -->
     <footer class="text-zinc-600 space-y-4 pb-8">
@@ -519,6 +526,9 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
 
       // Installing
       d(300, '')
+      d(0, s(C.cy, '   ▸ ') + s(C.wh, 'Verifying curated registry...'))
+      d(200, s(C.gn, '   ✔ ') + s(C.z5, 'manifest and hashes loaded'))
+      d(200, '')
       d(0, s(C.cy, '   ▸ ') + s(C.wh, 'Installing skills...'))
       d(200, '')
       for (const sk of SKILL_LIST) {

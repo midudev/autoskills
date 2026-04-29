@@ -1,0 +1,141 @@
+version: "8.0"
+description: "Breaking change patterns for Rails 7.2 → 8.0 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "Sprockets usage"
+      pattern: "sprockets|Sprockets"
+      exclude: "propshaft"
+      search_paths:
+        - "Gemfile"
+        - "config/"
+        - "app/assets/"
+      explanation: "Rails 8.0 replaces Sprockets with Propshaft as the default asset pipeline"
+      fix: "Migrate to Propshaft or keep Sprockets with explicit configuration"
+      variable_name: "SPROCKETS"
+
+    - name: "Asset pipeline configuration"
+      pattern: "config\\.assets\\."
+      exclude: ""
+      search_paths:
+        - "config/environments/"
+        - "config/initializers/"
+      explanation: "Asset pipeline configuration changes significantly with Propshaft"
+      fix: "Review and update asset configuration for Propshaft compatibility"
+      variable_name: "ASSET_CONFIG"
+
+    - name: "javascript_include_tag (missing importmap)"
+      pattern: "javascript_include_tag"
+      exclude: "importmap"
+      search_paths:
+        - "app/views/layouts/"
+      explanation: "Rails 8.0 uses Import Maps - check javascript includes"
+      fix: "Ensure using javascript_importmap_tags for Import Maps"
+      variable_name: "JS_INCLUDE"
+
+    - name: "assume_ssl configuration"
+      pattern: "force_ssl\\s*="
+      exclude: "assume_ssl"
+      search_paths:
+        - "config/environments/production.rb"
+      explanation: "Rails 8.0 introduces assume_ssl for better SSL handling behind proxies"
+      fix: "Add config.assume_ssl = true alongside force_ssl for proper SSL termination"
+      variable_name: "ASSUME_SSL"
+
+    - name: "sqlite3_deprecated_warning"
+      pattern: "sqlite3_deprecated_warning"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "sqlite3_deprecated_warning option removed in Rails 8.0"
+      fix: "Remove sqlite3_deprecated_warning configuration"
+      variable_name: "SQLITE3_WARNING"
+
+  medium_priority:
+    - name: "Redis cache store"
+      pattern: "redis_cache_store|:redis_store"
+      exclude: "solid_cache"
+      search_paths:
+        - "config/environments/"
+      explanation: "Rails 8.0 defaults to Solid Cache - Redis is optional"
+      fix: "Keep Redis if working well, or migrate to Solid Cache for simpler infrastructure"
+      variable_name: "REDIS_CACHE"
+
+    - name: "Sidekiq/Redis queue"
+      pattern: "sidekiq|:sidekiq|:async"
+      exclude: "solid_queue"
+      search_paths:
+        - "config/application.rb"
+        - "config/environments/"
+      explanation: "Rails 8.0 defaults to Solid Queue - Sidekiq still works"
+      fix: "Keep Sidekiq if needed, or consider Solid Queue for database-backed jobs"
+      variable_name: "SIDEKIQ_QUEUE"
+
+    - name: "ActionCable Redis adapter"
+      pattern: "adapter:\\s*redis|:redis"
+      exclude: "solid"
+      search_paths:
+        - "config/cable.yml"
+      explanation: "Rails 8.0 defaults to Solid Cable - Redis adapter still works"
+      fix: "Keep Redis if needed, or migrate to Solid Cable"
+      variable_name: "CABLE_REDIS"
+
+    - name: "Kamal deployment"
+      pattern: "kamal|deploy\\.yml"
+      exclude: ""
+      search_paths:
+        - "config/"
+        - "Gemfile"
+      explanation: "Rails 8.0 includes Kamal for deployment"
+      fix: "Review Kamal configuration if upgrading deployment process"
+      variable_name: "KAMAL_DEPLOY"
+
+    - name: "Docker/Thruster"
+      pattern: "thruster"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "Dockerfile"
+      explanation: "Rails 8.0 apps include Thruster for HTTP/2 and static assets"
+      fix: "Add thruster gem if using Docker deployment"
+      variable_name: "THRUSTER"
+
+    - name: "Database pool configuration"
+      pattern: "pool:\\s*\\d+"
+      exclude: "max_connections"
+      search_paths:
+        - "config/database.yml"
+      explanation: "Rails 8.0 restructures database.yml for Solid gems"
+      fix: "Review database.yml structure for multi-database support"
+      variable_name: "DB_POOL"
+
+dependencies:
+  propshaft:
+    check: true
+    gem_name: "propshaft"
+    message: "Rails 8.0 uses Propshaft instead of Sprockets for assets"
+    url: "https://github.com/rails/propshaft"
+
+  solid_cache:
+    check: false
+    gem_name: "solid_cache"
+    message: "Rails 8.0 includes Solid Cache for database-backed caching (optional)"
+    url: "https://github.com/rails/solid_cache"
+
+  solid_queue:
+    check: false
+    gem_name: "solid_queue"
+    message: "Rails 8.0 includes Solid Queue for database-backed jobs (optional)"
+    url: "https://github.com/rails/solid_queue"
+
+  solid_cable:
+    check: false
+    gem_name: "solid_cable"
+    message: "Rails 8.0 includes Solid Cable for database-backed WebSockets (optional)"
+    url: "https://github.com/rails/solid_cable"
+
+  kamal:
+    check: false
+    gem_name: "kamal"
+    message: "Rails 8.0 includes Kamal for deployment"
+    url: "https://kamal-deploy.org"

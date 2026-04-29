@@ -1,0 +1,61 @@
+{
+  "skill_name": "clerk-webhooks",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "every time a user signs up on our app i need to create a row in our users table in postgres (we use prisma). the table has id, email, name, clerkId, createdAt columns. can you set up the webhook handler? we're on next.js app router",
+      "expected_output": "Creates webhook route handler at app/api/webhooks/route.ts, verifies webhook signature, handles user.created event, inserts into Prisma users table",
+      "files": [],
+      "expectations": [
+        "Creates route handler at app/api/webhooks/route.ts or similar path",
+        "Uses POST method handler (not GET)",
+        "Includes webhook signature verification (verifyWebhook or svix verify)",
+        "Handles user.created event type and extracts email, name, id from payload",
+        "Inserts into database using Prisma with the correct column mapping (clerkId = evt.data.id)",
+        "Mentions that webhook route must be excluded from Clerk middleware (public route)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i want to send a welcome email via resend when someone creates an account. also want to notify our #new-users slack channel. we already have resend and slack sdks installed",
+      "expected_output": "Webhook handler for user.created that sends welcome email via Resend and posts to Slack",
+      "files": [],
+      "expectations": [
+        "Listens for user.created webhook event",
+        "Extracts user email and name from webhook payload",
+        "Calls Resend API to send welcome email",
+        "Posts notification to Slack channel",
+        "Includes webhook signature verification",
+        "Does NOT skip verification even though it's a notification-only handler"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "we're getting 401 errors on our webhook endpoint. the clerk dashboard shows the webhooks are being sent but our app keeps rejecting them. we're using express not next.js. heres our current code:\n\napp.post('/webhooks/clerk', express.json(), (req, res) => {\n  const evt = req.body;\n  console.log(evt);\n  res.json({ received: true });\n});",
+      "expected_output": "Identifies missing webhook verification, fixes express body parsing (needs raw body), adds proper Svix verification",
+      "files": [],
+      "expectations": [
+        "Identifies that express.json() is wrong - needs raw body for signature verification",
+        "Shows express.raw() or express.text() instead of express.json() for the webhook route",
+        "Adds webhook signature verification using Svix or @clerk/express webhook utilities",
+        "Preserves the existing route path /webhooks/clerk",
+        "Mentions CLERK_WEBHOOK_SECRET environment variable",
+        "Returns 200 status on success (not just res.json)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "our app has clerk organizations and we need to sync org membership changes to our database. when someone joins or leaves an org we need to update our team_members table. also when an org is created we need to create a workspace record",
+      "expected_output": "Webhook handler for organizationMembership and organization events with database sync",
+      "files": [],
+      "expectations": [
+        "Handles organizationMembership.created event (user joins org)",
+        "Handles organizationMembership.deleted event (user leaves org)",
+        "Handles organization.created event (new org created)",
+        "Extracts organization ID, user ID, and role from webhook payloads",
+        "Includes webhook signature verification",
+        "Shows database operations for both team_members and workspace tables"
+      ]
+    }
+  ]
+}

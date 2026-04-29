@@ -12,7 +12,7 @@
 
 </div>
 
-Scans your project, detects your tech stack, and installs the best AI agent skills from [skills.sh](https://skills.sh) automatically.
+Scans your project, detects your tech stack, and installs curated AI agent skills automatically.
 
 ```bash
 npx autoskills
@@ -22,14 +22,18 @@ npx autoskills
 
 1. Run `npx autoskills` in your project root
 2. Your `package.json`, Gradle files, and config files are scanned to detect technologies
-3. The best matching AI agent skills are installed via [skills.sh](https://skills.sh)
-4. If Claude Code is targeted, a `CLAUDE.md` summary is generated from the installed markdown files in `.claude/skills`
+3. The best matching AI agent skills are selected from the audited autoskills registry
+4. Only the selected skill files are downloaded from the registry and verified before writing them locally
 
 That's it. No config needed.
 
-## Claude Code summary
+## Security model
 
-If `claude-code` is auto-detected or passed with `-a`, `autoskills` also writes a `CLAUDE.md` file in your project root with a quick summary of the markdown files installed for Claude Code.
+`autoskills` does not install directly from random upstream repositories at runtime.
+
+Skills are synced by maintainers into the repository-local autoskills registry, scanned for prompt-injection and supply-chain risks, and recorded with SHA-256 hashes in a manifest. When you run `autoskills`, the CLI downloads only the skills your project needs from that curated registry, verifies every file against the manifest, and writes a `skills-lock.json` entry with the installed source and bundle hash.
+
+This keeps the package small while avoiding live downloads from third-party skill sources during installation.
 
 ## Options
 

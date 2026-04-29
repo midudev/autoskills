@@ -42,18 +42,19 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 
 ## Options
 
-| Flag                       | Description                                                                 |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `-y`, `--yes`              | Skip confirmation prompt, install all detected skills                       |
-| `--dry-run`                | Show detected skills without installing                                     |
-| `--json`                   | Emit structured JSON (used with `--dry-run` or subcommands; errors return `{error:{code,message}}`) |
-| `--from-spec <path>`       | Scan a markdown spec file for tech (code fences + Tech Stack headings)      |
-| `--scan-docs`              | Auto-scan `CLAUDE.md` / `AGENTS.md` / `README.md` in the project root       |
-| `--show-specgen-prompt`    | Print the shipped spec-generator prompt to stdout                           |
-| `--copy-specgen-prompt`    | Copy the shipped spec-generator prompt to the OS clipboard                  |
-| `-v`, `--verbose`          | Show error details if any installation fails                                |
-| `-a`, `--agent <ids>`      | Install for specific IDEs only (e.g. `cursor`, `claude-code`)               |
-| `-h`, `--help`             | Show help message                                                           |
+| Flag                    | Description                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `-y`, `--yes`           | Skip confirmation prompt, install all detected skills                                               |
+| `--dry-run`             | Show detected skills without installing                                                             |
+| `--clear-cache`         | Clear downloaded skills cache                                                                       |
+| `--json`                | Emit structured JSON (used with `--dry-run` or subcommands; errors return `{error:{code,message}}`) |
+| `--from-spec <path>`    | Scan a markdown spec file for tech (code fences + Tech Stack headings)                              |
+| `--scan-docs`           | Auto-scan `CLAUDE.md` / `AGENTS.md` / `README.md` in the project root                               |
+| `--show-specgen-prompt` | Print the shipped spec-generator prompt to stdout                                                   |
+| `--copy-specgen-prompt` | Copy the shipped spec-generator prompt to the OS clipboard                                          |
+| `-v`, `--verbose`       | Show install trace and error details                                                                |
+| `-a`, `--agent <ids>`   | Install for specific IDEs only (e.g. `cursor`, `claude-code`)                                       |
+| `-h`, `--help`          | Show help message                                                                                   |
 
 ## Markdown scanner (opt-in)
 

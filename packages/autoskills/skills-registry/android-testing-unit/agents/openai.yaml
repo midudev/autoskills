@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Testing Unit"
+  short_description: "Write fast, focused Android unit tests for reducers, use cases, repositories, and lifecycle-safe state holders"
+  default_prompt: "Use $android-testing-unit when the request is about write fast, focused Android unit tests for reducers, use cases, repositories, and lifecycle-safe state holders."

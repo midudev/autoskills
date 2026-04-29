@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android DI Hilt"
+  short_description: "Wire Android dependency injection with Hilt, scopes, testing overrides, and module ownership boundaries"
+  default_prompt: "Use $android-di-hilt when the request is about wire Android dependency injection with Hilt, scopes, testing overrides, and module ownership boundaries."

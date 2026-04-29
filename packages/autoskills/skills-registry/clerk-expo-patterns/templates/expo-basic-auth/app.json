@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "clerk-expo",
+    "slug": "clerk-expo",
+    "scheme": "clerkexpo",
+    "plugins": ["expo-secure-store", "@clerk/expo"]
+  }
+}

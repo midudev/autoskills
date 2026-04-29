@@ -19,14 +19,14 @@ describe("detectAgents", () => {
     ok(agents.includes("claude-code"));
   });
 
-  it("detects cursor from .cursor/skills", () => {
-    mkdirSync(join(tmp.path, ".cursor", "skills"), { recursive: true });
-    ok(detectAgents(tmp.path).includes("cursor"));
+  it("detects junie from .junie/skills", () => {
+    mkdirSync(join(tmp.path, ".junie", "skills"), { recursive: true });
+    ok(detectAgents(tmp.path).includes("junie"));
   });
 
-  it("detects opencode from .opencode/skills", () => {
-    mkdirSync(join(tmp.path, ".opencode", "skills"), { recursive: true });
-    ok(detectAgents(tmp.path).includes("opencode"));
+  it("detects codebuddy from .codebuddy/skills", () => {
+    mkdirSync(join(tmp.path, ".codebuddy", "skills"), { recursive: true });
+    ok(detectAgents(tmp.path).includes("codebuddy"));
   });
 
   it("detects kiro-cli from .kiro/skills", () => {
@@ -37,13 +37,11 @@ describe("detectAgents", () => {
   it("detects multiple agents", () => {
     mkdirSync(join(tmp.path, ".claude", "skills"), { recursive: true });
     mkdirSync(join(tmp.path, ".cline", "skills"), { recursive: true });
-    mkdirSync(join(tmp.path, ".codex", "skills"), { recursive: true });
     const agents = detectAgents(tmp.path);
     equal(agents[0], "universal");
     ok(agents.includes("claude-code"));
     ok(agents.includes("cline"));
-    ok(agents.includes("codex"));
-    equal(agents.length, 4);
+    equal(agents.length, 3);
   });
 
   it("ignores agent folders without skills subdirectory", () => {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Compose Foundations"
+  short_description: "Build Android UI with Jetpack Compose foundations, layouts, modifiers, theming, and stable component structure"
+  default_prompt: "Use $android-compose-foundations when the request is about build Android UI with Jetpack Compose foundations, layouts, modifiers, theming, and stable component structure."

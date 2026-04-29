@@ -1,0 +1,19 @@
+{
+  "version": "1.1.1",
+  "organization": "Community",
+  "technology": "React Hook Form",
+  "date": "January 2026",
+  "abstract": "Comprehensive performance optimization guide for React Hook Form applications, designed for AI agents and LLMs. Contains 41 rules across 8 categories, prioritized by impact from critical (form configuration, field subscriptions) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation.",
+  "references": [
+    "https://react-hook-form.com/docs",
+    "https://react-hook-form.com/advanced-usage",
+    "https://react-hook-form.com/docs/useform",
+    "https://react-hook-form.com/docs/usewatch",
+    "https://react-hook-form.com/docs/usecontroller",
+    "https://react-hook-form.com/docs/usefieldarray",
+    "https://react-hook-form.com/docs/useformstate",
+    "https://github.com/react-hook-form/resolvers",
+    "https://ui.shadcn.com/docs/components/form"
+  ],
+  "category": "Frontend"
+}

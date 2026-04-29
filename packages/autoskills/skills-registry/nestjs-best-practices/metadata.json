@@ -1,0 +1,13 @@
+{
+  "version": "1.1.0",
+  "organization": "NestJS Best Practices",
+  "date": "January 2026",
+  "abstract": "Comprehensive best practices and architecture guide for NestJS applications, designed for AI agents and LLMs. Contains 40 rules across 10 categories, prioritized by impact from critical (architecture, dependency injection) to incremental (DevOps patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation.",
+  "references": [
+    "https://docs.nestjs.com",
+    "https://github.com/nestjs/nest",
+    "https://typeorm.io",
+    "https://github.com/typestack/class-validator",
+    "https://github.com/goldbergyoni/nodebestpractices"
+  ]
+}

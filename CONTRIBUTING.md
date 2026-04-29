@@ -26,7 +26,17 @@ git checkout -b fix/typo-in-readme
 
 At this point, you're ready to make your changes! Feel free to ask for help on your PR if you get stuck.
 
-## 4. Get the style right
+## 4. Install Git hooks
+
+Before committing, install the repository hooks:
+
+```sh
+pnpm run hooks:install
+```
+
+This configures Git to use the versioned hooks in `.githooks/`. The pre-commit hook formats staged files and adds the formatted result to the commit automatically.
+
+## 5. Get the style right
 
 Your patch should follow the same coding conventions and style as the rest of the project. Please ensure:
 
@@ -34,7 +44,7 @@ Your patch should follow the same coding conventions and style as the rest of th
 - All new features and bug fixes include relevant tests.
 - Existing tests pass locally before committing.
 
-## 5. Make a Pull Request
+## 6. Make a Pull Request
 
 At this point, you should switch back to your master branch and make sure it's up to date with the main repository:
 
@@ -54,7 +64,7 @@ git push --set-upstream origin 325-add-new-feature
 
 Finally, go to GitHub and create a Pull Request on the main repository.
 
-## 6. Keeping your Pull Request updated
+## 7. Keeping your Pull Request updated
 
 If an maintainer asks you to rebase, they're saying that a lot of code has changed, and that you need to update your branch to easily merge it into the main project.
 

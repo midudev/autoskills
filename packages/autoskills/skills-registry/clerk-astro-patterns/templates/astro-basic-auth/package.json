@@ -1,0 +1,13 @@
+{
+  "name": "clerk-astro",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build"
+  },
+  "dependencies": {
+    "astro": "^5.0.0",
+    "@clerk/astro": "^2.0.0",
+    "@astrojs/node": "^9.0.0"
+  }
+}

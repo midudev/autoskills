@@ -1,0 +1,12 @@
+{
+  "name": "nuxt-basic-auth",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build"
+  },
+  "dependencies": {
+    "nuxt": "latest",
+    "@clerk/nuxt": "latest"
+  }
+}

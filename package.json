@@ -11,16 +11,18 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt --write .",
-    "fmt:check": "oxfmt --check ."
+    "fmt:staged": "oxfmt --write --no-error-on-unmatched-pattern",
+    "fmt:check": "oxfmt --check .",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "dependencies": {
-    "@tailwindcss/vite": "4.2.2",
-    "astro": "6.1.8",
+    "@tailwindcss/vite": "4.2.4",
+    "astro": "6.1.9",
     "geist": "1.7.0",
-    "tailwindcss": "4.2.2"
+    "tailwindcss": "4.2.4"
   },
   "devDependencies": {
-    "oxfmt": "0.45.0",
+    "oxfmt": "0.46.0",
     "oxlint": "1.61.0"
   },
   "engines": {

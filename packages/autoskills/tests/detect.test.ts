@@ -1517,7 +1517,6 @@ describe("detectCombos", () => {
       (c) => c.id === "react-hook-form-zod",
     );
     ok(combo);
-    ok(combo.skills.includes("jezweb/claude-skills/react-hook-form-zod"));
     ok(combo.skills.includes("pproenca/dot-skills/zod"));
   });
 

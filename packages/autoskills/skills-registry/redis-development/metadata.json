@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "organization": "Redis, Inc.",
+  "date": "January 2026",
+  "abstract": "Best practices for Redis including data structures, memory management, Redis Query Engine (RQE), vector search with RedisVL, semantic caching with LangCache, and performance optimization. Optimized for AI agents and LLMs.",
+  "references": [
+    "https://redis.io/docs/",
+    "https://redis.io/docs/latest/develop/interact/search-and-query/",
+    "https://redis.io/docs/latest/develop/clients/redisvl/",
+    "https://redis.io/docs/latest/develop/ai/langcache/",
+    "https://redis.io/commands/"
+  ]
+}
+

@@ -1,0 +1,177 @@
+version: "4.2"
+description: "Breaking change patterns for Rails 4.1 → 4.2 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "ActionMailer .deliver / .deliver! deprecated"
+      pattern: "\\.deliver!?\\s*(#|$)"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.2 deprecates .deliver and .deliver! in favor of .deliver_now / .deliver_now! (sync) and .deliver_later (async via ActiveJob)"
+      fix: "Replace .deliver with .deliver_now, and .deliver! with .deliver_now! (bang-preserving). Use .deliver_later for async delivery via ActiveJob"
+      variable_name: "MAILER_DELIVER"
+
+    - name: "respond_with usage"
+      pattern: "\\brespond_with\\b"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "respond_with and class-level respond_to were extracted from Rails core into the responders gem in Rails 4.2"
+      fix: "Add gem 'responders', '~> 2.0' to your Gemfile. No code changes needed."
+      variable_name: "RESPOND_WITH"
+
+    - name: "Class-level respond_to declaration"
+      pattern: "^\\s*respond_to\\s+:"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "Class-level respond_to was extracted to the responders gem. Action-level respond_to do |format| blocks are unaffected"
+      fix: "Add gem 'responders', '~> 2.0' to your Gemfile"
+      variable_name: "CLASS_RESPOND_TO"
+
+    - name: "Verify raise_in_transactional_callbacks is configured"
+      pattern: "class\\s+\\w+\\s*<\\s*Rails::Application"
+      exclude: ""
+      search_paths:
+        - "config/application.rb"
+      explanation: "FILE MARKER (manual review required): Rails 4.2 still suppresses exceptions in after_commit/after_rollback callbacks but emits a deprecation warning. The application file should opt-in to raising (the Rails 5.0+ default). Grep cannot detect absence of a setting, so this pattern flags config/application.rb itself — open it and verify the setting is present"
+      fix: "If config.active_record.raise_in_transactional_callbacks is NOT present in config/application.rb, add: config.active_record.raise_in_transactional_callbacks = true. If it is already set to true, no action needed"
+      variable_name: "TRANSACTIONAL_CALLBACKS"
+
+    - name: "RSpec 2.x in Gemfile"
+      pattern: "rspec-rails.*['\"\\(][~><=\\s]*2\\."
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "Gemfile.lock"
+      explanation: "Rails 4.2 does not support RSpec 2. You must upgrade to RSpec 3 (use 2.99 as an intermediate step to surface deprecations). Matches ~>, >=, >, <=, bare versions, and locked (2.x.y) versions"
+      fix: "Upgrade to rspec-rails 2.99 first, fix deprecations, then upgrade to rspec-rails 3.x. Consider Transpec for automation"
+      variable_name: "RSPEC_2"
+
+    - name: "assert_tag / TagAssertions"
+      pattern: "\\bassert_tag\\b"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "assert_tag and the TagAssertions module are deprecated in Rails 4.2. Use assert_select from SelectorAssertions (now in the rails-dom-testing gem)"
+      fix: "Replace assert_tag with assert_select equivalents"
+      variable_name: "ASSERT_TAG"
+
+    - name: "ActiveJob usage requires queue adapter"
+      pattern: "\\.deliver_later\\b|<\\s*ActiveJob::Base\\b"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.2 introduces ActiveJob. Any use of deliver_later or a class inheriting from ActiveJob::Base requires a configured queue adapter. The default in 4.2 is :inline (runs jobs synchronously in-process), which is rarely what production wants"
+      fix: "Set config.active_job.queue_adapter = :sidekiq (or :resque, :delayed_job, :que, etc.) in config/application.rb or per-environment, and ensure the adapter gem is in the Gemfile. For dev/test without a backend, :inline or :async is acceptable"
+      variable_name: "ACTIVE_JOB_ADAPTER"
+
+  medium_priority:
+    - name: "find/exists? with possible AR object argument"
+      pattern: "\\.(find|exists\\?)\\(\\s*@?[a-z_][a-zA-Z_0-9.]*\\s*\\)"
+      exclude: "\\.(find|exists\\?)\\([^)]*\\.id\\s*\\)|\\.(find|exists\\?)\\(\\s*\\d+"
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.2 deprecates passing AR objects where an id is expected. Manual review needed — numeric ids and expressions ending in .id are already correct and excluded"
+      fix: "Pass .id explicitly when the argument is an AR object (e.g., Comment.find(comment.id) instead of Comment.find(comment))"
+      variable_name: "FIND_WITH_OBJECT"
+
+    - name: "HTML sanitizer usage"
+      pattern: "\\b(sanitize|strip_tags|strip_links|sanitize_css)\\b"
+      exclude: ""
+      search_paths:
+        - "app/"
+      explanation: "Rails 4.2 rewrites the sanitizer on top of Loofah/Nokogiri. Output may differ for edge-case inputs - review tests that assert sanitized output"
+      fix: "Review test assertions on sanitized output. If differences are unacceptable, temporarily add gem 'rails-deprecated_sanitizer'"
+      variable_name: "HTML_SANITIZER"
+
+    - name: "Verify test_order is set"
+      pattern: "Rails\\.application\\.configure"
+      exclude: ""
+      search_paths:
+        - "config/environments/test.rb"
+      explanation: "FILE MARKER (manual review required): Rails 4.2 emits a deprecation warning when config.active_support.test_order is not explicitly set. Grep cannot detect absence of a setting, so this pattern flags the config file itself — open config/environments/test.rb and verify the setting is present"
+      fix: "If config.active_support.test_order is NOT present in config/environments/test.rb, add: config.active_support.test_order = :random (or :sorted to preserve 4.1 behavior)"
+      variable_name: "TEST_ORDER"
+
+    - name: "Serialized attributes with custom coder"
+      pattern: "serialize\\s+:\\w+,\\s*(JSON|YAML|\\w+Coder)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.2 changes how nil is handled with serialized attributes and custom coders - nil now saves NULL instead of passing through the coder"
+      fix: "Review code that assigns nil to serialized attributes with custom coders. Check for tests that relied on the coder's nil representation (e.g., 'null' for JSON)"
+      variable_name: "SERIALIZED_CUSTOM_CODER"
+
+    - name: "serve_static_assets config"
+      pattern: "serve_static_assets"
+      exclude: ""
+      search_paths:
+        - "config/environments/"
+      explanation: "Rails 4.2 renames config.serve_static_assets to config.serve_static_files"
+      fix: "Rename config.serve_static_assets to config.serve_static_files. In production.rb, consider using ENV['RAILS_SERVE_STATIC_FILES'].present?"
+      variable_name: "SERVE_STATIC_ASSETS"
+
+    - name: "form_authenticity_token in non-Rails forms"
+      pattern: "form_authenticity_token"
+      exclude: ""
+      search_paths:
+        - "app/"
+      explanation: "Rails 4.2 masks CSRF tokens per-request for SSL attack mitigation. Non-Rails forms or clients that cache the token break"
+      fix: "Fetch the token per request or use Rails form helpers that handle masking automatically"
+      variable_name: "CSRF_TOKEN_MASKING"
+
+    - name: "Foreigner gem"
+      pattern: "gem.*['\"]foreigner['\"]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+      explanation: "Rails 4.2 adds native foreign key support (add_foreign_key, t.references foreign_key: true) that can replace Foreigner for most cases"
+      fix: "Remove gem 'foreigner', run bundle install, run bin/rake db:schema:dump, verify db/schema.rb. Note: Rails FK support is a subset of Foreigner"
+      variable_name: "FOREIGNER"
+
+  low_priority:
+    - name: "Procfile rails server without explicit bind"
+      pattern: "rails\\s+s(erver)?\\s*$|rails\\s+s(erver)?\\s+(?!-b|--binding)"
+      exclude: "-b\\s+0\\.0\\.0\\.0|--binding"
+      search_paths:
+        - "Procfile"
+        - "bin/"
+      explanation: "Rails 4.2 (via Rack) binds rails server to localhost instead of 0.0.0.0 by default. Docker, Vagrant, and remote-access setups break"
+      fix: "Add -b 0.0.0.0 to rails server commands that need external access"
+      variable_name: "SERVER_BIND"
+
+    - name: "Timecop gem in use"
+      pattern: "gem.*['\"]timecop['\"]|\\bTimecop\\."
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "test/"
+        - "spec/"
+      explanation: "Rails 4.2 adds built-in travel, travel_to, and travel_back helpers via ActiveSupport::Testing::TimeHelpers - these replace most Timecop use cases"
+      fix: "Replace Timecop.freeze/return with travel_to/travel_back. Keep Timecop only if you use time-rate features (e.g., 1 sec = 1 hour)"
+      variable_name: "TIMECOP"
+
+dependencies:
+  responders:
+    check: true
+    gem_name: "responders"
+    message: "Required if controllers use respond_with or class-level respond_to"
+    url: "https://github.com/heartcombo/responders"
+
+  web-console:
+    check: false
+    gem_name: "web-console"
+    message: "New Rails 4.2 default - interactive IRB console in development on error pages and via <%= console %> helper"
+    url: "https://github.com/rails/web-console"
+
+  rails-deprecated_sanitizer:
+    check: false
+    gem_name: "rails-deprecated_sanitizer"
+    message: "Temporary fallback if the new Loofah-based sanitizer produces unexpected output (not recommended long-term, 4.2-only)"
+    url: "https://github.com/rails/rails-deprecated_sanitizer"

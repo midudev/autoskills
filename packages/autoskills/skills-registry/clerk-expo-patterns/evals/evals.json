@@ -1,0 +1,83 @@
+{
+  "skill_name": "clerk-expo-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i'm building an expo app and want to add clerk. show me how to wrap the app with ClerkProvider and configure the SecureStore token cache so the session persists after app restarts.",
+      "expected_output": "Wraps app in ClerkProvider with publishableKey from EXPO_PUBLIC_ env, passes tokenCache from @clerk/expo/token-cache",
+      "scaffold": "expo-basic-auth",
+      "expectations": [
+        "Imports ClerkProvider from @clerk/expo",
+        "Imports tokenCache from @clerk/expo/token-cache",
+        "Reads publishableKey from process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY",
+        "Passes tokenCache prop to ClerkProvider",
+        "Does NOT use NEXT_PUBLIC_ prefix for the env variable"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i want users to sign in with Google in my expo app. implement the OAuth flow using useSSO and handle the deep link redirect.",
+      "expected_output": "Uses useSSO hook with startSSOFlow, passes redirectUrl with app scheme, calls WebBrowser.maybeCompleteAuthSession",
+      "scaffold": "expo-basic-auth",
+      "expectations": [
+        "Imports useSSO from @clerk/expo",
+        "Calls startSSOFlow with strategy: 'oauth_google'",
+        "Passes redirectUrl with the app's custom scheme (e.g. myapp://oauth-callback)",
+        "Calls WebBrowser.maybeCompleteAuthSession() at the top level of the callback screen",
+        "Calls setActive with the createdSessionId after successful OAuth"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "my expo router app has a (tabs) group that should only be accessible to signed-in users. redirect unauthenticated users to the sign-in screen.",
+      "expected_output": "Uses useAuth in the tabs layout, redirects to /sign-in with Redirect component when not signed in",
+      "scaffold": "expo-basic-auth",
+      "expectations": [
+        "Imports useAuth from @clerk/expo",
+        "Checks isSignedIn and isLoaded from useAuth",
+        "Returns null or loading indicator when isLoaded is false",
+        "Redirects to the sign-in screen when isSignedIn is false",
+        "Uses Expo Router's Redirect component or router.replace for the redirect"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "i need the clerk session token to survive app restarts. show me how to implement a custom token cache using expo-secure-store directly instead of the built-in one.",
+      "expected_output": "Creates a TokenCache object with getToken and saveToken using SecureStore.getItemAsync and setItemAsync",
+      "scaffold": "expo-basic-auth",
+      "expectations": [
+        "Creates an object implementing TokenCache interface with getToken and saveToken methods",
+        "Uses SecureStore.getItemAsync in getToken",
+        "Uses SecureStore.setItemAsync in saveToken",
+        "Handles errors in getToken by deleting the corrupted item and returning null",
+        "Passes the custom cache as tokenCache prop to ClerkProvider"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i want to show the user's profile information (name, avatar, email) in a profile screen in my expo app.",
+      "expected_output": "Uses useUser hook to access user data, renders user.fullName, user.imageUrl, and primary email",
+      "scaffold": "expo-basic-auth",
+      "expectations": [
+        "Imports useUser from @clerk/expo",
+        "Destructures user from useUser()",
+        "Shows user.fullName or user.firstName",
+        "Handles the case where user is null (not yet loaded)",
+        "Accesses email via user.primaryEmailAddress?.emailAddress"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "my expo app supports organizations. i need a screen where users can see their organizations and switch the active one.",
+      "expected_output": "Uses useOrganizationList to list memberships and setActive, uses useOrganization to show current org",
+      "scaffold": "expo-basic-auth",
+      "expectations": [
+        "Imports useOrganization and useOrganizationList from @clerk/expo",
+        "Calls setActive from useOrganizationList to switch organizations",
+        "Lists available orgs from userMemberships.data",
+        "Shows the currently active organization name",
+        "Handles the case where userMemberships.data is undefined or loading"
+      ]
+    }
+  ]
+}

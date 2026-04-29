@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {"type": "string"},
+    "reproduction_steps": {"type": "array", "items": {"type": "string"}},
+    "failing_command": {"type": "string"},
+    "failing_tests": {"type": "array", "items": {"type": "string"}},
+    "minimal_fix_plan": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["title","reproduction_steps","failing_command","failing_tests"]
+}

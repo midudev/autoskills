@@ -26,10 +26,11 @@ import {
   red,
   pink,
   gray,
+  muted,
   SHOW_CURSOR,
 } from "./colors.ts";
 import { printBanner, multiSelect, formatTime } from "./ui.ts";
-import { installAll, resolveSkillsBin } from "./installer.ts";
+import { clearAutoskillsCache, installAll, loadRegistry } from "./installer.ts";
 import { cleanupClaudeMd } from "./claude.ts";
 import { runList, runPrompt, runInstall, runCopyPrompt } from "./subcommands.ts";
 import { serializeDryRun, serializeError } from "./cli-json.ts";
@@ -46,6 +47,7 @@ const VERSION: string = (() => {
   }
   return "0.0.0";
 })();
+const ISSUES_URL = "https://github.com/midudev/autoskills/issues";
 
 process.on("SIGINT", () => {
   write(SHOW_CURSOR + "\n");
@@ -66,6 +68,7 @@ interface CliArgs {
   dryRun: boolean;
   verbose: boolean;
   help: boolean;
+  clearCache: boolean;
   agents: string[];
   fromSpec?: string;
   scanDocs: boolean;
@@ -147,6 +150,7 @@ function parseArgs(): CliArgs {
     dryRun: args.includes("--dry-run"),
     verbose: args.includes("--verbose") || args.includes("-v"),
     help: args.includes("--help") || args.includes("-h"),
+    clearCache: args.includes("--clear-cache"),
     agents,
     fromSpec,
     scanDocs: args.includes("--scan-docs"),
@@ -167,6 +171,7 @@ function showHelp(): void {
     npx autoskills                              Detect & install skills
     npx autoskills ${dim("-y")}                            Skip confirmation
     npx autoskills ${dim("--dry-run")} ${dim("[--json]")}            Show what would be installed
+    npx autoskills ${dim("--clear-cache")}                 Clear downloaded skills cache
     npx autoskills ${dim("-a cursor claude-code")}          Install for specific IDEs only
     npx autoskills ${dim("list")} ${dim("[--json] [--filter <id>]")}  List catalog
     npx autoskills ${dim("--show-specgen-prompt")}          Print spec-generator prompt to stdout
@@ -176,7 +181,8 @@ function showHelp(): void {
   ${bold("Options:")}
     -y, --yes              Skip confirmation prompt
     --dry-run              Show skills without installing
-    -v, --verbose          Show error details on failure
+    --clear-cache          Clear downloaded skills cache
+    -v, --verbose          Show install trace and error details
     -a, --agent            Install for specific IDEs only (e.g. cursor, claude-code)
     --from-spec <path>     Detect tech from a markdown spec file
     --scan-docs            Auto-scan CLAUDE.md / AGENTS.md in project root
@@ -250,7 +256,7 @@ function formatSkillLabel(skill: string, { styled = false }: { styled?: boolean 
     return `${author} › ${skillName}`;
   }
 
-  return `${gray(author)} ${gray("›")} ${cyan(bold(skillName))}`;
+  return `${muted(author)} ${gray("›")} ${cyan(bold(skillName))}`;
 }
 
 function printSkillsList(skills: SkillEntry[]): void {
@@ -379,10 +385,11 @@ function printSummary({ installed, failed, errors, elapsed, verbose }: SummaryOp
           log(dim(`       ${reason}`));
         }
       }
+      log();
       if (!verbose) {
-        log();
-        log(dim("   Run with --verbose to see full error details."));
+        log(dim("   Run again with --verbose to see the full error details."));
       }
+      log(dim(`   If it looks like an autoskills bug, please create an issue: ${ISSUES_URL}`));
     }
   }
 
@@ -463,7 +470,7 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
 
 async function main(): Promise<void> {
   const args = parseArgs();
-  const { autoYes, dryRun, verbose, help, agents, fromSpec, scanDocs } = args;
+  const { autoYes, dryRun, verbose, help, clearCache, agents, fromSpec, scanDocs } = args;
 
   if (help) {
     showHelp();
@@ -526,8 +533,19 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  if (clearCache) {
+    const { cacheDir, removed } = clearAutoskillsCache();
+    log(
+      removed
+        ? green(`   ✔ Cleared autoskills cache: ${cacheDir}`)
+        : dim(`   No autoskills cache found: ${cacheDir}`),
+    );
+    log();
+    process.exit(0);
+  }
+
   if (!args.json) {
-    printBanner(VERSION);
+    await printBanner(VERSION);
   }
 
   const projectDir = resolve(".");
@@ -589,14 +607,14 @@ async function main(): Promise<void> {
   if (skills.length === 0) {
     if (!args.json) {
       log(yellow("   No skills available for your stack yet."));
-      log(dim("   Check https://skills.sh for the latest."));
+      log(dim("   Check https://autoskills.sh for the latest."));
       log();
     }
     process.exit(0);
   }
 
   if (!dryRun) {
-    setImmediate(resolveSkillsBin);
+    setImmediate(loadRegistry);
   }
 
   if (dryRun) {
@@ -625,23 +643,20 @@ async function main(): Promise<void> {
 
   const selectedSkills = await selectSkills(skills, autoYes);
 
-  if (!autoYes && process.stdout.isTTY) {
-    write("\x1b[H\x1b[2J\x1b[3J");
-    printBanner(VERSION);
-  } else {
-    log();
-  }
+  log();
 
   log(cyan("   ◆ ") + bold("Installing skills..."));
   log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
   log();
 
   const startTime = Date.now();
-  const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents);
+  const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents, {
+    verbose,
+  });
   const elapsed = Date.now() - startTime;
   const claudeCleanup = cleanupClaudeMd(projectDir);
 
-  if (process.stdout.isTTY) {
+  if (process.stdout.isTTY && !verbose) {
     const up = selectedSkills.length + 2;
     write(`\x1b[${up}A\r\x1b[K`);
     log(green("   ◆ ") + bold("Done!"));

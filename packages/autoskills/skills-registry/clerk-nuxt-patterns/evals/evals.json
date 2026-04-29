@@ -1,0 +1,122 @@
+{
+  "skill_name": "clerk-nuxt-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i have a nuxt 3 app with @clerk/nuxt installed. i need to protect my /dashboard route so only signed-in users can access it. unauthenticated users should be redirected to the sign-in page.",
+      "expected_output": "Adds definePageMeta middleware auth guard to dashboard page, or creates a route middleware using clerkMiddleware",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Uses definePageMeta({ middleware: 'auth' }) on the dashboard page OR creates a named route middleware",
+        "Handles redirect for unauthenticated users",
+        "Does NOT use client-side only checks for route protection",
+        "Imports are correct for @clerk/nuxt",
+        "Does not break the existing app structure"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i need to create a server API route in my nuxt app that returns the current user's data. the route should only work for authenticated users and return 401 for unauthenticated requests.",
+      "expected_output": "Creates a Nitro server route using event.context.auth or clerkClient to get the current user",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Creates a file in server/api/ directory",
+        "Accesses auth state via event.context.auth or imports clerkClient from @clerk/nuxt/server",
+        "Returns 401 status for unauthenticated requests",
+        "Returns user data for authenticated requests",
+        "Uses defineEventHandler from Nitro"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i want to show user profile information on my nuxt page - the user's name, email, and avatar. how do i access this data in my page component?",
+      "expected_output": "Uses useUser() composable to access user data in the Vue component",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Uses useUser() composable (auto-imported by @clerk/nuxt)",
+        "Accesses user.firstName, user.lastName, user.emailAddresses, or user.imageUrl",
+        "Handles the loading state before rendering user data",
+        "Does NOT make a server fetch for user data when composables suffice",
+        "Component uses <script setup> syntax"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "my nuxt saas app needs organization support. users should be able to switch between their organizations in the header. show me how to add org switching and display org-scoped content on the dashboard.",
+      "expected_output": "Adds OrganizationSwitcher component, reads orgId from useAuth() to scope dashboard content",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Adds <OrganizationSwitcher /> component to the header or layout",
+        "Uses orgId from useAuth() composable to scope data",
+        "Handles case where no org is selected (prompts user to select or create one)",
+        "Does NOT remove existing user authentication logic",
+        "Dashboard content is conditional on orgId being present"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i want to replace the hosted sign-in page with a custom one inside my nuxt app. show me how to create a custom sign-in page using clerk components.",
+      "expected_output": "Creates a pages/sign-in.vue page with <SignIn /> component and configures the sign-in URL",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Creates a sign-in page in the pages/ directory",
+        "Renders the <SignIn /> component from @clerk/nuxt",
+        "Configures NUXT_PUBLIC_CLERK_SIGN_IN_URL or signInUrl in nuxt.config.ts",
+        "Does NOT implement a custom auth form from scratch",
+        "Page is publicly accessible (no auth middleware on it)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "i need to protect a nitro server route that handles payments. the route needs to verify the user is authenticated and get their userId to record the payment in my database.",
+      "expected_output": "Server route using event.context.auth to get userId, returns 401 if not authenticated",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Uses event.context.auth.userId in a Nitro server route",
+        "Returns createError({ statusCode: 401 }) or setResponseStatus(event, 401) for unauthenticated",
+        "Extracts userId from auth context to use in database operation",
+        "File is placed in server/api/ or server/routes/",
+        "Does NOT re-verify the session token manually"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "i'm adding clerk to my nuxt 3 app. set up the module and protect the /dashboard route so unauthenticated users are redirected to /sign-in.",
+      "expected_output": "Adds @clerk/nuxt to modules in nuxt.config.ts, creates Nuxt route middleware that checks auth and redirects",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Adds @clerk/nuxt to the modules array in nuxt.config.ts",
+        "Creates a route middleware that checks authentication",
+        "Uses useAuth composable inside the middleware",
+        "Redirects unauthenticated users to /sign-in via navigateTo",
+        "Applies the middleware to the /dashboard route"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "my nuxt app has a server API route /api/user-data that should only work for authenticated users. implement the server-side auth check.",
+      "expected_output": "Uses getAuth from @clerk/nuxt/server in the event handler, throws 401 when userId is falsy",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Imports getAuth from @clerk/nuxt/server",
+        "Calls getAuth(event) to get userId",
+        "Throws createError({ statusCode: 401 }) when userId is falsy",
+        "Uses userId in the data fetching logic",
+        "Does NOT use client-side composables in the server route"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "i need to add a global nuxt server middleware that checks auth on all protected routes and redirects to /sign-in. use clerkMiddleware from @clerk/nuxt.",
+      "expected_output": "Creates server/middleware/clerk.ts with clerkMiddleware that checks H3Event context for auth",
+      "scaffold": "nuxt-basic-auth",
+      "expectations": [
+        "Creates server/middleware/clerk.ts",
+        "Uses clerkMiddleware from @clerk/nuxt/server",
+        "Exports the result as default",
+        "Can access auth state via event.context.auth",
+        "Does NOT create the middleware in middleware/ (that is for route middleware, not server middleware)"
+      ]
+    }
+  ]
+}

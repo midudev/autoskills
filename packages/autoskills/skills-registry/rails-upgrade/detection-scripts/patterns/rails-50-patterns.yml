@@ -1,0 +1,132 @@
+version: "5.0"
+description: "Breaking change patterns for Rails 4.2 → 5.0 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "Ruby version below 2.2.2"
+      pattern: "ruby.*['\"]2\\.[01]\\.|ruby.*['\"]1\\."
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - ".ruby-version"
+      explanation: "Rails 5.0 requires Ruby 2.2.2 or newer"
+      fix: "Upgrade Ruby to 2.2.2+ (2.3+ recommended)"
+      variable_name: "RUBY_VERSION"
+
+    - name: "Models inheriting from ActiveRecord::Base"
+      pattern: "class\\s+\\w+\\s*<\\s*ActiveRecord::Base"
+      exclude: "ApplicationRecord"
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 5.0 introduces ApplicationRecord as the base class for all models"
+      fix: "Create app/models/application_record.rb and change all models to inherit from ApplicationRecord"
+      variable_name: "ACTIVERECORD_BASE"
+
+    - name: "belongs_to without optional: true"
+      pattern: "belongs_to\\s+:\\w+"
+      exclude: "optional:"
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 5.0 makes belongs_to required by default. Review each match to determine if the association can be nil"
+      fix: "Add optional: true only to belongs_to associations that can legitimately be nil. Leave required ones as-is"
+      variable_name: "BELONGS_TO_REQUIRED"
+
+    - name: "protected_attributes gem"
+      pattern: "gem.*['\"]protected_attributes['\"]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+      explanation: "The protected_attributes gem is not compatible with Rails 5.0. You must migrate to Strong Parameters"
+      fix: "Remove protected_attributes gem, remove attr_accessible from models, add *_params methods to controllers"
+      variable_name: "PROTECTED_ATTRIBUTES"
+
+    - name: "attr_accessible in models"
+      pattern: "attr_accessible"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "attr_accessible is removed in Rails 5.0. Use Strong Parameters in controllers instead"
+      fix: "Remove attr_accessible from models and add *_params methods to controllers"
+      variable_name: "ATTR_ACCESSIBLE"
+
+    - name: "Parameters used as hash"
+      pattern: "params(\\[.*\\])?\\.(slice|except|merge|symbolize_keys|to_hash)\\b"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+        - "app/"
+      explanation: "params is now ActionController::Parameters, not HashWithIndifferentAccess. Hash methods may not work"
+      fix: "Call .permit and .to_h before using hash methods on params"
+      variable_name: "PARAMS_AS_HASH"
+
+  medium_priority:
+    - name: "Callback returning false to halt"
+      pattern: "return\\s+false"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+        - "app/controllers/"
+      explanation: "Returning false from a callback no longer halts the chain in Rails 5.0. This is a noisy pattern -- only matches inside before_* callbacks need fixing"
+      fix: "Replace 'return false' with 'throw :abort' in before_* callbacks. Ignore matches in non-callback methods"
+      variable_name: "CALLBACK_HALT"
+
+    - name: "assigns in tests"
+      pattern: "assigns\\(:"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "assigns and assert_template are extracted to the rails-controller-testing gem in Rails 5.0"
+      fix: "Add gem 'rails-controller-testing' to Gemfile test group"
+      variable_name: "ASSIGNS_IN_TESTS"
+
+    - name: "assert_template in tests"
+      pattern: "assert_template"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "assert_template is extracted to the rails-controller-testing gem in Rails 5.0"
+      fix: "Add gem 'rails-controller-testing' to Gemfile test group"
+      variable_name: "ASSERT_TEMPLATE"
+
+    - name: "ActionDispatch::Http::UploadedFile in tests"
+      pattern: "ActionDispatch::Http::UploadedFile"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "Use Rack::Test::UploadedFile instead of ActionDispatch::Http::UploadedFile in Rails 5.0"
+      fix: "Replace with Rack::Test::UploadedFile.new(file_path, content_type)"
+      variable_name: "UPLOAD_FILE_TEST"
+
+    - name: "rake commands in scripts or docs"
+      pattern: "\\brake\\s+(db:|test|routes|assets:|secret)"
+      exclude: ""
+      search_paths:
+        - "bin/"
+        - "scripts/"
+        - "Rakefile"
+        - "lib/tasks/"
+      explanation: "Rails 5.0 prefers 'rails' command over 'rake' for db, test, routes, etc."
+      fix: "Replace 'rake' with 'rails' for db:migrate, test, routes, and other Rails commands"
+      variable_name: "RAKE_COMMANDS"
+
+dependencies:
+  rails-controller-testing:
+    check: true
+    gem_name: "rails-controller-testing"
+    message: "Required if tests use assigns() or assert_template"
+    url: "https://github.com/rails/rails-controller-testing"
+
+  test_unit:
+    check: false
+    gem_name: "test-unit"
+    message: "Required if you see 'cannot load such file -- test/unit/assertions' after upgrading Ruby"
+    url: "https://github.com/test-unit/test-unit"
+
+  rails_upgrader:
+    check: false
+    gem_name: "rails_upgrader"
+    message: "Helps automate Strong Parameters migration from attr_accessible"
+    url: "https://github.com/fastruby/rails_upgrader"

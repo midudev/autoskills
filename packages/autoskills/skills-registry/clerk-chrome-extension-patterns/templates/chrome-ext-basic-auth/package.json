@@ -1,0 +1,16 @@
+{
+  "name": "clerk-chrome-extension",
+  "displayName": "Clerk Chrome Extension",
+  "scripts": { "dev": "plasmo dev", "build": "plasmo build" },
+  "dependencies": {
+    "@clerk/chrome-extension": "latest",
+    "plasmo": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "manifest": {
+    "key": "$CRX_PUBLIC_KEY",
+    "permissions": ["cookies", "storage"],
+    "host_permissions": ["http://localhost/*", "$CLERK_FRONTEND_API/*"]
+  }
+}

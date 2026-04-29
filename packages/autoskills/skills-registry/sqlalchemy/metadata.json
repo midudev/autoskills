@@ -1,0 +1,63 @@
+{
+  "name": "sqlalchemy",
+  "version": "1.0.0",
+  "category": "toolchain",
+  "toolchain": "python",
+  "framework": "sqlalchemy",
+  "tags": [
+    "orm",
+    "database",
+    "sqlalchemy",
+    "alembic",
+    "migrations",
+    "sql",
+    "postgresql",
+    "mysql",
+    "sqlite",
+    "async",
+    "fastapi",
+    "flask"
+  ],
+  "entry_point_tokens": 80,
+  "full_tokens": 5876,
+  "related_skills": [
+    "../../frameworks/fastapi",
+    "../../frameworks/flask",
+    "../../testing/pytest",
+    "../../../database/postgresql",
+    "../../../database/mysql"
+  ],
+  "author": "Claude MPM",
+  "license": "MIT",
+  "subcategory": "data",
+  "description": "SQLAlchemy 2.0 ORM with declarative models, relationships, migrations, and async support",
+  "when_to_use": [
+    "Building Python applications with relational databases",
+    "Need type-safe ORM with powerful query builder",
+    "Working with FastAPI, Flask, or Django",
+    "Managing database schemas with migrations (Alembic)",
+    "Async database operations with AsyncSession"
+  ],
+  "key_features": [
+    "SQLAlchemy 2.0 modern syntax with Mapped types",
+    "Declarative models with type hints",
+    "Powerful query builder with select() API",
+    "Relationship mapping (one-to-many, many-to-many)",
+    "Alembic migration support",
+    "Async SQLAlchemy with AsyncSession",
+    "Connection pooling and performance optimization",
+    "FastAPI and Flask integration patterns"
+  ],
+  "prerequisites": [
+    "Python 3.10+",
+    "Basic SQL knowledge",
+    "Understanding of relational databases"
+  ],
+  "installation": "pip install sqlalchemy alembic",
+  "created_at": "2025-11-30",
+  "progressive_loading": {
+    "entry_tokens": 80,
+    "full_tokens": 5000,
+    "has_progressive_structure": true
+  }
+}
