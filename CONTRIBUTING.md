@@ -22,13 +22,23 @@ git checkout -b docs/improve-contributing-guide
 
 Make the smallest change that fully solves the problem. Ask for help in the PR — you don't need to wait until it's perfect.
 
-## 4. Follow the style
+## 4. Install Git hooks
 
-- Lint and format before pushing
-- Add or update tests for every behavior change
-- Make sure all tests pass locally before opening a PR
+Before committing, install the repository hooks:
 
-## 5. Open a pull request
+```sh
+pnpm run hooks:install
+```
+
+This configures Git to use the versioned hooks in `.githooks/`. The pre-commit hook formats staged files and adds the formatted result to the commit automatically.
+
+## 5. Follow the style
+
+- Lint and format before pushing.
+- Add or update tests for every behavior change.
+- Make sure all tests pass locally before opening a PR.
+
+## 6. Open a pull request
 
 Sync with main before pushing:
 
@@ -43,7 +53,7 @@ git push --set-upstream origin your-branch
 
 Keep the PR title short and in the imperative mood: `feat: add Bun detection`, `fix: empty gems array in Ruby entry`, `test: validate skills map entries`.
 
-## 6. Keep your PR up to date
+## 7. Keep your PR up to date
 
 When a maintainer asks you to rebase, the base branch has moved. Update your branch:
 
@@ -53,7 +63,7 @@ git rebase upstream/main
 git push --force-with-lease
 ```
 
-## 7. AutoSkills-specific contributions
+## 8. AutoSkills-specific contributions
 
 Most AutoSkills changes fall into one of these:
 
@@ -68,9 +78,9 @@ Most AutoSkills changes fall into one of these:
 
 ### Adding a technology
 
-Add one entry to `SKILLS_MAP` in `packages/autoskills/skills-map.mjs`:
+Add one entry to `SKILLS_MAP` in `packages/autoskills/skills-map.ts`:
 
-```js
+```ts
 {
   id: "bun",
   name: "Bun",
@@ -98,7 +108,7 @@ Use signals in this order of preference:
 
 **1. `packages`** — match npm/pip/cargo package names
 
-```js
+```ts
 detect: {
   packages: ["react", "react-dom"],
 }
@@ -106,7 +116,7 @@ detect: {
 
 **2. `configFiles`** — match specific filenames in the project root
 
-```js
+```ts
 detect: {
   configFiles: ["next.config.js", "next.config.mjs", "next.config.ts"],
 }
@@ -114,7 +124,7 @@ detect: {
 
 **3. `gems`** — match Ruby gem names
 
-```js
+```ts
 detect: {
   gems: ["rails", "sinatra"],
 }
@@ -122,7 +132,7 @@ detect: {
 
 **4. `packagePatterns`** — match packages by RegExp when a prefix covers multiple packages
 
-```js
+```ts
 detect: {
   packagePatterns: [/^@aws-sdk\//, /^aws-cdk/],
 }
@@ -130,7 +140,7 @@ detect: {
 
 **5. `configFileContent`** — search file contents when names and packages are not enough
 
-```js
+```ts
 // Standard form — search inside specific files
 detect: {
   configFileContent: {
@@ -150,7 +160,7 @@ detect: {
 
 You can combine signals — the entry matches when any signal is found:
 
-```js
+```ts
 detect: {
   packages: ["tailwindcss"],
   configFiles: ["tailwind.config.js", "tailwind.config.ts"],
@@ -180,7 +190,7 @@ Run the tests and you'll see exactly what needs fixing:
 
 Common mistakes:
 
-```js
+```ts
 // ✗ packages is empty
 detect: {
   packages: [];
@@ -208,9 +218,9 @@ detect: {
 
 ### Adding a combo
 
-Add one entry to `COMBO_SKILLS_MAP` in `packages/autoskills/skills-map.mjs`:
+Add one entry to `COMBO_SKILLS_MAP` in `packages/autoskills/skills-map.ts`:
 
-```js
+```ts
 {
   id: "nextjs-supabase",
   name: "Next.js + Supabase",
@@ -242,7 +252,7 @@ If you reference an id that doesn't exist in `SKILLS_MAP`, the test fails:
 
 ```sh
 cd packages/autoskills
-node --test 'tests/*.test.mjs'
+node --test 'tests/*.test.ts'
 ```
 
 Expected output when everything is correct:
@@ -260,15 +270,15 @@ Expected output when everything is correct:
 
 #### Adding a technology
 
-- [ ] One entry added to `SKILLS_MAP` in `packages/autoskills/skills-map.mjs`
+- [ ] One entry added to `SKILLS_MAP` in `packages/autoskills/skills-map.ts`
 - [ ] Detection uses the simplest reliable signal
 - [ ] All skill refs follow the `owner/repo/skill-name` or `https://` format
-- [ ] Tests pass locally (`node --test 'tests/*.test.mjs'`)
+- [ ] Tests pass locally (`node --test 'tests/*.test.ts'`)
 - [ ] PR title uses the imperative mood: `feat: add Bun detection`
 
 #### Adding a combo
 
-- [ ] One entry added to `COMBO_SKILLS_MAP` in `packages/autoskills/skills-map.mjs`
+- [ ] One entry added to `COMBO_SKILLS_MAP` in `packages/autoskills/skills-map.ts`
 - [ ] `requires` contains at least two ids that exist in `SKILLS_MAP`
 - [ ] The combo adds skills not already covered by the individual entries
 - [ ] Tests pass locally
@@ -276,8 +286,8 @@ Expected output when everything is correct:
 
 #### Fixing detection
 
-- [ ] Existing entry updated in `packages/autoskills/skills-map.mjs`
-- [ ] A test in `packages/autoskills/tests/detect.test.mjs` covers the fixed case
+- [ ] Existing entry updated in `packages/autoskills/skills-map.ts`
+- [ ] A test in `packages/autoskills/tests/detect.test.ts` covers the fixed case
 - [ ] Tests pass locally
 - [ ] PR title describes the fix: `fix: detect Tailwind from @tailwindcss/vite`
 

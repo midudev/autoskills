@@ -1,55 +1,57 @@
 import { describe, it } from "node:test";
 import { ok, strictEqual, throws } from "node:assert/strict";
-
-import { SKILLS_MAP, COMBO_SKILLS_MAP } from "../skills-map.mjs";
+import { SKILLS_MAP, COMBO_SKILLS_MAP } from "../skills-map.ts";
+import type { Technology, ComboSkill, DetectConfig } from "../skills-map.ts";
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function findDuplicates(values) {
-  const counts = new Map();
-
+function findDuplicates(values: string[]): string[] {
+  const counts = new Map<string, number>();
   for (const value of values) {
     counts.set(value, (counts.get(value) ?? 0) + 1);
   }
-
   return [...counts.entries()]
     .filter(([, count]) => count > 1)
     .map(([value]) => value)
     .sort();
 }
 
-function isNonEmptyString(value) {
+function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isValidSkillRef(skill) {
+function isValidSkillRef(skill: string): boolean {
   if (/^https?:\/\/\S+$/u.test(skill)) return true;
-
   const parts = skill.split("/");
   if (parts.length < 3) return false;
-
   const [owner, repo, ...rest] = parts;
-  return isNonEmptyString(owner) && isNonEmptyString(repo) && isNonEmptyString(rest.join("/"));
-}
-
-function hasAtLeastOneDetectSignal(detect) {
-  return Boolean(
-    detect.packages?.length ||
-    detect.packagePatterns?.length ||
-    detect.configFiles?.length ||
-    detect.gems?.length ||
-    detect.configFileContent,
+  return (
+    isNonEmptyString(owner) &&
+    isNonEmptyString(repo) &&
+    isNonEmptyString(rest.join("/"))
   );
 }
 
-function toConfigBlocks(value) {
+function hasAtLeastOneDetectSignal(detect: DetectConfig): boolean {
+  return Boolean(
+    detect.packages?.length ||
+      detect.packagePatterns?.length ||
+      detect.configFiles?.length ||
+      detect.gems?.length ||
+      detect.configFileContent,
+  );
+}
+
+function toConfigBlocks(
+  value: DetectConfig["configFileContent"],
+): Array<NonNullable<DetectConfig["configFileContent"]>> {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
 
 // ── Per-entry validators ──────────────────────────────────────
 
-function validateDetectConfig(tech) {
+function validateDetectConfig(tech: Technology): void {
   const { detect } = tech;
 
   ok(detect && typeof detect === "object", `[${tech.id}] detect must exist`);
@@ -115,10 +117,7 @@ function validateDetectConfig(tech) {
   }
 
   for (const block of toConfigBlocks(detect.configFileContent)) {
-    ok(
-      block && typeof block === "object",
-      `[${tech.id}] configFileContent block must be an object`,
-    );
+    ok(block && typeof block === "object", `[${tech.id}] configFileContent block must be an object`);
     ok(Array.isArray(block.patterns), `[${tech.id}] configFileContent.patterns must be an array`);
     ok(
       block.patterns.length > 0,
@@ -131,10 +130,10 @@ function validateDetectConfig(tech) {
       );
     }
 
-    if (!block.scanGradleLayout) {
+    if (!block.scanGradleLayout && !block.scanDotNetLayout) {
       ok(
         Array.isArray(block.files),
-        `[${tech.id}] configFileContent.files must be an array (or set scanGradleLayout: true for Gradle projects)`,
+        `[${tech.id}] configFileContent.files must be an array (or set scanGradleLayout: true for Gradle projects, scanDotNetLayout: true for .NET projects)`,
       );
       ok(
         block.files.length > 0,
@@ -150,7 +149,7 @@ function validateDetectConfig(tech) {
   }
 }
 
-function validateSkillList(ownerId, skills) {
+function validateSkillList(ownerId: string, skills: string[]): void {
   ok(Array.isArray(skills), `[${ownerId}] skills must be an array`);
 
   for (const skill of skills) {
@@ -169,7 +168,7 @@ function validateSkillList(ownerId, skills) {
   );
 }
 
-function validateTechnologyEntry(tech) {
+function validateTechnologyEntry(tech: Technology): void {
   ok(
     isNonEmptyString(tech.id),
     `technology.id is missing or empty — every SKILLS_MAP entry needs a stable unique id (e.g. "react", "nextjs", "prisma")`,
@@ -182,7 +181,7 @@ function validateTechnologyEntry(tech) {
   validateSkillList(tech.id, tech.skills);
 }
 
-function validateComboEntry(combo, technologyIds) {
+function validateComboEntry(combo: ComboSkill, technologyIds: Set<string>): void {
   ok(
     isNonEmptyString(combo.id),
     `combo.id is missing or empty — every COMBO_SKILLS_MAP entry needs a stable unique id (e.g. "nextjs-supabase")`,
@@ -255,13 +254,14 @@ describe("COMBO_SKILLS_MAP validation", () => {
 
 describe("validation gives actionable feedback on bad entries", () => {
   const VALID_SKILL = "owner/repo/skill-name";
-  const VALID_DETECT = { packages: ["some-package"] };
+  const VALID_DETECT: DetectConfig = { packages: ["some-package"] };
 
-  function expectsError(fn, pattern) {
-    throws(fn, (err) => {
+  function expectsError(fn: () => void, pattern: RegExp): void {
+    throws(fn, (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
       ok(
-        pattern.test(err.message),
-        `\nExpected error message matching: ${pattern}\nGot: "${err.message}"`,
+        pattern.test(message),
+        `\nExpected error message matching: ${pattern}\nGot: "${message}"`,
       );
       return true;
     });
@@ -270,7 +270,11 @@ describe("validation gives actionable feedback on bad entries", () => {
   it("reports missing technology id with a usage hint", () => {
     expectsError(
       () =>
-        validateTechnologyEntry({ name: "My Tech", detect: VALID_DETECT, skills: [VALID_SKILL] }),
+        validateTechnologyEntry({
+          name: "My Tech",
+          detect: VALID_DETECT,
+          skills: [VALID_SKILL],
+        } as Technology),
       /e\.g\.|stable.*id|unique.*id/i,
     );
   });
@@ -307,7 +311,7 @@ describe("validation gives actionable feedback on bad entries", () => {
         validateTechnologyEntry({
           id: "my-tech",
           name: "My Tech",
-          detect: { packagePatterns: ["not-a-regexp"] },
+          detect: { packagePatterns: ["not-a-regexp"] as unknown as RegExp[] },
           skills: [VALID_SKILL],
         }),
       /RegExp|\/pattern\//,
