@@ -1,0 +1,69 @@
+{
+  "version": "1.1.1",
+  "organization": "community",
+  "technology": "Zod",
+  "date": "January 2026",
+  "abstract": "Comprehensive schema validation guide for Zod in TypeScript applications, designed for AI agents and LLMs. Contains 43 rules across 8 categories, prioritized by impact from critical (schema definition, parsing) to incremental (performance, bundle optimization). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation.",
+  "references": [
+    "https://zod.dev/",
+    "https://zod.dev/v4",
+    "https://github.com/colinhacks/zod",
+    "https://zod.dev/packages/mini",
+    "https://www.totaltypescript.com/tutorials/zod",
+    "https://zod.dev/error-handling",
+    "https://zod.dev/api"
+  ],
+  "categories": [
+    {
+      "name": "Schema Definition",
+      "prefix": "schema",
+      "impact": "CRITICAL",
+      "ruleCount": 6
+    },
+    {
+      "name": "Parsing & Validation",
+      "prefix": "parse",
+      "impact": "CRITICAL",
+      "ruleCount": 6
+    },
+    {
+      "name": "Type Inference",
+      "prefix": "type",
+      "impact": "HIGH",
+      "ruleCount": 5
+    },
+    {
+      "name": "Error Handling",
+      "prefix": "error",
+      "impact": "HIGH",
+      "ruleCount": 5
+    },
+    {
+      "name": "Object Schemas",
+      "prefix": "object",
+      "impact": "MEDIUM-HIGH",
+      "ruleCount": 6
+    },
+    {
+      "name": "Schema Composition",
+      "prefix": "compose",
+      "impact": "MEDIUM",
+      "ruleCount": 5
+    },
+    {
+      "name": "Refinements & Transforms",
+      "prefix": "refine",
+      "impact": "MEDIUM",
+      "ruleCount": 5
+    },
+    {
+      "name": "Performance & Bundle",
+      "prefix": "perf",
+      "impact": "LOW-MEDIUM",
+      "ruleCount": 5
+    }
+  ],
+  "totalRules": 43,
+  "zodVersion": "4.x",
+  "category": "API"
+}

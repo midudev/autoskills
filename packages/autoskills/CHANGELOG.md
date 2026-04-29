@@ -1,5 +1,74 @@
 # Changelog
 
+## [0.3.4](https://github.com/midudev/autoskills/releases/tag/v0.3.4) (2026-04-28)
+
+### ✨ Features
+
+- feat(autoskills): add verbose install tracing [`cc409f8`](https://github.com/midudev/autoskills/commit/cc409f8)
+- feat(autoskills): fall back to main registry mirror [`f7d9155`](https://github.com/midudev/autoskills/commit/f7d9155)
+
+### 🐛 Bug Fixes
+
+- fix(release): normalize repository URL for changelog and release summary links [`832819e`](https://github.com/midudev/autoskills/commit/832819e)
+
+### 📦 Other Changes
+
+- style(autoskills): format code for improved readability [`a5a3f11`](https://github.com/midudev/autoskills/commit/a5a3f11)
+
+## [0.3.3](git+https://github.com/midudev/autoskills/releases/tag/v0.3.3) (2026-04-27)
+
+### ✨ Features
+
+- feat(autoskills): update registry URL handling and remove legacy codex support [`27205b5`](git+https://github.com/midudev/autoskills/commit/27205b5)
+- feat(autoskills): update package version and add new skills [`03e8e8f`](git+https://github.com/midudev/autoskills/commit/03e8e8f)
+- test(autoskills): add test for --clear-cache CLI option [`66b89cd`](git+https://github.com/midudev/autoskills/commit/66b89cd)
+- feat(autoskills): add clear cache option to CLI [`f8d7549`](git+https://github.com/midudev/autoskills/commit/f8d7549)
+- feat(autoskills): add cache directory management functions [`975bce3`](git+https://github.com/midudev/autoskills/commit/975bce3)
+- test(autoskills): add test for rejecting disallowed Archive.zip files [`2bcf41d`](git+https://github.com/midudev/autoskills/commit/2bcf41d)
+- feat(autoskills): implement file skipping logic for skill downloads [`bd0b5e7`](git+https://github.com/midudev/autoskills/commit/bd0b5e7)
+- feat(autoskills): prevent downloading disallowed skill files [`2dc068d`](git+https://github.com/midudev/autoskills/commit/2dc068d)
+- feat(autoskills): review flagged skills before syncing [`1edccd2`](git+https://github.com/midudev/autoskills/commit/1edccd2)
+- feat(autoskills): add retry functionality for failed skills [`e6c18dd`](git+https://github.com/midudev/autoskills/commit/e6c18dd)
+- docs(skills): add Dart discovery guidance [`289a854`](git+https://github.com/midudev/autoskills/commit/289a854)
+- feat(autoskills): polish curated registry install flow [`0c13719`](git+https://github.com/midudev/autoskills/commit/0c13719)
+- feat(autoskills): download registry skills on demand [`2411321`](git+https://github.com/midudev/autoskills/commit/2411321)
+- feat(autoskills): add local skills-registry with sync script [`e8c477f`](git+https://github.com/midudev/autoskills/commit/e8c477f)
+- fix(detect): add Podfile to SwiftUI detection for CocoaPods iOS projects [`d2352cd`](git+https://github.com/midudev/autoskills/commit/d2352cd)
+- feat(autoskills): add React Hook Form support [`7e91438`](git+https://github.com/midudev/autoskills/commit/7e91438)
+- feat: add support for .NET, C#, ASP.NET Core, Blazor, and Minimal API [`198ff70`](git+https://github.com/midudev/autoskills/commit/198ff70)
+- feat(autoskills): add Zod support [`3d05e4c`](git+https://github.com/midudev/autoskills/commit/3d05e4c)
+
+### 🐛 Bug Fixes
+
+- fix(autoskills): cache on-demand skill installs [`b7e77f3`](git+https://github.com/midudev/autoskills/commit/b7e77f3)
+- fix(autoskills): make registry sync more resilient [`336847b`](git+https://github.com/midudev/autoskills/commit/336847b)
+- fix(autoskills): update skill paths to match registry naming [`01b17c7`](git+https://github.com/midudev/autoskills/commit/01b17c7)
+- fix(skills-map): remove duplicate flask entry with empty skills array [`2a28292`](git+https://github.com/midudev/autoskills/commit/2a28292)
+- fix(detect): replace deleted Cloudflare building skills with agents-sdk [`43f0e6a`](git+https://github.com/midudev/autoskills/commit/43f0e6a)
+- fix(autoskills): stop generating CLAUDE.md, clean up existing sections [`986b05b`](git+https://github.com/midudev/autoskills/commit/986b05b)
+
+### 📦 Other Changes
+
+- chore(autoskills): remove benchmark script from package [`1be95c0`](git+https://github.com/midudev/autoskills/commit/1be95c0)
+- refactor(autoskills): update agent folder mappings and tests [`d22a330`](git+https://github.com/midudev/autoskills/commit/d22a330)
+- test(autoskills): refactor CLI tests to use temporary directory consistently [`572f31c`](git+https://github.com/midudev/autoskills/commit/572f31c)
+- test(autoskills): update test to reject disallowed .zip files before downloading [`617faec`](git+https://github.com/midudev/autoskills/commit/617faec)
+- refactor(autoskills): enhance file skipping logic to be case-insensitive [`1aee9c5`](git+https://github.com/midudev/autoskills/commit/1aee9c5)
+- refactor(autoskills): simplify file skipping logic in sync-skills.mjs [`c3ed116`](git+https://github.com/midudev/autoskills/commit/c3ed116)
+- chore(autoskills): update skill file listings and hashes in registry [`e875400`](git+https://github.com/midudev/autoskills/commit/e875400)
+- refactor(autoskills): clean up code formatting and improve readability [`affcd6f`](git+https://github.com/midudev/autoskills/commit/affcd6f)
+- chore(autoskills): refresh synced skill registry [`4abff24`](git+https://github.com/midudev/autoskills/commit/4abff24)
+- chore(autoskills): update skill metadata and improve documentation [`b3f68fd`](git+https://github.com/midudev/autoskills/commit/b3f68fd)
+- refactor(autoskills): rewrite installer to use local registry [`3a5045e`](git+https://github.com/midudev/autoskills/commit/3a5045e)
+- Merge pull request #97 from vishalpatel1994/fix/detect-ios-cocoapods-projects [`fe58c72`](git+https://github.com/midudev/autoskills/commit/fe58c72)
+- Merge pull request #99 from Prgm-code/fix/update-deleted-cloudflare-skills [`bd89809`](git+https://github.com/midudev/autoskills/commit/bd89809)
+- chore: format skills map for oxfmt [`04ba9bf`](git+https://github.com/midudev/autoskills/commit/04ba9bf)
+- refactor(autoskills): clean up SKILLS_MAP by removing redundant skills entries [`7f4cd58`](git+https://github.com/midudev/autoskills/commit/7f4cd58)
+- Merge pull request #85 from muhamadeissa92/support-aspnet-core [`0086d2b`](git+https://github.com/midudev/autoskills/commit/0086d2b)
+- refactor(tests): streamline CLAUDE.md test case formatting [`31430dd`](git+https://github.com/midudev/autoskills/commit/31430dd)
+- style: format code with oxfmt [`0149d2e`](git+https://github.com/midudev/autoskills/commit/0149d2e)
+- chore: reorder package.json fields (engines after devDependencies) [`d3a03f2`](git+https://github.com/midudev/autoskills/commit/d3a03f2)
+
 ## [0.2.7](git+https://github.com/midudev/autoskills/releases/tag/v0.2.7) (2026-04-09)
 
 ### ✨ Features

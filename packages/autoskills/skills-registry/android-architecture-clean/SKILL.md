@@ -1,0 +1,65 @@
+---
+name: "android-architecture-clean"
+description: "Apply clean architecture boundaries, use cases, repositories, and lifecycle-aware presentation models in Android projects."
+metadata:
+  version: "0.1.0"
+  category: "foundations"
+  tags: ["android", "architecture", "clean-architecture", "layers"]
+  triggers:
+    include: ["clean architecture in android", "split use cases and repositories", "untangle presentation and data layer", "android architecture cleanup", "mvvm to cleaner boundaries"]
+    exclude: ["retrofit config only", "compose animation tweak", "play store release only"]
+  owners: ["@android-agent-skills/maintainers"]
+  test_targets: ["examples/orbittasks-compose", "examples/orbittasks-xml", "benchmarks/triggers.jsonl"]
+---
+# Android Architecture Clean
+
+## When To Use
+- Use this skill when the request is about: clean architecture in android, split use cases and repositories, untangle presentation and data layer.
+- Primary outcome: Apply clean architecture boundaries, use cases, repositories, and lifecycle-aware presentation models in Android projects.
+- Handoff skills when the scope expands:
+- `android-modularization`
+- `android-state-management`
+
+## Workflow
+1. Map the request to the current Android stack, module boundaries, and minimum supported API level.
+2. Inspect the existing implementation for implicit assumptions, duplicate helpers, and outdated patterns.
+3. Apply the smallest change that improves correctness, readability, and long-term maintainability.
+4. Validate the result against the relevant showcase app path and repo benchmarks.
+5. Hand off adjacent work to the next specialized skill only after the core foundation is stable.
+
+## Guardrails
+- Prefer official Android and Kotlin guidance over custom local conventions when they conflict.
+- Keep public APIs boring and explicit; avoid clever abstractions that hide Android lifecycle costs.
+- Do not mix architectural cleanup with product behavior changes unless the request explicitly needs both.
+- Document any compatibility constraints that will affect old modules or generated code.
+
+## Anti-Patterns
+- Sprinkling helpers across modules without a clear ownership boundary.
+- Introducing framework-specific code into pure domain or data layers.
+- Refactoring every adjacent file when only one contract needed to change.
+- Leaving migration notes implied instead of writing them down.
+
+## Examples
+### Happy path
+- Scenario: Separate OrbitTasks feature state, use case, and repository contracts.
+- Command: `cd examples/orbittasks-compose && ./gradlew :app:testDebugUnitTest`
+
+### Edge case
+- Scenario: Keep XML activity actions thin while preserving saved-state behavior.
+- Command: `cd examples/orbittasks-xml && ./gradlew :app:testDebugUnitTest`
+
+### Failure recovery
+- Scenario: Catch trigger confusion against modularization and state-management requests.
+- Command: `python3 scripts/eval_triggers.py --skill android-architecture-clean`
+
+## Done Checklist
+- The implementation path is explicit, minimal, and tied to the right Android surface.
+- Relevant example commands and benchmark prompts have been exercised or updated.
+- Handoffs to adjacent skills are documented when the request crosses boundaries.
+- Official references cover the chosen pattern and the main migration or troubleshooting path.
+
+## Official References
+- [https://developer.android.com/topic/architecture](https://developer.android.com/topic/architecture)
+- [https://developer.android.com/topic/architecture/recommendations](https://developer.android.com/topic/architecture/recommendations)
+- [https://developer.android.com/jetpack/guide](https://developer.android.com/jetpack/guide)
+- [https://developer.android.com/topic/libraries/architecture/viewmodel](https://developer.android.com/topic/libraries/architecture/viewmodel)

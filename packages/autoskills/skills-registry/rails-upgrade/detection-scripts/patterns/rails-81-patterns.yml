@@ -1,0 +1,99 @@
+version: "8.1"
+description: "Breaking change patterns for Rails 8.0 → 8.1 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "SSL configuration commented"
+      pattern: "#.*force_ssl|#.*assume_ssl"
+      exclude: ""
+      search_paths:
+        - "config/environments/production.rb"
+      explanation: "Rails 8.1 comments out SSL config by default (assumes Kamal handles it)"
+      fix: "Uncomment force_ssl and assume_ssl if NOT using Kamal"
+      variable_name: "SSL_COMMENTED"
+
+    - name: "pool to max_connections"
+      pattern: "pool:"
+      exclude: "max_connections"
+      search_paths:
+        - "config/database.yml"
+      explanation: "Rails 8.1 renames 'pool:' to 'max_connections:' in database.yml"
+      fix: "Replace pool: with max_connections: in all database configurations"
+      variable_name: "POOL_RENAME"
+
+    - name: "bundler-audit required"
+      pattern: "bundler-audit"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "bin/"
+        - "config/"
+      explanation: "Rails 8.1 requires bundler-audit for security scanning"
+      fix: "Add bundler-audit gem and bin/brakeman script"
+      variable_name: "BUNDLER_AUDIT"
+
+  medium_priority:
+    - name: "Semicolon query separator"
+      pattern: "param.*;"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 8.1 removes semicolon as query parameter separator"
+      fix: "Replace semicolons (;) with ampersands (&) in query strings"
+      variable_name: "SEMICOLON_SEPARATOR"
+
+    - name: "Sidekiq adapter built-in"
+      pattern: "sidekiq-rails|activejob-sidekiq"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+      explanation: "Rails 8.1 removes built-in Sidekiq adapter"
+      fix: "Use sidekiq gem directly (6.5+) which includes its own adapter"
+      variable_name: "SIDEKIQ_ADAPTER"
+
+    - name: "SuckerPunch adapter"
+      pattern: "sucker_punch"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - "config/"
+      explanation: "Rails 8.1 removes SuckerPunch adapter"
+      fix: "Update sucker_punch gem to 3.2+ which includes its own adapter"
+      variable_name: "SUCKER_PUNCH"
+
+    - name: "Azure storage service"
+      pattern: "azure_storage|microsoft_azure"
+      exclude: ""
+      search_paths:
+        - "config/storage.yml"
+        - "Gemfile"
+      explanation: "Rails 8.1 removes Azure storage service adapter"
+      fix: "Switch to S3, GCS, or Disk storage. Or use azure-storage gem directly."
+      variable_name: "AZURE_STORAGE"
+
+  low_priority:
+    - name: "MySQL unsigned types"
+      pattern: "unsigned:\\s*true"
+      exclude: ""
+      search_paths:
+        - "db/migrate/"
+      explanation: "MySQL unsigned integer types deprecation notice in Rails 8.1"
+      fix: "Use check constraints instead of unsigned integers"
+      variable_name: "MYSQL_UNSIGNED"
+
+    - name: "gitignore config keys"
+      pattern: "\\.key$"
+      exclude: "/config/"
+      search_paths:
+        - ".gitignore"
+      explanation: "Rails 8.1 changes .gitignore to use /config/*.key"
+      fix: "Update .gitignore to use /config/*.key instead of *.key"
+      variable_name: "GITIGNORE_KEYS"
+
+dependencies:
+  bundler_audit:
+    check: true
+    gem_name: "bundler-audit"
+    message: "Rails 8.1 requires bundler-audit for security scanning"
+    url: "https://github.com/rubysec/bundler-audit"

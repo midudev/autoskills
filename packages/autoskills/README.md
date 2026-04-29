@@ -46,7 +46,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | ----------------- | ----------------------------------------------------- |
 | `-y`, `--yes`     | Skip confirmation prompt, install all detected skills |
 | `--dry-run`       | Show detected skills without installing anything      |
-| `-v`, `--verbose` | Show error details if any installation fails          |
+| `-v`, `--verbose` | Show install trace and error details                  |
 | `-h`, `--help`    | Show help message                                     |
 
 ## Supported Technologies

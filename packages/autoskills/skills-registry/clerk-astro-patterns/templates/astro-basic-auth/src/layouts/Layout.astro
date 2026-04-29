@@ -1,0 +1,24 @@
+---
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/astro/components"
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Clerk + Astro</title>
+  </head>
+  <body>
+    <header>
+      <SignedOut>
+        <SignInButton mode="modal" />
+        <SignUpButton mode="modal" />
+      </SignedOut>
+      <SignedIn>
+        <p>You are signed in!</p>
+      </SignedIn>
+    </header>
+    <slot />
+  </body>
+</html>

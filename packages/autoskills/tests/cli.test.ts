@@ -1,7 +1,8 @@
 import { describe, it } from "node:test";
 import { ok } from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.ts";
 
 const CLI_PATH = resolve(import.meta.dirname!, "..", "index.mjs");
@@ -16,10 +17,13 @@ function run(args: string[] = [], cwd: string = process.cwd()): string {
 }
 
 describe("CLI", () => {
+  const tmp = useTmpDir();
+
   it("shows help with --help", () => {
     const output = run(["--help"]);
     ok(output.includes("autoskills"));
     ok(output.includes("--dry-run"));
+    ok(output.includes("--clear-cache"));
     ok(output.includes("--yes"));
     ok(output.includes("--agent"));
   });
@@ -27,6 +31,25 @@ describe("CLI", () => {
   it("shows help with -h", () => {
     const output = run(["-h"]);
     ok(output.includes("autoskills"));
+  });
+
+  it("clears the autoskills cache with --clear-cache", () => {
+    const cacheDir = join(tmp.path, "cache");
+    const prevCacheDir = process.env.AUTOSKILLS_CACHE_DIR;
+
+    process.env.AUTOSKILLS_CACHE_DIR = cacheDir;
+    try {
+      writeFile(tmp.path, "cache/bundle/SKILL.md", "# cached");
+
+      const output = run(["--clear-cache"], tmp.path);
+
+      ok(output.includes("Cleared autoskills cache"));
+      ok(output.includes(cacheDir));
+      ok(!existsSync(cacheDir));
+    } finally {
+      if (prevCacheDir === undefined) delete process.env.AUTOSKILLS_CACHE_DIR;
+      else process.env.AUTOSKILLS_CACHE_DIR = prevCacheDir;
+    }
   });
 
   describe("--dry-run", () => {
@@ -183,7 +206,7 @@ describe("CLI", () => {
       writeJson(tmp.path, "wrangler.json", { name: "my-worker", ai: { binding: "AI" } });
       const output = run(["--dry-run"], tmp.path);
       ok(output.includes("Cloudflare AI"));
-      ok(output.includes("building-ai-agent-on-cloudflare"));
+      ok(output.includes("agents-sdk"));
     });
 
     it("detects Cloudflare Agents from agents package", () => {
@@ -191,7 +214,7 @@ describe("CLI", () => {
       const output = run(["--dry-run"], tmp.path);
       ok(output.includes("Cloudflare Agents"));
       ok(output.includes("agents-sdk"));
-      ok(output.includes("building-mcp-server-on-cloudflare"));
+      ok(output.includes("sandbox-sdk"));
     });
 
     it("detects Cloudflare + Vite combo for vinext", () => {

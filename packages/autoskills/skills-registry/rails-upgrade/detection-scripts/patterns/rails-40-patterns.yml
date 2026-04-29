@@ -1,0 +1,346 @@
+version: "4.0"
+description: "Breaking change patterns for Rails 3.2 → 4.0 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "attr_accessible usage"
+      pattern: "attr_accessible"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+        - "lib/"
+      explanation: "Rails 4.0 replaces attr_accessible with Strong Parameters in controllers"
+      fix: "Create *_params methods in controllers using params.require(:model).permit(:attrs), then remove attr_accessible from models"
+      variable_name: "ATTR_ACCESSIBLE"
+
+    - name: "attr_protected usage"
+      pattern: "attr_protected"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+        - "lib/"
+      explanation: "Rails 4.0 replaces attr_protected with Strong Parameters in controllers"
+      fix: "Create *_params methods in controllers with explicit permit lists, then remove attr_protected from models"
+      variable_name: "ATTR_PROTECTED"
+
+    - name: "require strong_parameters"
+      pattern: "require.*strong_parameters"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+        - "config/"
+      explanation: "The strong_parameters gem is built into Rails 4.0 — require calls will fail"
+      fix: "Remove require 'strong_parameters' calls entirely"
+      variable_name: "REQUIRE_STRONG_PARAMS"
+
+    - name: "Scope without lambda"
+      pattern: "scope\\s+:\\w+\\s*,\\s*where"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 requires all scopes to use a lambda"
+      fix: "Change scope :name, where(...) to scope :name, -> { where(...) }"
+      variable_name: "SCOPE_WITHOUT_LAMBDA"
+
+    - name: "default_scope without block"
+      pattern: "default_scope\\s+(where|order|:order)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 requires default_scope to use a block"
+      fix: "Change default_scope where(...) to default_scope { where(...) }"
+      variable_name: "DEFAULT_SCOPE_WITHOUT_BLOCK"
+
+    - name: "Association :conditions option"
+      pattern: "(has_many|has_one|belongs_to|has_and_belongs_to_many).*:?conditions(:|\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 removed :conditions from associations — use a lambda with where() instead"
+      fix: "Move conditions into a lambda: has_many :items, -> { where(active: true) }"
+      variable_name: "ASSOCIATION_CONDITIONS"
+
+    - name: "Association :order option"
+      pattern: "(has_many|has_one|belongs_to|has_and_belongs_to_many).*[^_]:?order(:|\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 removed :order from associations — use a lambda with order() instead"
+      fix: "Move order into a lambda: has_many :items, -> { order('position ASC') }"
+      variable_name: "ASSOCIATION_ORDER"
+
+    - name: "Association :extend option"
+      pattern: "(has_many|has_one|belongs_to|has_and_belongs_to_many).*:?extend(:|\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 removed :extend from associations — use extending() inside a lambda"
+      fix: "Move extend into a lambda: has_many :items, -> { extending SomeExtension }"
+      variable_name: "ASSOCIATION_EXTEND"
+
+    - name: "Association :uniq option"
+      pattern: "(has_many|has_and_belongs_to_many).*:?uniq(:|\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 removed :uniq from associations — use a lambda with distinct"
+      fix: "Move uniq into a lambda: has_many :items, -> { distinct }, through: :joins"
+      variable_name: "ASSOCIATION_UNIQ"
+
+    - name: "Association :finder_sql option"
+      pattern: ":?finder_sql(:|\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 deprecated :finder_sql with no direct replacement"
+      fix: "Rewrite using standard associations with scopes or custom query methods"
+      variable_name: "FINDER_SQL"
+
+    - name: "Dynamic finders (find_all_by_*)"
+      pattern: "find_all_by_"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Dynamic finders like find_all_by_* are deprecated in Rails 4.0"
+      fix: "Replace find_all_by_column(val) with where(column: val)"
+      variable_name: "FIND_ALL_BY"
+
+    - name: "Dynamic finders (find_or_create_by_*)"
+      pattern: "find_or_create_by_"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Dynamic finders like find_or_create_by_* are deprecated in Rails 4.0"
+      fix: "Replace find_or_create_by_column(val) with find_or_create_by(column: val)"
+      variable_name: "FIND_OR_CREATE_BY"
+
+    - name: "Dynamic finders (find_or_initialize_by_*)"
+      pattern: "find_or_initialize_by_"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Dynamic finders like find_or_initialize_by_* are deprecated in Rails 4.0"
+      fix: "Replace find_or_initialize_by_column(val) with find_or_initialize_by(column: val)"
+      variable_name: "FIND_OR_INITIALIZE_BY"
+
+    - name: "Association :readonly option on through"
+      pattern: "(has_many|has_and_belongs_to_many).*:?readonly(:|\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.0 removed :readonly from has_many :through associations"
+      fix: "Remove the readonly option — it is no longer supported"
+      variable_name: "ASSOCIATION_READONLY"
+
+    - name: "Ruby 1.8 version requirement"
+      pattern: "ruby.*['\"]1\\.8"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+        - ".ruby-version"
+      explanation: "Rails 4.0 requires Ruby 1.9.3+ (2.0+ recommended) — it will not boot on Ruby 1.8"
+      fix: "Upgrade Ruby to 1.9.3+ (2.1+ recommended)"
+      variable_name: "RUBY_VERSION"
+
+    - name: "Route match without HTTP method"
+      pattern: "^\\s*match\\s+['\"/]"
+      exclude: "via:"
+      search_paths:
+        - "config/routes.rb"
+        - "config/routes/"
+      explanation: "Rails 4.0 requires match routes to specify an HTTP method via: option"
+      fix: "Add via: :get (or appropriate method) or replace with get/post/put/patch/delete helper"
+      variable_name: "MATCH_WITHOUT_VIA"
+
+  medium_priority:
+    - name: "rescue_action method"
+      pattern: "def rescue_action"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+        - "lib/"
+      explanation: "rescue_action was removed in Rails 4.0 with no deprecation warning"
+      fix: "Replace with rescue_from ExceptionClass do |e| ... end"
+      variable_name: "RESCUE_ACTION"
+
+    - name: "ActiveRecord Observers"
+      pattern: "ActiveRecord::Observer|observer.*:.*\\w+_observer|config\\.active_record\\.observers"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "config/"
+      explanation: "ActiveRecord Observers were extracted from Rails 4.0"
+      fix: "Add gem 'rails-observers' to Gemfile"
+      variable_name: "OBSERVERS"
+
+    - name: "ActionController Sweepers"
+      pattern: "cache_sweeper|ActionController::Caching::Sweeper|< ActionController::Caching::Sweeper"
+      exclude: ""
+      search_paths:
+        - "app/"
+      explanation: "Sweepers were extracted from Rails 4.0"
+      fix: "Add gem 'rails-observers' to Gemfile (includes sweepers)"
+      variable_name: "SWEEPERS"
+
+    - name: "Action caching (caches_page/caches_action)"
+      pattern: "caches_page|caches_action"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "Page and action caching were extracted from Rails 4.0"
+      fix: "Add gem 'actionpack-action_caching' to Gemfile"
+      variable_name: "ACTION_CACHING"
+
+    - name: "ActiveResource usage"
+      pattern: "ActiveResource|< ActiveResource::Base"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "ActiveResource was extracted from Rails 4.0"
+      fix: "Add gem 'activeresource' to Gemfile"
+      variable_name: "ACTIVE_RESOURCE"
+
+    - name: "vendor/plugins directory"
+      pattern: ""
+      exclude: ""
+      search_paths:
+        - "vendor/plugins/"
+      explanation: "Rails 4.0 dropped support for vendor/plugins"
+      fix: "Move plugin code to lib/ or convert to a gem"
+      variable_name: "VENDOR_PLUGINS"
+
+    - name: "cache_timestamp_format or external cache_key storage"
+      pattern: "cache_timestamp_format|cache_key"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+        - "config/"
+      explanation: "Rails 4.0 changed cache_timestamp_format from :number to :nsec — stored cache keys may no longer match"
+      fix: "Invalidate stored cache keys after upgrading, or set self.cache_timestamp_format = :number to preserve old format"
+      variable_name: "CACHE_KEY_FORMAT"
+
+    - name: "ActiveSupport::BufferedLogger"
+      pattern: "ActiveSupport::BufferedLogger"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+        - "config/"
+      explanation: "ActiveSupport::BufferedLogger was renamed to ActiveSupport::Logger in Rails 4.0"
+      fix: "Replace ActiveSupport::BufferedLogger with ActiveSupport::Logger"
+      variable_name: "BUFFERED_LOGGER"
+
+    - name: "config.assets.compress"
+      pattern: "config\\.assets\\.compress"
+      exclude: ""
+      search_paths:
+        - "config/environments/"
+      explanation: "config.assets.compress was removed in Rails 4.0"
+      fix: "Replace with config.assets.js_compressor = :uglifier and config.assets.css_compressor = :sass"
+      variable_name: "ASSETS_COMPRESS"
+
+    - name: "config.paths[\"config/routes\"] (without .rb)"
+      pattern: "config\\.paths\\[.config/routes.\\]"
+      exclude: "routes.rb"
+      search_paths:
+        - "config/"
+        - "lib/"
+      explanation: "Rails 4.0 changed the config path key from 'config/routes' to 'config/routes.rb'"
+      fix: "Change config.paths[\"config/routes\"] to config.paths[\"config/routes.rb\"]"
+      variable_name: "CONFIG_ROUTES_PATH"
+
+    - name: "assign_attributes with options hash"
+      pattern: "assign_attributes\\(.*,\\s*\\w+:"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.0 removed the options argument from assign_attributes"
+      fix: "Remove the second argument (e.g., without_protection: true)"
+      variable_name: "ASSIGN_ATTRIBUTES_OPTIONS"
+
+    - name: "request.env.merge! in tests"
+      pattern: "request\\.env\\.merge!"
+      exclude: ""
+      search_paths:
+        - "spec/"
+        - "test/"
+      explanation: "Rails 4.0 changed test request header API from request.env to request.headers"
+      fix: "Replace request.env.merge!(headers) with request.headers.merge!(headers)"
+      variable_name: "REQUEST_ENV_MERGE"
+
+    - name: "_run_validation_callbacks"
+      pattern: "_run_validation_callbacks"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Internal method _run_validation_callbacks was replaced in Rails 4.0"
+      fix: "Replace with run_callbacks(:validation)"
+      variable_name: "RUN_VALIDATION_CALLBACKS"
+
+    - name: "select('distinct ...').pluck"
+      pattern: "select\\(.*distinct.*\\)\\.pluck"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.0 introduced .distinct as the preferred way to get distinct results"
+      fix: "Replace .select('distinct column').pluck(:column) with .distinct.pluck(:column)"
+      variable_name: "SELECT_DISTINCT_PLUCK"
+
+    - name: "ActiveRecord::ImmutableRelation risk"
+      pattern: "\\.count\\(['\"]distinct"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.0 raises ActiveRecord::ImmutableRelation when calling count with a string on a loaded/modified relation"
+      fix: "Replace .count('distinct column') with .distinct.count"
+      variable_name: "IMMUTABLE_RELATION"
+
+    - name: "Fixture dynamic dates without string cast"
+      pattern: "<%=.*\\.(ago|from_now|since|until).*%>"
+      exclude: "to_s"
+      search_paths:
+        - "spec/fixtures/"
+        - "test/fixtures/"
+      explanation: "Rails 4.0 is stricter about date parsing in YAML fixtures"
+      fix: "Cast dynamic dates to strings: <%= 3.days.ago.to_s(:db) %>"
+      variable_name: "FIXTURE_DATES"
+
+dependencies:
+  protected_attributes:
+    check: false
+    gem_name: "protected_attributes"
+    message: "Temporary bridge gem for attr_accessible — migrate to Strong Parameters then remove"
+    url: "https://github.com/rails/protected_attributes"
+
+  rails_observers:
+    check: false
+    gem_name: "rails-observers"
+    message: "Required if using ActiveRecord Observers or Sweepers"
+    url: "https://github.com/rails/rails-observers"
+
+  activerecord_deprecated_finders:
+    check: false
+    gem_name: "activerecord-deprecated_finders"
+    message: "Temporary bridge gem for find_all_by_* — migrate to where/find_by then remove"
+    url: "https://github.com/rails/activerecord-deprecated_finders"
+
+  actionpack_action_caching:
+    check: false
+    gem_name: "actionpack-action_caching"
+    message: "Required if using caches_page or caches_action"
+    url: "https://github.com/rails/actionpack-action_caching"
+
+  activeresource:
+    check: false
+    gem_name: "activeresource"
+    message: "Required if using ActiveResource"
+    url: "https://github.com/rails/activeresource"

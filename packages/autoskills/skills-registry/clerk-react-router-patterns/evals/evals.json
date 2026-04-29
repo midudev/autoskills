@@ -1,0 +1,83 @@
+{
+  "skill_name": "clerk-react-router-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i'm building a react router v7 app and need to add clerk authentication. show me how to set up rootAuthLoader and ClerkApp in root.tsx, plus the middleware so getAuth works in nested loaders.",
+      "expected_output": "Sets up rootAuthLoader in root.tsx loader, wraps default export with ClerkApp, exports clerkMiddleware as middleware",
+      "scaffold": "react-router-basic-auth",
+      "expectations": [
+        "Calls rootAuthLoader(args) inside the root.tsx loader function",
+        "Wraps the root component with ClerkApp from @clerk/react-router",
+        "Exports middleware array with clerkMiddleware() from @clerk/react-router/server",
+        "Imports rootAuthLoader and clerkMiddleware from @clerk/react-router/server",
+        "Does NOT use @clerk/nextjs imports"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i have a react router app with clerk. i need to protect the /dashboard route so only signed-in users can access it. redirect unauthenticated users to /sign-in.",
+      "expected_output": "Uses getAuth in dashboard loader, throws redirect to /sign-in when userId is falsy",
+      "scaffold": "react-router-basic-auth",
+      "expectations": [
+        "Imports getAuth from @clerk/react-router/server",
+        "Calls getAuth(args) inside the dashboard loader",
+        "Throws redirect('/sign-in') when userId is falsy",
+        "Returns data from the loader for authenticated users",
+        "Does NOT use middleware-only auth without checking in the loader"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i need a form action in react router that saves data to the database. the action should only run for authenticated users and associate the data with their userId.",
+      "expected_output": "Uses getAuth in action function, checks userId, throws 401 if missing, uses userId when saving",
+      "scaffold": "react-router-basic-auth",
+      "expectations": [
+        "Imports getAuth from @clerk/react-router/server",
+        "Calls getAuth(args) at the top of the action function",
+        "Returns or throws a 401/403 response when userId is missing",
+        "Uses userId when writing data to the database",
+        "Reads form data from args.request.formData()"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "i want to show the current user's name and avatar in my react router app's navigation. the nav is a client component. how do i access user data?",
+      "expected_output": "Uses useUser hook from @clerk/react-router in the nav component, shows user.firstName and user.imageUrl",
+      "scaffold": "react-router-basic-auth",
+      "expectations": [
+        "Imports useUser from @clerk/react-router (not @clerk/nextjs)",
+        "Destructures user from useUser()",
+        "Handles the case where user is null/undefined (loading state)",
+        "Displays user.firstName or user.fullName",
+        "Does NOT fetch user data in a loader just to display it in a client nav"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i need to load org-scoped data in a react router loader. if the user is not in an organization, redirect them to /select-org. if they are, fetch data for that org.",
+      "expected_output": "Calls getAuth, checks orgId, redirects to /select-org if missing, uses orgId to fetch org data",
+      "scaffold": "react-router-basic-auth",
+      "expectations": [
+        "Calls getAuth(args) and destructures both userId and orgId",
+        "Throws redirect('/select-org') when orgId is falsy",
+        "Uses orgId to scope the data fetch",
+        "Also checks userId to catch fully unauthenticated users",
+        "Returns the fetched org data from the loader"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "add an organization switcher to the dashboard nav so users can switch between their organizations. after switching, they should stay on the dashboard.",
+      "expected_output": "Renders OrganizationSwitcher with afterSelectOrganizationUrl pointing to /dashboard",
+      "scaffold": "react-router-basic-auth",
+      "expectations": [
+        "Imports OrganizationSwitcher from @clerk/react-router",
+        "Sets afterSelectOrganizationUrl='/dashboard' or equivalent",
+        "Places the component in a nav or header component",
+        "Does NOT break existing authentication logic",
+        "Does NOT import from @clerk/nextjs"
+      ]
+    }
+  ]
+}

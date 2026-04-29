@@ -1,0 +1,126 @@
+{
+	"skill_name": "clerk-orgs",
+	"evals": [
+		{
+			"id": 1,
+			"prompt": "i have a basic saas app with clerk auth. i need to add organization support so users can create teams and switch between them. the dashboard should be org-scoped so each team sees their own data. add an org switcher to the dashboard.",
+			"expected_output": "Adds OrganizationSwitcher component, makes dashboard org-aware using orgId from auth(), adds org-scoped data access pattern",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Imports and renders OrganizationSwitcher from @clerk/nextjs",
+				"Uses orgId from auth() in the dashboard to scope data to the current organization",
+				"Handles the case where no organization is selected (prompts user to select or create one)",
+				"Does NOT remove existing user authentication logic",
+				"Dashboard page checks both userId and orgId"
+			]
+		},
+		{
+			"id": 2,
+			"prompt": "my app needs role-based access control. i have an admin settings page that only org admins should access. regular members should see the dashboard but not settings. use clerk's org roles to enforce this.",
+			"expected_output": "Adds orgRole check to settings page, redirects non-admins, uses auth() to get role",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Uses has({ role: 'org:admin' }) from auth() rather than comparing orgRole string directly",
+				"Destructures has from the result of await auth() (not from useAuth or a non-awaited call)",
+				"Does NOT hardcode role strings without using Clerk's role system",
+				"If it uses a permission check, uses a canonical System Permission slug like org:sys_memberships:manage, NOT invented slugs like org:manage_members, org:create, or org:update_metadata",
+				"Settings page shows org-level configuration options",
+				"Regular members can still access the dashboard"
+			]
+		},
+		{
+			"id": 3,
+			"prompt": "i need to add a members page where org admins can see who is in their organization and invite new members. show each member's role and let admins manage the team.",
+			"expected_output": "Creates members page with OrganizationMembers component or custom member list using clerkClient",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Creates a members page at a logical route (e.g. /dashboard/members or /org/members)",
+				"Shows organization members with their roles",
+				"Provides ability to invite new members (InviteMember component or invitation API)",
+				"Only accessible to users with appropriate org permissions",
+				"Uses @clerk/nextjs components or clerkClient for member data"
+			]
+		},
+		{
+			"id": 4,
+			"prompt": "users are confused because after signing up they land on the dashboard without selecting an organization. i need a flow where after sign-up, users must either create or join an org before they can access the app.",
+			"expected_output": "Adds organization selection flow after sign-up, uses afterSignUpUrl or custom redirect logic",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Adds a post-signup organization selection step",
+				"Uses OrganizationSwitcher or a custom org creation page",
+				"Redirects users without an active org to the org selection page",
+				"Updates middleware or dashboard to enforce org requirement",
+				"Does NOT break existing sign-in flow for users who already have orgs"
+			]
+		},
+		{
+			"id": 5,
+			"prompt": "our enterprise customer wants their employees to sign in via their company's SAML SSO provider. how do i configure clerk organizations to support enterprise SSO for a specific org?",
+			"expected_output": "Explains Enterprise SSO configuration steps, mentions dashboard setup, domain verification, enterprise_sso strategy",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Mentions configuring Enterprise SSO in the Clerk Dashboard for the specific organization",
+				"Explains that domain verification via DNS TXT record is required before SSO-signed users auto-join the org",
+				"References user.enterpriseAccounts (NOT user.samlAccounts) to access SSO session data",
+				"Uses strategy: 'enterprise_sso' (NOT 'saml')",
+				"If accessing provider metadata, reads it from user.enterpriseAccounts[i].enterpriseConnection?.provider (NOT directly from user.enterpriseAccounts[i].provider — that field does not exist on EnterpriseAccount)",
+				"Does NOT suggest implementing SAML from scratch (Clerk handles the protocol)"
+			]
+		},
+		{
+			"id": 6,
+			"prompt": "i need a custom permission called 'billing:manage' that only certain org members should have. show me how to create it and check it in my dashboard billing route so only authorized members can access it.",
+			"expected_output": "Uses has() from auth() to check custom permission, mentions creating custom role in Dashboard",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Uses has({ permission: 'org:billing:manage' }) or similar from auth() to check the custom permission",
+				"Mentions creating the custom role and permission in Clerk Dashboard",
+				"Protects the billing route by redirecting unauthorized users",
+				"Shows the permission check in a server component or middleware",
+				"Does NOT hardcode role names as the only check method (uses permissions API)"
+			]
+		},
+		{
+			"id": 7,
+			"prompt": "i want org admins to invite new members from inside the app. show an invitation form where they enter an email and role, and list pending invitations.",
+			"expected_output": "Creates invitation form using clerkClient or OrganizationSwitcher, lists pending invitations",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Checks the caller has invite permission using has({ permission: 'org:sys_memberships:manage' }) before sending invitations",
+				"Calls clerk.organizations.createOrganizationInvitation with organizationId, inviterUserId (the calling userId), emailAddress, role, and redirectUrl",
+				"Does NOT omit inviterUserId — it is required for human-initiated invitations",
+				"Lists pending invitations by calling getOrganizationInvitationList with status array",
+				"If filtering status, uses only the canonical values: 'pending', 'accepted', 'revoked', 'expired' (not made-up states)",
+				"Only authorized users (admins or members with org:sys_memberships:manage) can send invitations",
+				"Uses await clerkClient() (not clerkClient directly) to obtain the client instance before making API calls"
+			]
+		},
+		{
+			"id": 9,
+			"prompt": "i enabled organizations in clerk but my b2c users can't access the pricing page anymore. OrganizationSwitcher also doesn't show 'Personal account'. what happened?",
+			"expected_output": "Membership required is the default mode since Aug 22, 2025 — it disables personal accounts. B2C + B2B coexistence needs Membership optional.",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Identifies that Membership required is the DEFAULT mode in Clerk Organizations (since Aug 22, 2025)",
+				"Explains that Membership required disables personal accounts, so users without an active org are excluded from <PricingTable />, <OrganizationSwitcher />'s personal tab, and anything tied to user-level identity",
+				"Directs user to Dashboard → Organizations settings → toggle to Membership optional",
+				"Does NOT suggest changing code before flipping the Dashboard toggle",
+				"Does NOT claim this requires deleting and re-enabling Organizations"
+			]
+		},
+		{
+			"id": 8,
+			"prompt": "i set up billing with clerk and now my org admin can't access the settings page even though they have the admin role. has({ permission: 'org:settings:manage' }) returns false. what's wrong?",
+			"expected_output": "When Billing is enabled, permissions are gated by plan features. The Feature for that permission must be included in the org's active Plan.",
+			"scaffold": "nextjs-basic-auth",
+			"expectations": [
+				"Identifies that Billing gates permissions at the feature level",
+				"Explains that has({ permission }) returns false if the Feature is not in the active Plan",
+				"Directs user to check Dashboard > Billing > Plans > Features",
+				"Notes this happens even when the user has the permission via their role",
+				"Suggests ensuring the required Feature is attached to the org's Plan"
+			]
+		}
+	]
+}

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -eu
+
+staged_paths="$(mktemp)"
+
+cleanup() {
+  rm -f "$staged_paths"
+}
+
+trap cleanup EXIT
+
+git diff --cached --name-only -z --diff-filter=ACMR > "$staged_paths"
+
+if [ ! -s "$staged_paths" ]; then
+  exit 0
+fi
+
+echo "Formatting staged files..."
+xargs -0 pnpm run fmt:staged -- < "$staged_paths"
+xargs -0 git add -- < "$staged_paths"

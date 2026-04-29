@@ -1,0 +1,96 @@
+{
+  "skill_name": "clerk-astro-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i'm adding clerk to my astro app. set up the middleware so the /dashboard and /settings routes are protected and redirect unauthenticated users to /sign-in.",
+      "expected_output": "Creates src/middleware.ts with clerkMiddleware, createRouteMatcher matching /dashboard and /settings, redirects via auth().redirectToSignIn()",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Creates src/middleware.ts that exports onRequest",
+        "Uses clerkMiddleware from @clerk/astro/server",
+        "Uses createRouteMatcher to match /dashboard and /settings routes",
+        "Calls auth().redirectToSignIn() when route is protected and user is not signed in",
+        "Calls next() for unprotected routes"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i have an astro SSR page at /dashboard. i need to get the current user's id and redirect to /sign-in if they're not authenticated.",
+      "expected_output": "Uses Astro.locals.auth() to get userId, calls Astro.redirect('/sign-in') when userId is falsy",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Calls Astro.locals.auth() to get auth data in the frontmatter",
+        "Destructures userId from the auth result",
+        "Calls return Astro.redirect('/sign-in') when userId is falsy",
+        "Page has output: server or is not marked as prerender",
+        "Does NOT import auth from @clerk/nextjs/server"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i need to protect an Astro API route at /api/data.ts so only authenticated users can call it. return 401 if not authenticated.",
+      "expected_output": "API route reads Astro.locals.auth() to get userId, returns 401 Response when not authenticated",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Reads Astro.locals.auth() in the GET or POST handler",
+        "Returns new Response('Unauthorized', { status: 401 }) when userId is falsy",
+        "Uses userId in the data fetching logic",
+        "Does NOT require auth in the static prerender path"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "i want to show a sign-in button in my astro site's header when the user is not signed in, and a user menu when they are. this needs to work client-side.",
+      "expected_output": "Creates a React island component with client:load using useAuth and SignInButton/UserButton from @clerk/astro/react",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Creates a React island component (Header.tsx or similar)",
+        "Imports useAuth from @clerk/astro/react",
+        "Shows UserButton when isSignedIn is true",
+        "Shows SignInButton when isSignedIn is false",
+        "Mounts the component with client:load directive in the .astro file"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i have a mix of static and dynamic pages in my astro app. how do i handle auth on pages that are statically prerendered?",
+      "expected_output": "Explains that static prerendered pages skip middleware, suggests using client-side auth in islands or converting the page to SSR with export const prerender = false",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Notes that clerkMiddleware is skipped for prerendered pages",
+        "Suggests removing export const prerender = true for pages that need auth",
+        "OR suggests using client-side useAuth in island components for partially static pages",
+        "Does NOT suggest that Astro.locals.auth() works on prerendered pages",
+        "Explains the hybrid rendering approach (output: hybrid in astro.config.mjs)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "i need to show org-aware content in an astro SSR page. load the current org name from clerk and show it, or redirect to /select-org if no org is active.",
+      "expected_output": "Uses Astro.locals.auth() to get orgId, redirects to /select-org if orgId is missing, shows org data",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Calls Astro.locals.auth() and destructures both userId and orgId",
+        "Returns Astro.redirect('/sign-in') when userId is falsy",
+        "Returns Astro.redirect('/select-org') when orgId is falsy",
+        "Uses orgId to fetch or display org-specific data",
+        "Handles both unauthenticated and no-org-selected states"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "i want to use React components with Clerk in my Astro app. set up the React integration and create a header component that shows sign-in/sign-up for signed-out users and a user button for signed-in users. use it in an Astro layout.",
+      "expected_output": "Adds @astrojs/react, updates astro.config with react(), creates React header using Show/UserButton/SignInButton from @clerk/astro/react, mounts with client:load in Astro layout",
+      "scaffold": "astro-basic-auth",
+      "expectations": [
+        "Updates astro.config to include react() in integrations array alongside clerk()",
+        "Creates a React component (.tsx) importing from @clerk/astro/react (NOT @clerk/astro/components)",
+        "Uses Show when='signed-in' and Show when='signed-out' (or SignedIn/SignedOut) for conditional rendering",
+        "Includes UserButton and SignInButton from @clerk/astro/react",
+        "Mounts the React component in an .astro file with client:load directive",
+        "Does NOT forget client:load on the React component (would render as static HTML without it)"
+      ]
+    }
+  ]
+}

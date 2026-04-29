@@ -1,0 +1,33 @@
+{
+  "name": "drizzle-orm",
+  "version": "1.0.0",
+  "category": "toolchain",
+  "toolchain": "typescript",
+  "framework": null,
+  "tags": [
+    "drizzle",
+    "orm",
+    "database",
+    "sql",
+    "postgresql",
+    "mysql",
+    "sqlite",
+    "typescript",
+    "type-safety"
+  ],
+  "entry_point_tokens": 75,
+  "full_tokens": 14767,
+  "author": "claude-mpm-skills",
+  "license": "MIT",
+  "subcategory": "data",
+  "requires": [
+    "typescript-core"
+  ],
+  "related": [
+    "database-migration",
+    "nextjs-core"
+  ],
+  "updated": "2025-11-30",
+  "source_path": "toolchains/typescript/data/drizzle/SKILL.md",
+  "repository": "https://github.com/bobmatnyc/claude-mpm-skills"
+}

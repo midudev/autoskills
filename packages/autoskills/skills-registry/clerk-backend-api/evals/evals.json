@@ -1,0 +1,87 @@
+{
+  "skill_name": "clerk-backend-api",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i need to get all users who signed up in the last 7 days from clerk's backend API. show me how",
+      "expected_output": "REST API call to GET /v1/users with date filter, Bearer token auth using CLERK_SECRET_KEY, response parsing and pagination handling",
+      "scaffold": "nextjs-basic-auth",
+      "files": [],
+      "expectations": [
+        "Uses GET /v1/users endpoint",
+        "Includes a created_at or date-based filter query parameter to narrow to last 7 days",
+        "Sets CLERK_SECRET_KEY as Bearer token in the Authorization header",
+        "Parses the JSON response array of user objects",
+        "Handles or mentions pagination via limit and offset parameters"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "use the clerk backend api to create a new organization called 'Acme Corp' and invite user@example.com as an admin",
+      "expected_output": "Two API calls: POST /v1/organizations to create org, then POST /v1/organizations/{id}/invitations to invite with admin role",
+      "scaffold": "nextjs-basic-auth",
+      "files": [],
+      "expectations": [
+        "Uses POST /v1/organizations to create the organization with name 'Acme Corp'",
+        "Uses POST /v1/organizations/{id}/invitations to send the invitation",
+        "Sets the role to admin (or org:admin) in the invitation payload",
+        "Authenticates both API calls using CLERK_SECRET_KEY in the Authorization header",
+        "Extracts the organization ID from the first response and uses it in the invitation request"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i need to set custom metadata on a user via clerk's backend api. set their plan to 'pro' and onboarded to true",
+      "expected_output": "PATCH /v1/users/{user_id} with public_metadata or private_metadata body, explanation of metadata types and when to use each",
+      "scaffold": "nextjs-basic-auth",
+      "files": [],
+      "expectations": [
+        "Uses PATCH /v1/users/{user_id} endpoint",
+        "Sets the metadata in the correct field: public_metadata, private_metadata, or unsafe_metadata",
+        "Explains the difference between metadata types (client-readable vs server-only vs client-writable)",
+        "Includes a properly formed JSON body with the plan and onboarded fields",
+        "Mentions checking write permissions before executing the update"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "remove a user with id user_abc123 from our clerk instance using the backend api",
+      "expected_output": "DELETE /v1/users/{user_id} call with warning about irreversibility, CLERK_BAPI_SCOPES check, and CLERK_SECRET_KEY auth",
+      "scaffold": "nextjs-basic-auth",
+      "files": [],
+      "expectations": [
+        "Uses DELETE /v1/users/{user_id} endpoint with the correct user ID",
+        "Warns that the action is destructive and irreversible",
+        "Requires or recommends explicit confirmation before executing the delete",
+        "Includes CLERK_SECRET_KEY as Bearer token in the Authorization header",
+        "Mentions implications such as loss of user data, sessions, and associated records"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i'm updating user metadata to add a 'plan' field but it keeps deleting the existing 'role' field. what am i doing wrong?",
+      "expected_output": "Metadata updates overwrite not merge. Read existing metadata first, spread it, then write back.",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "Explains that updateUser publicMetadata replaces all existing metadata, not merges",
+        "Shows reading the existing user first with getUser(userId)",
+        "Spreads existing metadata before adding new fields ({ ...user.publicMetadata, plan: 'pro' })",
+        "Calls updateUser with the merged metadata object",
+        "Warns that this applies to publicMetadata, privateMetadata, and unsafeMetadata equally"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "my clerk backend api calls are failing with 429 errors in development. what are the rate limits?",
+      "expected_output": "Development has 100 req/10s limit (vs 1000/10s in production). Batch operations or reduce call frequency.",
+      "scaffold": "nextjs-basic-auth",
+      "expectations": [
+        "States the development rate limit (100 requests per 10 seconds)",
+        "States the production rate limit (1000 requests per 10 seconds)",
+        "Suggests batching operations or reducing call frequency",
+        "Mentions that currentUser() counts as an API call against the limit",
+        "Recommends using auth() instead of currentUser() when only session claims are needed"
+      ]
+    }
+  ]
+}

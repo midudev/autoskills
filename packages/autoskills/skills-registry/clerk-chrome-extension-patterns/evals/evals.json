@@ -1,0 +1,83 @@
+{
+  "skill_name": "clerk-chrome-extension-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i need to wrap my chrome extension popup in ClerkProvider from @clerk/chrome-extension. what props does it need for redirect URLs to work inside a chrome extension?",
+      "expected_output": "ClerkProvider with publishableKey, redirect URLs using chrome.runtime.getURL",
+      "scaffold": "chrome-ext-basic-auth",
+      "expectations": [
+        "Imports ClerkProvider from @clerk/chrome-extension (not @clerk/react or @clerk/nextjs)",
+        "Passes publishableKey prop to ClerkProvider",
+        "Uses chrome.runtime.getURL for redirect URL props (afterSignOutUrl, signInFallbackRedirectUrl, or similar)",
+        "Uses SignInButton or SignUpButton for unauthenticated state",
+        "Uses UserButton or user profile component for authenticated state"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "my background service worker needs to make authenticated API calls to my server. how can it access the current user's session token?",
+      "expected_output": "Use createClerkClient from @clerk/chrome-extension/client with background: true to get a fresh session token",
+      "scaffold": "chrome-ext-basic-auth",
+      "expectations": [
+        "Imports createClerkClient from @clerk/chrome-extension/client (not @clerk/chrome-extension)",
+        "Calls createClerkClient with background: true option",
+        "Checks clerk.session before calling getToken()",
+        "Returns true from the chrome.runtime.onMessage listener to keep connection open for async sendResponse",
+        "Explains that background: true keeps the session fresh when popup is closed"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "my content script needs to check if the user is signed in before injecting a UI overlay into the page. how do i access clerk auth state from a content script?",
+      "expected_output": "Content script uses message passing to background service worker which uses createClerkClient to get auth state",
+      "scaffold": "chrome-ext-basic-auth",
+      "expectations": [
+        "Explains that Clerk cannot be used directly in content scripts due to origin restrictions",
+        "Uses chrome.runtime.sendMessage to request auth state from background service worker",
+        "Background script uses createClerkClient from @clerk/chrome-extension/client",
+        "Shows how to conditionally inject UI based on the response",
+        "Handles the async nature of message passing with return true in background listener"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "my chrome extension needs to let users sign in with google oauth. how do i set that up?",
+      "expected_output": "OAuth is not supported directly in popup or side panel -- must use syncHost to delegate to a web app",
+      "scaffold": "chrome-ext-basic-auth",
+      "expectations": [
+        "States clearly that OAuth is NOT supported in the popup or side panel",
+        "Explains that OAuth requires a redirect from the Identity Provider which Chrome extensions do not support",
+        "Introduces the syncHost approach to delegate auth to a companion web app",
+        "Mentions adding PLASMO_PUBLIC_CLERK_SYNC_HOST env var",
+        "Mentions adding syncHost prop to ClerkProvider"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "i want my extension to automatically know when the user signs in on my web app without them having to interact with the popup. how?",
+      "expected_output": "Use syncHost prop + host_permissions + add extension ID to allowed_origins via Clerk API",
+      "scaffold": "chrome-ext-basic-auth",
+      "expectations": [
+        "Introduces the syncHost feature to sync auth state from web app to extension",
+        "Shows PLASMO_PUBLIC_CLERK_SYNC_HOST env var setup for dev and prod",
+        "Shows adding syncHost prop to ClerkProvider",
+        "Shows host_permissions configuration in package.json manifest",
+        "Shows the curl command to add extension ID to allowed_origins via Clerk API"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "every time i rebuild my chrome extension, the extension ID changes and clerk auth breaks because the redirect URLs don't match. how do i fix this?",
+      "expected_output": "Pin the extension ID by providing a consistent key in the manifest, then update Clerk Dashboard with the stable chrome-extension:// URL",
+      "scaffold": "chrome-ext-basic-auth",
+      "expectations": [
+        "Explains that the extension ID changes because Chrome derives it from the key field",
+        "Shows how to pin the extension ID by providing a consistent key via .env.chrome and package.json",
+        "Mentions the CRX_PUBLIC_KEY env var and manifest key field",
+        "Mentions updating the Clerk Dashboard or allowed_origins with the stable chrome-extension:// URL",
+        "Notes that Plasmo Itero can generate the keypair"
+      ]
+    }
+  ]
+}

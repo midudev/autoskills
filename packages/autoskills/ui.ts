@@ -6,11 +6,16 @@ import {
   green,
   yellow,
   cyan,
-  gray,
   white,
   HIDE_CURSOR,
   SHOW_CURSOR,
 } from "./colors.ts";
+
+const LOGO_LINES = [
+  "┌─┐┬ ┬┌┬┐┌─┐┌─┐┬┌─┬┬  ┬  ┌─┐",
+  "├─┤│ │ │ │ │└─┐├┴┐││  │  └─┐",
+  "┴ ┴└─┘ ┴ └─┘└─┘┴ ┴┴┴─┘┴─┘└─┘",
+];
 
 export function formatTime(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -22,17 +27,62 @@ export function formatTime(ms: number): string {
   return `${m}m ${Math.round(s % 60)}s`;
 }
 
-export function printBanner(version: string): void {
-  const ver = `v${version}`;
-  const title = "   autoskills";
-  const gap = " ".repeat(39 - title.length - ver.length - 3);
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  log();
-  log(bold(cyan("   ╔═══════════════════════════════════════╗")));
-  log(bold(cyan("   ║")) + bold(yellow(title)) + gap + gray(ver) + "   " + bold(cyan("║")));
-  log(bold(cyan("   ║")) + dim("   Auto-install the best AI skills     ") + bold(cyan("║")));
-  log(bold(cyan("   ║")) + dim("   for your project                    ") + bold(cyan("║")));
-  log(bold(cyan("   ╚═══════════════════════════════════════╝")));
+function rgb(grayValue: number, text: string): string {
+  return `\x1b[38;2;${grayValue};${grayValue};${grayValue}m${text}\x1b[39m`;
+}
+
+function renderAnimatedLogo(frame: number, speed: number): string[] {
+  const waveFront = frame * speed;
+
+  return LOGO_LINES.map((line, row) =>
+    [...line]
+      .map((ch, col) => {
+        if (ch === " ") return ch;
+        const distance = col + row * 2;
+        const progress = Math.max(0, Math.min(1, (waveFront - distance) / 10));
+        const grayValue = Math.round(63 + progress * (244 - 63));
+        return rgb(grayValue, ch);
+      })
+      .join(""),
+  );
+}
+
+export async function printBanner(version: string): Promise<void> {
+  const ver = `v${version}`;
+  const subtitle = `Auto-install the best AI skills for your project · ${ver}`;
+
+  if (!process.stdout.isTTY || "NO_COLOR" in process.env) {
+    log();
+    for (const line of LOGO_LINES) log(bold(cyan(line)));
+    log(dim(subtitle));
+    log();
+    return;
+  }
+
+  const cols = Math.max(...LOGO_LINES.map((line) => line.length));
+  const rows = LOGO_LINES.length;
+  const speed = 2.5;
+  const frameDelay = 28;
+  const totalFrames = Math.ceil((cols + rows * 2 + 10) / speed);
+
+  write(HIDE_CURSOR + "\n");
+  for (let frame = 0; frame <= totalFrames; frame++) {
+    const lines = renderAnimatedLogo(frame, speed);
+    write(lines.map((line) => `   ${line}`).join("\n"));
+    write("\n");
+
+    if (frame < totalFrames) {
+      write(`\x1b[${rows}A\r`);
+      await sleep(frameDelay);
+    }
+  }
+
+  write(dim(`   ${subtitle}`) + "\n");
+  write(SHOW_CURSOR);
   log();
 }
 
@@ -77,12 +127,19 @@ export function multiSelect<T>(
 
     const separatorCount = groupCount > 1 ? groupCount - 1 : 0;
 
-    function render(): void {
+    function renderedLineCount(): number {
+      return items.length + groupCount + separatorCount + 1;
+    }
+
+    function clearRendered(): void {
       if (rendered) {
-        write(`\x1b[${items.length + groupCount + separatorCount + 1}A\r`);
+        write(`\x1b[${renderedLineCount()}A\r\x1b[J`);
       }
+    }
+
+    function render(): void {
+      clearRendered();
       rendered = true;
-      write("\x1b[J");
       draw();
     }
 
@@ -105,8 +162,7 @@ export function multiSelect<T>(
         const check = selected[i] ? green("◼") : dim("◻");
         const label = labelFn(items[i], i);
         const hint = hintFn ? hintFn(items[i], i) : "";
-        const line = selected[i] ? label : dim(label);
-        write(`     ${pointer} ${check} ${line}${hint ? "  " + dim(hint) : ""}\n`);
+        write(`     ${pointer} ${check} ${label}${hint ? "  " + dim(hint) : ""}\n`);
       }
       write("\n");
       const shortcutHints = shortcuts
@@ -161,7 +217,7 @@ export function multiSelect<T>(
       if (key === "\r" || key === "\n") {
         settled = true;
         cleanup();
-        write("\x1b[1A\r\x1b[J");
+        clearRendered();
         write(SHOW_CURSOR);
         resolve(items.filter((_, i) => selected[i]));
         return;

@@ -1,0 +1,44 @@
+{
+  "skill_name": "clerk-vue-patterns",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "show me how to use clerk composables in a vue 3 component to display the user's name and a sign-out button.",
+      "expected_output": "Uses useAuth and useUser composables from @clerk/vue, shows user.firstName, calls signOut()",
+      "scaffold": "vue-basic-auth",
+      "expectations": [
+        "Imports useAuth and useUser from @clerk/vue",
+        "Uses isSignedIn from useAuth to conditionally render",
+        "Accesses user.firstName or user.fullName from useUser",
+        "Calls signOut() from useAuth on button click",
+        "Handles the case where user is not signed in"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "i want to build a custom sign-in form in vue using clerk's useSignIn composable. show the email/password flow.",
+      "expected_output": "Uses useSignIn composable, calls signIn.create with identifier and password, sets active session after success",
+      "scaffold": "vue-basic-auth",
+      "expectations": [
+        "Imports useSignIn from @clerk/vue",
+        "Destructures signIn and setActive from useSignIn",
+        "Calls signIn.create({ identifier, password }) on form submit",
+        "Calls setActive({ session: signIn.createdSessionId }) after successful sign-in",
+        "Handles errors from the sign-in attempt"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "i want a pinia store that syncs with clerk auth state. the store should expose isAuthenticated and userId, and update reactively when the user signs in or out.",
+      "expected_output": "Creates a Pinia store that uses useAuth composable, exposes isSignedIn and userId as computed values",
+      "scaffold": "vue-basic-auth",
+      "expectations": [
+        "Creates a Pinia store using defineStore",
+        "Calls useAuth inside the store setup function",
+        "Exposes isSignedIn (or renamed isAuthenticated) from useAuth",
+        "Exposes userId from useAuth",
+        "Does NOT duplicate auth state — wraps useAuth reactivity rather than copying it"
+      ]
+    }
+  ]
+}
