@@ -105,13 +105,22 @@ When proposing code fixes that must work with both the current and target Rails 
 - Update Gemfile to target Rails version
 - Run test suite against both versions during the transition
 - Do not fix deprecations printed by the next version, these will be addressed later before the next upgrade
+- **Check CI config before opening the PR (MANDATORY):** follow `workflows/ci-sync-workflow.md` to verify every CI file in the repo matches the upgraded Gemfile (Ruby version, Rails matrix, service versions). Fix any mismatches before Step 5 is complete. Stale CI config is the most common cause of red builds on upgrade PRs.
 - Deploy and verify
 
-### Step 6: Align load_defaults to New Version (FINAL STEP)
+### Step 6: Align load_defaults to New Version
 - **DELEGATE** to the `rails-load-defaults` skill for detection and incremental update
 - That skill handles tiered, per-config updates with test runs between each change
-- This is done AFTER the Rails version upgrade is complete, as the last step
+- This is done AFTER the Rails version upgrade is complete
 - **DEPENDENCY:** Requires the [rails-load-defaults skill](https://github.com/ombulabs/claude-code_rails-load-defaults-skill)
+
+### Step 7: Suggest Cleanup (USER-TRIGGERED)
+- After the upgrade is shipped, **mention** the cleanup option. Do not run it automatically.
+- Example wording:
+
+  > Rails X.Y is in. When you're ready to remove dual-boot scaffolding (drop `NextRails.next?` / `NextRails.current?` branches, retire `Gemfile.next`), ask me to clean up. If you're heading straight to the next hop, keeping dual-boot in place is also fine.
+
+- The cleanup itself lives in the `upgrade-cleanup` companion plugin. Delegate to it when the user explicitly asks (e.g. "finish the upgrade", "clean up dual-boot", "drop the NextRails branches").
 
 ---
 
@@ -134,6 +143,13 @@ Claude should activate this skill when user says:
 - "Preview configuration changes for Rails [version]"
 - "Generate the upgrade report"
 - "What will change if I upgrade?"
+
+**Upgrade Cleanup Requests (delegate to the `upgrade-cleanup` plugin):**
+- "Finish the upgrade"
+- "Clean up after my Rails upgrade"
+- "Remove the dual-boot setup"
+- "Drop the NextRails branches"
+- "We're done upgrading to Rails [version]"
 
 ---
 
@@ -203,6 +219,8 @@ If user requests a multi-hop upgrade (e.g., 5.2 → 8.1):
 
 **Legacy Rails:**
 - `version-guides/upgrade-3.2-to-4.0.md` - Rails 3.2 → 4.0 (Strong Parameters)
+- `version-guides/upgrade-4.0-to-4.1.md` - Rails 4.0 → 4.1 (Spring, secrets.yml, enums)
+- `version-guides/upgrade-4.1-to-4.2.md` - Rails 4.1 → 4.2 (ActiveJob, Web Console)
 - `version-guides/upgrade-4.2-to-5.0.md` - Rails 4.2 → 5.0 (ApplicationRecord)
 
 **Modern Rails:**
@@ -220,7 +238,9 @@ If user requests a multi-hop upgrade (e.g., 5.2 → 8.1):
 - `workflows/test-suite-verification-workflow.md` - **MANDATORY FIRST STEP** - How to run and verify test suite
 - `workflows/direct-detection-workflow.md` - How to run breaking change detection directly
 - `workflows/upgrade-report-workflow.md` - How to generate upgrade reports
+- `workflows/ci-sync-workflow.md` - **MANDATORY before opening the upgrade PR** - How to verify CI config matches the upgraded Gemfile
 - `workflows/app-update-preview-workflow.md` - How to generate app:update previews
+- **`upgrade-cleanup` companion plugin** - User-triggered. Removes dual-boot scaffolding and drops `NextRails.next?` / `NextRails.current?` branches. Deprecation triage stays with this skill for the next hop.
 
 ### Examples (Load when user needs clarification)
 - `examples/simple-upgrade.md` - Single-hop upgrade example
@@ -341,10 +361,11 @@ Claude runs detection directly using tools - NO script generation needed
 3. Implement breaking change fixes using `NextRails.next?` for dual-boot code
 4. Update Gemfile to target Rails version
 5. Run test suite against both versions
-6. Deploy and verify
+6. **Check CI config matches the upgraded Gemfile** — load `workflows/ci-sync-workflow.md`, fix any mismatches before proceeding
+7. Deploy and verify
 ```
 
-### Step 7: Align load_defaults (FINAL STEP)
+### Step 7: Align load_defaults
 ```
 ⚠️  THIS STEP HAPPENS AFTER THE UPGRADE IS COMPLETE
 
@@ -352,6 +373,18 @@ Claude runs detection directly using tools - NO script generation needed
 2. That skill walks through each config change one at a time, grouped by risk tier
 3. Tests are re-run between each change
 4. Consolidates into config/application.rb when done
+```
+
+### Step 8: Mention Cleanup (USER-TRIGGERED)
+```
+⚠️  DO NOT AUTO-RUN. Mention it; let the user decide.
+
+1. Tell the user the cleanup option exists
+2. Delegate to the upgrade-cleanup plugin only when the user explicitly asks
+   ("finish the upgrade", "clean up dual-boot", "drop the NextRails branches")
+3. The cleanup plugin removes NextRails.next? / NextRails.current? branches
+   and retires dual-boot scaffolding. Deprecation triage stays with this
+   skill for the next hop, not with cleanup.
 ```
 
 ---
@@ -428,7 +461,9 @@ Before starting ANY upgrade:
 **Action - Step 5 (Implement & Upgrade):**
 1. Fix breaking changes using `NextRails.next?` for dual-boot code
 2. Update Gemfile to target Rails version
-3. Run tests against both versions, deploy and verify
+3. Run tests against both versions
+4. **Check CI config matches the upgraded Gemfile** (`workflows/ci-sync-workflow.md`) — fix any mismatches before declaring Step 5 complete
+5. Deploy and verify
 
 **Action - Step 6 (Align load_defaults - FINAL):**
 1. DELEGATE to the `rails-load-defaults` skill
@@ -496,6 +531,12 @@ Before delivering, verify:
 - [ ] Code examples use user's actual code from affected files
 - [ ] Next steps clearly outlined
 
+**For CI Config Check (Step 5, before opening the PR):**
+- [ ] Every CI file in the repo enumerated (GitHub Actions, CircleCI, Jenkins, GitLab, etc.)
+- [ ] Ruby version, Rails matrix, and service versions diffed against the upgraded Gemfile
+- [ ] CI sync report produced with per-file verdict
+- [ ] All DRIFT entries fixed; overall verdict is OK
+
 **For app:update Preview:**
 - [ ] All {PLACEHOLDERS} replaced with actual values
 - [ ] File list matches user's actual config files
@@ -519,7 +560,9 @@ Before delivering, verify:
 11. **Sequential Process is Critical** (patch check → tests → dual-boot → detection → reports → implement → load_defaults)
 12. **Follow FastRuby.io Methodology** (incremental upgrades, assessment first)
 13. **Always Use `NextRails.next?` for Dual-Boot Code** (NEVER use `respond_to?` for version branching. DELEGATE to the `dual-boot` skill for patterns and setup.)
-14. **Align load_defaults Last** (load_defaults update happens AFTER the Rails version upgrade is complete, as the final step)
+14. **Check CI Config Before Opening the PR** (run `workflows/ci-sync-workflow.md` to make sure every CI file matches the upgraded Gemfile — stale CI is the most common cause of red builds on upgrade PRs)
+15. **Align load_defaults After the Version Bump** (load_defaults update happens AFTER the Rails version upgrade is complete)
+16. **Mention, Don't Auto-Run, Cleanup** (after the upgrade ships, mention the `upgrade-cleanup` plugin. Delegate to it only when the user explicitly asks: "finish the upgrade", "clean up dual-boot", "drop the NextRails branches". Cleanup removes `NextRails.next?` / `NextRails.current?` branches and retires dual-boot scaffolding. Deprecation triage stays with this skill for the next hop.)
 
 ---
 
@@ -539,7 +582,9 @@ A successful upgrade assistance session:
 ✅ Used user's actual code from findings (not generic examples)
 ✅ Flagged all custom code with ⚠️ warnings based on detected issues
 ✅ **Implemented changes and upgraded Rails version**
-✅ **Aligned load_defaults** (final step, after upgrade is complete)
+✅ **Verified CI config matches the upgraded Gemfile** (Ruby, Rails matrix, services — all mismatches fixed before opening the PR)
+✅ **Aligned load_defaults** (after upgrade is complete)
+✅ **Mentioned cleanup after the upgrade shipped** (pointed to the `upgrade-cleanup` plugin without auto-running it; delegated only when the user explicitly asked)
 ✅ Provided clear next steps
 ✅ Offered to help implement changes
 

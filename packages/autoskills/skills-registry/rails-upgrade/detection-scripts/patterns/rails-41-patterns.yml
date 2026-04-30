@@ -1,0 +1,244 @@
+version: "4.1"
+description: "Breaking change patterns for Rails 4.0 → 4.1 upgrade"
+
+breaking_changes:
+  high_priority:
+    - name: "Dynamic finders (find_all_by / find_last_by / scoped_by / find_by)"
+      pattern: "\\.(find_all_by_|find_last_by_|scoped_by_|find_by_)[a-zA-Z_0-9]+!?"
+      exclude: "\\.find_by\\s*\\("
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1 removed the activerecord-deprecated_finders dependency. find_all_by_*, find_last_by_*, scoped_by_*, and find_by_* (including find_by_*!) no longer work"
+      fix: "Rewrite: find_all_by_* → where(col: value); find_last_by_* → where(col: value).last; scoped_by_* → where(col: value); find_by_<col> → find_by(col: value); find_by_<col>! → find_by!(col: value). As a short-term bridge, add gem 'activerecord-deprecated_finders'"
+      variable_name: "DYNAMIC_FINDERS"
+
+    - name: "Dynamic find_or_initialize_by_* / find_or_create_by_*"
+      pattern: "\\.(find_or_initialize_by_|find_or_create_by_)[a-zA-Z_0-9]+"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1 removed the *_by_<col> forms of find_or_initialize_by and find_or_create_by"
+      fix: "Use the hash form: find_or_initialize_by(col: value) / find_or_create_by(col: value)"
+      variable_name: "FIND_OR_X_BY_DYNAMIC"
+
+    - name: "return inside inline callback block"
+      pattern: "^\\s*(before_|after_|around_)(save|create|update|destroy|validation|commit|rollback|initialize|find|touch)\\b.*\\{[^}]*\\breturn\\b"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+        - "app/controllers/"
+        - "lib/"
+      explanation: "Rails 4.1 raises LocalJumpError when an inline callback block uses `return`. LIMITATION: this regex only catches single-line `{ ... }` inline blocks on the same line as the callback declaration. Multi-line `{ ... }` blocks, all `do..end` blocks, and method-form callbacks (which are unaffected anyway) are not detected. A clean run does not prove the app is safe — spot-check manually"
+      fix: "Evaluate to the value instead: before_save { false if invalid_state? }. Or extract to a method where `return` is fine. In Rails 5+ the halt mechanism becomes `throw :abort`"
+      variable_name: "CALLBACK_RETURN"
+
+    - name: "Implicit join reference in includes+where string"
+      pattern: "\\.includes\\([^)]+\\)[^\\n]*\\.where\\(\\s*['\"][a-z_][a-z_0-9]*\\."
+      exclude: "\\.references\\(|\\.eager_load\\("
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1 removed the string-parsing heuristic that auto-joined tables referenced inside a where(\"other_table.col = ?\") string after includes(...)"
+      fix: "Replace with explicit joins(:assoc) (no eager load), eager_load(:assoc) (eager loaded), or includes(:assoc).where(...).references(:assoc)"
+      variable_name: "IMPLICIT_JOIN_REFERENCES"
+
+    - name: "store_accessor on json/hstore column (PG key semantics)"
+      pattern: "^\\s*store_accessor\\s+:"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.1 returns a string-keyed Hash (not HashWithIndifferentAccess) for PostgreSQL json/hstore columns. This pattern flags models using store_accessor. It cannot detect the break directly — that requires manual audit of callers that index the underlying json/hstore column with symbol keys (e.g., record.preferences[:theme] will silently return nil instead of the value)"
+      fix: "Audit models returned by this pattern. Identify any code that indexes the json/hstore column directly with symbol keys and switch to string keys. store_accessor-generated reader/writer methods are unaffected"
+      variable_name: "PG_JSON_HSTORE_KEYS"
+
+    - name: "default_scope in models"
+      pattern: "^\\s*default_scope\\b"
+      exclude: ""
+      search_paths:
+        - "app/models/"
+      explanation: "Rails 4.1 chains default_scope with subsequent scopes (AND) instead of letting them override. Scopes that contradict the default can now return zero rows, silently returning no results where 4.0 would have returned data"
+      fix: "Audit each scope on models with default_scope. Use unscope(where: :col) or rewhere(col: value) where a scope is supposed to override the default"
+      variable_name: "DEFAULT_SCOPE"
+
+  medium_priority:
+    - name: "MultiJSON usage"
+      pattern: "\\bMultiJSON\\b|require\\s+['\"]multi_json['\"]"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+        - "config/"
+      explanation: "Rails 4.1 no longer depends on MultiJSON. Apps that reference it directly will hit NameError once Rails stops pulling it in transitively. Gemfile is intentionally excluded — `gem 'multi_json'` IS the fix, not a breaking-change signal"
+      fix: "Either keep gem 'multi_json' in the Gemfile, or migrate callers to core JSON: obj.to_json and JSON.parse(str). Do NOT blindly replace with JSON.dump/JSON.load — those are unsafe for arbitrary objects"
+      variable_name: "MULTI_JSON"
+
+    - name: "ActiveRecord::Relation mutator calls"
+      pattern: "\\.(compact!|map!|delete_if|reject!|select!|flatten!|sort!|uniq!|collect!)\\b"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1 removed mutator methods from ActiveRecord::Relation. Calling compact!/map!/delete_if/etc. on a Relation raises NoMethodError. Some hits will be false positives on plain arrays — verify the receiver"
+      fix: "Call .to_a first, then mutate the array: records = Project.where(...).to_a; records.compact!"
+      variable_name: "RELATION_MUTATORS"
+
+    - name: "Controller test with format: :js (should use xhr)"
+      pattern: "^\\s*(get|post|put|patch|delete)\\s+:[a-z_]+[^\\n]*format:\\s*:js"
+      exclude: "\\bxhr\\b"
+      search_paths:
+        - "test/controllers/"
+        - "test/functional/"
+        - "spec/controllers/"
+      explanation: "Rails 4.1 extends CSRF protection to GET requests with JS responses. Controller tests that hit JS endpoints with the plain verb helpers now fail CSRF or skip the XHR code path"
+      fix: "Use xhr :verb, :action, params instead of verb :action, format: :js"
+      variable_name: "JS_CONTROLLER_TEST"
+
+    - name: "flash.to_hash with symbol key filters"
+      pattern: "flash\\.to_hash\\.(except|slice|values_at)\\(\\s*:"
+      exclude: ""
+      search_paths:
+        - "app/"
+      explanation: "flash.to_hash keys are strings in Rails 4.1. Filtering with symbol keys silently no-ops"
+      fix: "Use string keys: flash.to_hash.except(\"notify\") instead of flash.to_hash.except(:notify)"
+      variable_name: "FLASH_SYMBOL_KEYS"
+
+    - name: "Cookies serializer not configured"
+      pattern: "cookies_serializer"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 4.1 introduces a JSON cookies serializer. Apps generated before 4.1 keep Marshal unless they opt in. This is a presence check — ABSENCE is the signal to add config.action_dispatch.cookies_serializer = :hybrid"
+      fix: "If no match: add `Rails.application.config.action_dispatch.cookies_serializer = :hybrid` in a new config/initializers/cookies_serializer.rb. :hybrid reads legacy Marshal cookies and writes new JSON ones"
+      variable_name: "COOKIES_SERIALIZER"
+
+    - name: "I18n enforce_available_locales config"
+      pattern: "enforce_available_locales|available_locales"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 4.1 defaults enforce_available_locales to true. Any locale not in I18n.available_locales raises I18n::InvalidLocale. Presence check — ABSENCE of both settings is the signal to declare available_locales or disable enforcement"
+      fix: "Audit request paths that accept a locale param from user input and validate it against an allow-list. Then declare config.i18n.available_locales = [...] in config/application.rb. Disabling enforcement (config.i18n.enforce_available_locales = false) is an escape hatch; the default exists for a security reason"
+      variable_name: "I18N_ENFORCE_LOCALES"
+
+    - name: "time_precision (as_json millisecond default)"
+      pattern: "time_precision"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 4.1 adds millisecond precision to Time/DateTime/TimeWithZone JSON output by default. Presence check — ABSENCE means the app inherits the new default and clients parsing fixed-length ISO-8601 strings may break"
+      fix: "If clients require second precision: `ActiveSupport::JSON::Encoding.time_precision = 0` in an initializer. Otherwise accept the new default"
+      variable_name: "JSON_TIME_PRECISION"
+
+  low_priority:
+    - name: "Spring gem in Gemfile (presence check)"
+      pattern: "gem\\s+['\"]spring['\"]"
+      exclude: ""
+      search_paths:
+        - "Gemfile"
+      explanation: "Rails 4.1 ships with Spring as a new preloader default. This is a presence check — a HIT means Spring is already configured; ABSENCE is the signal to add it. Grep cannot detect absence, so review the Gemfile manually when this pattern does not match"
+      fix: "If no match: add `gem 'spring'` under group :development in the Gemfile, then run `bundle exec spring binstub --all` to generate Spring-aware binstubs. Optional but recommended"
+      variable_name: "SPRING"
+
+    - name: "Legacy secret_key_base / secret_token reads"
+      pattern: "Rails\\.application\\.config\\.secret_(key_base|token)"
+      exclude: ""
+      search_paths:
+        - "config/"
+        - "app/"
+      explanation: "Matches callers of the old Rails.application.config.secret_key_base / secret_token API. Rails 4.1 introduces config/secrets.yml exposed via Rails.application.secrets. NOTE: this is a migration-work signal based on hits; absence does NOT confirm secrets.yml is configured — grep cannot detect absence of a file"
+      fix: "Create config/secrets.yml with secret_key_base per environment, then migrate readers to Rails.application.secrets.secret_key_base. Delete the old config/initializers/secret_token.rb"
+      variable_name: "SECRETS_CONFIG_READS"
+
+    - name: "render :text usage"
+      pattern: "\\brender\\s*[\\(\\s]\\s*(?:.*,\\s*)?(?:text:\\s*|:text\\s*=>)"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "render :text was security-adjacent (sent text/html). Rails 4.1 introduces render :plain / :html / :body as precise replacements and signals :text for future deprecation"
+      fix: "Replace with render plain: for text/plain, render html: for explicit HTML, or render body: for no Content-Type header"
+      variable_name: "RENDER_TEXT"
+
+    - name: "encode_json hook override"
+      pattern: "def\\s+encode_json\\b"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1's rewritten JSON encoder no longer calls encode_json. Custom implementations silently become dead code"
+      fix: "Move the logic into as_json, or add gem 'activesupport-json_encoder' to restore the old encoder behavior"
+      variable_name: "ENCODE_JSON_HOOK"
+
+    - name: "encode_big_decimal_as_string (dead setting)"
+      pattern: "encode_big_decimal_as_string"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 4.1's new JSON encoder removed the BigDecimal-as-number option. The setting is a no-op"
+      fix: "Remove the setting. If clients require BigDecimal-as-number, add gem 'activesupport-json_encoder' to restore the old behavior"
+      variable_name: "BIG_DECIMAL_AS_STRING"
+
+    - name: "JSON.generate / JSON.dump on Rails objects"
+      pattern: "\\bJSON\\.(generate|dump)\\b"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1 isolated its encoder from the JSON gem. JSON.generate/JSON.dump no longer honor as_json. Output of Rails objects (AR instances, TimeWithZone, etc.) may differ from 4.0"
+      fix: "Use obj.to_json for Rails semantics (honors as_json). Keep JSON.generate only when you explicitly want stdlib behavior — pass obj.as_json first if needed"
+      variable_name: "JSON_GEM_ISOLATION"
+
+    - name: "set_callback around lambda with &block"
+      pattern: "set_callback\\s+.+,\\s*:around\\s*,\\s*->\\([^)]*&block"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 4.1 changed the around-callback lambda signature — the block is now a positional argument, not &block"
+      fix: "Drop the ampersand: ->(r, block) { ...; block.call; ... } instead of ->(r, &block) { ...; block.call; ... }"
+      variable_name: "SET_CALLBACK_AROUND"
+
+    - name: "disable_implicit_join_references config (dead setting)"
+      pattern: "disable_implicit_join_references"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "config.active_record.disable_implicit_join_references is a no-op in Rails 4.1 and emits a deprecation warning. Cosmetic cleanup only"
+      fix: "Remove config.active_record.disable_implicit_join_references from your config files"
+      variable_name: "DISABLE_IMPLICIT_JOIN_REFERENCES"
+
+    - name: "ActiveRecord::Migration.check_pending! in test helper"
+      pattern: "ActiveRecord::Migration\\.check_pending!"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "require 'test_help' runs the check automatically in Rails 4.1. The explicit call is harmless but redundant"
+      fix: "Optional: remove the line from test_helper.rb / rails_helper.rb"
+      variable_name: "CHECK_PENDING_MIGRATION"
+
+dependencies:
+  multi_json:
+    check: false
+    gem_name: "multi_json"
+    message: "Add to Gemfile only if the app still calls MultiJSON.dump / MultiJSON.load directly — Rails 4.1 no longer pulls it in"
+    url: "https://github.com/intridea/multi_json"
+
+  activerecord-deprecated_finders:
+    check: false
+    gem_name: "activerecord-deprecated_finders"
+    message: "Short-term bridge: restores find_all_by_*, find_last_by_*, scoped_by_*, and dynamic find_or_*_by_* finders removed from Rails 4.1"
+    url: "https://github.com/rails/activerecord-deprecated_finders"
+
+  spring:
+    check: false
+    gem_name: "spring"
+    message: "New Rails 4.1 default — application preloader that keeps the Rails environment in memory between commands"
+    url: "https://github.com/rails/spring"
+
+  activesupport-json_encoder:
+    check: false
+    gem_name: "activesupport-json_encoder"
+    message: "Restore pre-4.1 JSON encoder behavior: circular data-structure detection, encode_json hook, BigDecimal-as-number option"
+    url: "https://github.com/rails/activesupport-json_encoder"

@@ -98,7 +98,7 @@ breaking_changes:
       variable_name: "RENDER_NOTHING"
 
     - name: "Ruby version requirement"
-      pattern: "ruby.*['\"]2\\.[0-6]"
+      pattern: "ruby.*['\"](?:1\\.|2\\.[0-4])"
       exclude: ""
       search_paths:
         - "Gemfile"
@@ -106,6 +106,175 @@ breaking_changes:
       explanation: "Rails 6.0 requires Ruby 2.5.0 or newer"
       fix: "Upgrade Ruby to 2.5.0+ (2.7+ recommended)"
       variable_name: "RUBY_VERSION"
+
+    - name: "Controller-level force_ssl deprecated"
+      pattern: "^\\s*force_ssl\\b"
+      exclude: ""
+      search_paths:
+        - "app/controllers/"
+      explanation: "Rails 6.0 deprecates the controller-level force_ssl method. Configure HTTPS at the application level instead"
+      fix: "Set config.force_ssl = true in config/environments/production.rb. Use config.ssl_options to exempt specific endpoints if needed"
+      variable_name: "FORCE_SSL_DEPRECATED"
+
+    - name: "Cookies metadata config (rollback compatibility)"
+      pattern: "use_cookies_with_metadata"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 6.0 embeds purpose and expiry metadata inside signed/encrypted cookies. Cookies written by 6.0 are unreadable by 5.2 and earlier. This is a presence check: ABSENCE under load_defaults 6.0 means rollback to 5.2 will not be able to read existing user cookies"
+      fix: "If a rollback path to 5.2 must remain viable during deploy, set Rails.application.config.action_dispatch.use_cookies_with_metadata = false until the rollback window closes. Otherwise accept the new default"
+      variable_name: "COOKIES_METADATA_INCOMPATIBLE"
+
+    - name: "Hosts authorization configuration"
+      pattern: "config\\.hosts\\b"
+      exclude: ""
+      search_paths:
+        - "config/"
+      explanation: "Rails 6.0 introduces ActionDispatch::HostAuthorization. Development requests to any host other than localhost are blocked by default. This is a presence check: ABSENCE means non-localhost dev URLs (e.g. dev.myapp.com) will return BlockedHost"
+      fix: "Add config.hosts << 'dev.myapp.com' (or a regex/IPAddr) to config/environments/development.rb for every host the dev workflow uses"
+      variable_name: "HOSTS_AUTHORIZATION_DEV"
+
+    - name: "Legacy npm package names (actioncable / activestorage / rails-ujs)"
+      pattern: "['\"](actioncable|activestorage|rails-ujs)['\"]"
+      exclude: "@rails/"
+      search_paths:
+        - "package.json"
+        - "app/javascript/"
+      explanation: "Rails 6.0 moved all official npm packages to the @rails scope. The unscoped names are unsupported"
+      fix: "Update imports and package.json: actioncable → @rails/actioncable, activestorage → @rails/activestorage, rails-ujs → @rails/ujs"
+      variable_name: "NPM_RAILS_PACKAGES"
+
+    - name: "Rails.application.secrets.secret_token"
+      pattern: "Rails\\.application\\.secrets\\.secret_token\\b"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "config/"
+        - "lib/"
+      explanation: "Rails 6.0 removes the legacy secret_token. Apps must use secret_key_base (via credentials.yml.enc, secrets.yml, or the SECRET_KEY_BASE env var)"
+      fix: "Migrate to credentials: rails credentials:edit and store secret_key_base. Update readers to Rails.application.credentials.secret_key_base or Rails.application.secret_key_base. Delete config/initializers/secret_token.rb"
+      variable_name: "SECRETS_SECRET_TOKEN"
+
+    - name: "fragment_cache_key helper"
+      pattern: "\\bfragment_cache_key\\b"
+      exclude: "combined_fragment_cache_key"
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 6.0 removes the fragment_cache_key view helper. Use combined_fragment_cache_key (which honors :cache_key_with_version)"
+      fix: "Replace fragment_cache_key(...) with combined_fragment_cache_key(...)"
+      variable_name: "FRAGMENT_CACHE_KEY"
+
+    - name: "TestResponse predicate methods (success?/missing?/error?)"
+      pattern: "\\b(response|@response|last_response)\\.(success\\?|missing\\?|error\\?)"
+      exclude: ""
+      search_paths:
+        - "test/"
+        - "spec/"
+      explanation: "Rails 6.0 removes ActionDispatch::TestResponse#success?, #missing?, and #error?. NOISY REGEX: pattern targets common response receivers but other libraries (Net::HTTP, Faraday, etc.) also expose .success? on their own response objects. Verify the receiver is a Rails test response before mass-replacing"
+      fix: "Rename: response.success? → response.successful?; response.missing? → response.not_found?; response.error? → response.server_error?"
+      variable_name: "TEST_RESPONSE_PREDICATES"
+
+    - name: "ActiveRecord calculation methods with column name and block"
+      pattern: "\\.(count|sum)\\(\\s*:\\w+\\s*\\)\\s*(do\\b|\\{)"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 6.0 removes support for passing both a column name and a block to .count and .sum. The two forms can no longer be combined"
+      fix: "Choose one: drop the column (records.count { |r| r.active? }) or drop the block (records.where(active: true).count(:column))"
+      variable_name: "AR_CALC_WITH_BLOCK"
+
+    - name: "insert_fixtures adapter method"
+      pattern: "\\binsert_fixtures\\b"
+      exclude: "insert_fixtures_set"
+      search_paths:
+        - "app/"
+        - "lib/"
+        - "db/"
+      explanation: "Rails 6.0 removes ConnectionAdapters#insert_fixtures. Use insert_fixtures_set"
+      fix: "Rename insert_fixtures(...) to insert_fixtures_set(...). Direct callers are usually internal tooling or seed scripts"
+      variable_name: "INSERT_FIXTURES_ADAPTER"
+
+    - name: "ActiveRecord::Migrator.migrations_path setter"
+      pattern: "ActiveRecord::Migrator\\.migrations_path\\s*="
+      exclude: ""
+      search_paths:
+        - "config/"
+        - "lib/"
+        - "db/"
+      explanation: "Rails 6.0 removes ActiveRecord::Migrator.migrations_path=. Configure migration paths via the application's paths object"
+      fix: "Replace ActiveRecord::Migrator.migrations_path = 'db/custom' with Rails.application.config.paths['db/migrate'] << 'db/custom' in config/application.rb"
+      variable_name: "MIGRATIONS_PATH_SETTER"
+
+  low_priority:
+    - name: "image_alt view helper"
+      pattern: "\\bimage_alt\\b"
+      exclude: ""
+      search_paths:
+        - "app/views/"
+        - "app/helpers/"
+      explanation: "Rails 6.0 removes the image_alt view helper"
+      fix: "Inline the alt-text logic at the call site, or define a small helper of your own with the desired behavior"
+      variable_name: "IMAGE_ALT_HELPER"
+
+    - name: "Raw SQL strings in AR query methods"
+      pattern: "\\.(order|pluck|select|group)\\(\\s*['\"]"
+      exclude: "Arel\\.sql"
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 6.0 raises ActiveRecord::UnknownAttributeReference when unsafe SQL strings are passed to .order/.pluck/.select/.group. NOISY REGEX: most matches are safe column-name strings; the deprecation only bites when the string is dynamic SQL or contains expressions. Audit each match for user-influenced or expression SQL"
+      fix: "Wrap known-safe SQL in Arel.sql(...): Model.order(Arel.sql('LENGTH(name) DESC')). For user-influenced inputs, switch to a parameterized API"
+      variable_name: "AR_RAW_STRINGS"
+
+    - name: "Direct Arel usage in queries"
+      pattern: "\\bArel(::|\\.(?!sql\\b))"
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 6.0 deprecates direct use of Arel methods outside Arel.sql. NOISY REGEX: matches every Arel:: reference and any Arel.foo that is not Arel.sql. Most matches are valid Arel that may need a different AR API or Arel.sql wrapping"
+      fix: "Where the SQL is known-safe, use Arel.sql('...') to wrap it. Where the call is on Arel::Table, Arel::Nodes, etc., look for an equivalent ActiveRecord query API or accept the deprecation until removal"
+      variable_name: "AREL_DIRECT_USAGE"
+
+    - name: "Dynamic :controller / :action segments in routes"
+      pattern: "\\b(:controller|:action)\\b"
+      exclude: "controller:|action:|action_dispatch|action_view|action_mailer|action_cable|action_pack|action_controller"
+      search_paths:
+        - "config/routes.rb"
+      explanation: "Dynamic :controller(/:action(/:id)) routes were deprecated in 5.1 and remain deprecated through 6.0. If the app skipped 5.1 → 5.2 detection, this catches the deprecation here"
+      fix: "Replace dynamic segments with explicit routes: declare each controller/action pair with `get '/admin/users', to: 'users#index'` etc."
+      variable_name: "DYNAMIC_ROUTE_SEGMENTS"
+
+    - name: "config.ru with application class"
+      pattern: "^\\s*run\\s+\\w+::Application\\b"
+      exclude: ""
+      search_paths:
+        - "config.ru"
+      explanation: "Rails 6.0 deprecates `run AppName::Application` in config.ru in favor of `run Rails.application`"
+      fix: "Replace `run YourApp::Application` with `run Rails.application` in config.ru"
+      variable_name: "CONFIG_RU_APP_CLASS"
+
+    - name: "escape_attributes tag helper"
+      pattern: "\\bescape_attributes\\b"
+      exclude: ""
+      search_paths:
+        - "app/views/"
+        - "app/helpers/"
+      explanation: "Rails 6.0 deprecates the escape_attributes tag helper. The standard tag helpers already escape attributes correctly"
+      fix: "Drop the explicit escape_attributes call; the tag helpers handle attribute escaping"
+      variable_name: "ESCAPE_ATTRIBUTES_HELPER"
+
+    - name: "Transaction#set_state"
+      pattern: "\\.set_state\\("
+      exclude: ""
+      search_paths:
+        - "app/"
+        - "lib/"
+      explanation: "Rails 6.0 removes ActiveRecord::ConnectionAdapters::Transaction#set_state. This is internal-ish API; most apps never touch it"
+      fix: "If you have legitimate use, switch to the public commit/rollback methods on the transaction object"
+      variable_name: "SET_STATE_TRANSACTION"
 
 dependencies:
   zeitwerk:
