@@ -39,6 +39,12 @@ export interface RegistryEntry {
     promptVersion: string;
     reviewedAt: string;
   };
+  securityCheck?: {
+    status: "ok" | "warning";
+    findings: string[];
+    summary: string;
+    checkedAt: string;
+  };
 }
 
 export interface Registry {
@@ -144,6 +150,14 @@ export interface InstallResult {
   stderr: string;
   exitCode: number | null;
   command: string;
+  securityCheck?: InstallSecurityCheck;
+}
+
+export interface InstallSecurityCheck {
+  name: string;
+  status: "ok" | "warning";
+  summary: string;
+  findings: string[];
 }
 
 interface InstallOptions {
@@ -198,6 +212,28 @@ export function clearAutoskillsCache(): { cacheDir: string; removed: boolean } {
 
 function getCacheRegistryDir(entry: RegistryEntry): string {
   return join(getAutoskillsCacheDir(), entry.bundleHash);
+}
+
+function securityCheckForEntry(skillName: string, entry: RegistryEntry): InstallSecurityCheck {
+  if (entry.securityCheck) {
+    return {
+      name: skillName,
+      status: entry.securityCheck.status,
+      summary: entry.securityCheck.summary,
+      findings: entry.securityCheck.findings,
+    };
+  }
+
+  return {
+    name: skillName,
+    status: entry.review?.status === "flagged" ? "warning" : "ok",
+    summary:
+      entry.review?.summary ||
+      (entry.review?.status === "flagged"
+        ? "The sync review found issues that should be checked."
+        : "The sync review did not find security issues."),
+    findings: entry.review?.flags || [],
+  };
 }
 
 function encodeRawPath(skillName: string, rel: string): string {
@@ -440,6 +476,7 @@ export async function installSkill(
   if (!entry) {
     return fail(`skill '${skillName}' not found in registry (unaudited).`);
   }
+  const securityCheck = securityCheckForEntry(skillName, entry);
   opts.onTrace?.(`registry source: ${entry.source} @ ${entry.commitSha}`);
 
   const canonicalDir = join(projectDir, ".agents", "skills", skillName);
@@ -509,6 +546,7 @@ export async function installSkill(
     stderr: "",
     exitCode: 0,
     command,
+    securityCheck,
   };
 }
 
@@ -525,6 +563,7 @@ function sortByRepo(skills: SkillEntry[]): SkillEntry[] {
 interface InstallAllResult {
   installed: number;
   failed: number;
+  securityChecks: InstallSecurityCheck[];
   errors: {
     name: string;
     output: string;
@@ -592,6 +631,7 @@ export async function installAll(
   let installed = 0;
   let failed = 0;
   const errors: InstallAllResult["errors"] = [];
+  const securityChecks: InstallSecurityCheck[] = [];
   let nextIdx = 0;
 
   async function worker(): Promise<void> {
@@ -608,6 +648,7 @@ export async function installAll(
       if (result.success) {
         state.status = "success";
         installed++;
+        if (result.securityCheck) securityChecks.push(result.securityCheck);
       } else {
         state.status = "failed";
         state.output = result.output;
@@ -631,7 +672,7 @@ export async function installAll(
   render();
   write(SHOW_CURSOR);
 
-  return { installed, failed, errors };
+  return { installed, failed, errors, securityChecks };
 }
 
 async function installAllVerbose(
@@ -643,6 +684,7 @@ async function installAllVerbose(
   let installed = 0;
   let failed = 0;
   const errors: InstallAllResult["errors"] = [];
+  const securityChecks: InstallSecurityCheck[] = [];
 
   for (const { skill } of sorted) {
     log(cyan(`   ◆ ${skill}`));
@@ -654,6 +696,7 @@ async function installAllVerbose(
     if (result.success) {
       log(green(`     ✔ installed`));
       installed++;
+      if (result.securityCheck) securityChecks.push(result.securityCheck);
     } else {
       log(red(`     ✘ failed`) + dim(` — ${result.output}`));
       errors.push({
@@ -668,7 +711,7 @@ async function installAllVerbose(
     log();
   }
 
-  return { installed, failed, errors };
+  return { installed, failed, errors, securityChecks };
 }
 
 async function installAllSimple(
@@ -681,6 +724,7 @@ async function installAllSimple(
   let installed = 0;
   let failed = 0;
   const errors: InstallAllResult["errors"] = [];
+  const securityChecks: InstallSecurityCheck[] = [];
   let nextIdx = 0;
 
   async function worker(): Promise<void> {
@@ -692,6 +736,7 @@ async function installAllSimple(
       if (result.success) {
         log(green(`   ✔ ${skill}`));
         installed++;
+        if (result.securityCheck) securityChecks.push(result.securityCheck);
       } else {
         log(red(`   ✘ ${skill}`) + dim(" — failed"));
         errors.push({
@@ -709,7 +754,7 @@ async function installAllSimple(
   const workers = Array.from({ length: Math.min(CONCURRENCY, sorted.length) }, () => worker());
   await Promise.all(workers);
 
-  return { installed, failed, errors };
+  return { installed, failed, errors, securityChecks };
 }
 
 // ── Deprecated shim ──────────────────────────────────────────

@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import {
   agentFolderFor,
+  installAll,
   installSkill,
   verifyRegistryEntry,
   _setRegistryDir,
@@ -34,6 +35,8 @@ interface FakeSkill {
   name: string;
   source: string;
   files: Record<string, string>;
+  review?: RegistryEntry["review"];
+  securityCheck?: RegistryEntry["securityCheck"];
 }
 
 function buildRegistry(dir: string, skills: FakeSkill[]): void {
@@ -61,7 +64,7 @@ function buildRegistry(dir: string, skills: FakeSkill[]): void {
       files: Object.keys(skill.files).sort(),
       sha256: shaMap,
       bundleHash: bundleHashOf({ files: Object.keys(skill.files).sort(), sha256: shaMap }),
-      review: {
+      review: skill.review || {
         status: "approved",
         flags: [],
         summary: "test",
@@ -69,6 +72,7 @@ function buildRegistry(dir: string, skills: FakeSkill[]): void {
         promptVersion: "1.0.0",
         reviewedAt: new Date().toISOString(),
       },
+      securityCheck: skill.securityCheck,
     };
     (manifest.skills as Record<string, RegistryEntry>)[skill.name] = entry;
   }
@@ -185,6 +189,111 @@ describe("installSkill", () => {
     equal(lock.skills["hello-skill"].source, "owner/repo");
     equal(lock.skills["hello-skill"].sourceType, "autoskills-registry");
     ok(typeof lock.skills["hello-skill"].computedHash === "string");
+  });
+
+  it("returns the persisted security check after installing a skill", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      {
+        name: "warning-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# warning" },
+        securityCheck: {
+          status: "warning",
+          findings: ["external URL needs review"],
+          summary: "External URLs should be reviewed.",
+          checkedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/warning-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    ok(result.success, result.output);
+    deepEqual(result.securityCheck, {
+      name: "warning-skill",
+      status: "warning",
+      summary: "External URLs should be reviewed.",
+      findings: ["external URL needs review"],
+    });
+  });
+
+  it("falls back to review metadata when securityCheck is missing", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      {
+        name: "review-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# review" },
+        review: {
+          status: "flagged",
+          flags: ["broad shell command"],
+          summary: "Contains a broad shell command.",
+          model: "test-model",
+          promptVersion: "1.0.0",
+          reviewedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/review-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    ok(result.success, result.output);
+    deepEqual(result.securityCheck, {
+      name: "review-skill",
+      status: "warning",
+      summary: "Contains a broad shell command.",
+      findings: ["broad shell command"],
+    });
+  });
+
+  it("collects security checks when installing multiple skills", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      { name: "first-skill", source: "owner/repo", files: { "SKILL.md": "# first" } },
+      {
+        name: "second-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# second" },
+        securityCheck: {
+          status: "warning",
+          findings: ["manual review"],
+          summary: "Needs manual review.",
+          checkedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installAll(
+      [
+        { skill: "owner/repo/first-skill", sources: [], installed: false },
+        { skill: "owner/repo/second-skill", sources: [], installed: false },
+      ],
+      [],
+      { projectDir, registryDir: regDir },
+    );
+
+    equal(result.installed, 2);
+    deepEqual(result.securityChecks.map((check) => check.name).sort(), [
+      "first-skill",
+      "second-skill",
+    ]);
+    equal(result.securityChecks.find((check) => check.name === "second-skill")?.status, "warning");
   });
 
   it("installs from the local registry without fetching", async () => {

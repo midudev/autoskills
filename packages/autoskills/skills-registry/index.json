@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-04-24T21:34:15.421Z",
+  "generatedAt": "2026-04-30T08:55:16.647Z",
   "reviewer": {
     "model": "gpt-5.4",
     "promptVersion": "1.0.0"
@@ -9,26 +9,32 @@
     "bun": {
       "source": "midudev/autoskills",
       "skillPath": "midudev/autoskills/bun",
-      "commitSha": "local",
-      "files": ["SKILL.md"],
+      "commitSha": "ed5c5789273d850c0c20526bf032bbbf71cb9beb",
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
-        "SKILL.md": "c0c362b87424495daf0621a086f9a67dfb1138a0bd27a98d6d4668b3b5b4bc03"
+        "SKILL.md": "8e1a9758b9721b48f534cee5998a3fcea8833f4885ca5929847f9fc48b773957"
       },
-      "bundleHash": "358e81e8551652cc63f41c2ea9f727263a25af98ee45c5a81cfb8ae0403157d7",
+      "bundleHash": "1386ed5490ed278e38312a416c9aa074dbe3849f32ae7f841e4142fef5d4df94",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "local curated Bun skill",
+        "summary": "The skill content is on-topic Bun documentation with benign commands, no embedded secrets, and no prompt-injection or destructive instructions.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-30T00:00:00.000Z"
+        "reviewedAt": "2026-04-30T08:53:50.471Z"
       }
     },
     "deploy-to-vercel": {
       "source": "vercel-labs/agent-skills",
       "skillPath": "vercel-labs/agent-skills/deploy-to-vercel",
       "commitSha": "ce3e64e468f8fa09a2d075d102771838061fdac0",
-      "files": ["SKILL.md", "resources/deploy-codex.sh", "resources/deploy.sh"],
+      "files": [
+        "SKILL.md",
+        "resources/deploy-codex.sh",
+        "resources/deploy.sh"
+      ],
       "sha256": {
         "SKILL.md": "cfcc3dd479ab2e0ae721ddf39b8af84d977321487672f1487c8d6855f576927b",
         "resources/deploy-codex.sh": "18b411e2bfe07778bca11d7f0e1ec9c95e5764011dd2e3838f51066728646855",
@@ -106,7 +112,9 @@
       "source": "vercel-labs/next-skills",
       "skillPath": "vercel-labs/next-skills/next-cache-components",
       "commitSha": "038954e07bfc313e97fa5f6ff7caf87226e4a782",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "92fc6ac94c5cabdcd13c7dc7aabd6a4d04921e6295dfc00dd9888e375fd1ff4c"
       },
@@ -124,7 +132,9 @@
       "source": "vercel-labs/next-skills",
       "skillPath": "vercel-labs/next-skills/next-upgrade",
       "commitSha": "038954e07bfc313e97fa5f6ff7caf87226e4a782",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "562f9834d7c55c37498e0787fe431061f4bb766cd1dd6bb52441790593c7e1a8"
       },
@@ -748,7 +758,9 @@
       "source": "sveltejs/ai-tools",
       "skillPath": "sveltejs/ai-tools/svelte-code-writer",
       "commitSha": "2ded13539a34253aa2f9031ef83caf8cbd80c9d4",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "cc8fa3ac4a382aeb1cda3e6e9244abe785ab0e3364105bf45ea8bbb94f4301bf"
       },
@@ -856,7 +868,9 @@
       "source": "astrolicious/agent-skills",
       "skillPath": "astrolicious/agent-skills/astro",
       "commitSha": "cb4839f3794189ebf35c55d3ba5d3876dff7acf0",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "64b0cfb9774b1dae0c7c86cc186508822588f903e8d6165ddd4e699e1c2710a8"
       },
@@ -909,7 +923,7 @@
     "shadcn": {
       "source": "shadcn/ui",
       "skillPath": "shadcn/ui/shadcn",
-      "commitSha": "cc20c8a79493156476de07c4711ea15522d3c446",
+      "commitSha": "b07070cd07aaae3b671307dc199f8505390fc9bf",
       "files": [
         "SKILL.md",
         "agents/openai.yml",
@@ -926,7 +940,7 @@
         "rules/styling.md"
       ],
       "sha256": {
-        "SKILL.md": "de1c1ad6a44d5a963370d172ea8c770cb3b87e733dd09fa5681e86eac473ae2e",
+        "SKILL.md": "c5a5c3a8e380ab7d49369c68a715b2da6b1bcc449898cfdf787bbab8cb13a5d9",
         "agents/openai.yml": "35db91b1eef58b2abe01da9b88577de5a44e233b740cd93d692ddeeadd2afe4d",
         "assets/shadcn-small.png": "0ecc62d682727f68fc4937eed19960c706714fa084d44f63028d611ae02bf3d7",
         "assets/shadcn.png": "7d60ad6fec4d89a0d44ba5a3c9283d2fea0047af5467f9227040e20d927d39b7",
@@ -940,25 +954,23 @@
         "rules/icons.md": "d4a58266648872d9ee07d0c2368843a1cb88b8253b7f528dd7bda9d68b6c2535",
         "rules/styling.md": "4a71da3fc53d8efbedac26946e5b13b53d1edf71583d62088ccc2b8cc7b5fef7"
       },
-      "bundleHash": "1b1287f853d10e344c8e7bf8f1715ec77554b083ad48fff6a4a1c844009626cd",
+      "bundleHash": "3e8ca56eb3af0f18b9cca3ae002f2b52f5dd23bceb286dd7403e18ae2fb38d08",
       "review": {
-        "status": "flagged",
-        "flags": [
-          "external URLs to be fetched from docs output and registry sources should be human-checked",
-          "add command accepts arbitrary URLs/local paths, which could introduce unreviewed third-party code",
-          "environment variable token example in mcp config may warrant review despite not exposing a secret"
-        ],
-        "summary": "The skill is mostly on-topic and non-destructive, but it encourages fetching external URLs and installing registry items/URLs, so a human should verify those supply-chain-related behaviors.",
+        "status": "approved",
+        "flags": [],
+        "summary": "The skill content is on-topic documentation for shadcn usage and does not contain prompt injection, embedded secrets, suspicious links, or clearly destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:34:12.950Z"
+        "reviewedAt": "2026-04-30T08:51:46.473Z"
       }
     },
     "typescript-advanced-types": {
       "source": "wshobson/agents",
       "skillPath": "wshobson/agents/typescript-advanced-types",
       "commitSha": "87b81e9d642d7bb9602b33d1e2dadf1c2a619f2b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "c142f64de35a7c7518e62d4a5c5b18800bbe4391be14ba45a5d049adfcf01c57"
       },
@@ -976,7 +988,11 @@
       "source": "wshobson/agents",
       "skillPath": "wshobson/agents/terraform-module-library",
       "commitSha": "87b81e9d642d7bb9602b33d1e2dadf1c2a619f2b",
-      "files": ["SKILL.md", "references/aws-modules.md", "references/oci-modules.md"],
+      "files": [
+        "SKILL.md",
+        "references/aws-modules.md",
+        "references/oci-modules.md"
+      ],
       "sha256": {
         "SKILL.md": "4bf215264e4e485a47a57a72f56d0da6a3e207ec3160535f838f5b1d4ba771b3",
         "references/aws-modules.md": "fdec33a85c9fc14107f482ae0d1d29920a965cd56d4c12e2aa41a4afc2461cf2",
@@ -996,7 +1012,10 @@
       "source": "wshobson/agents",
       "skillPath": "wshobson/agents/nodejs-backend-patterns",
       "commitSha": "87b81e9d642d7bb9602b33d1e2dadf1c2a619f2b",
-      "files": ["SKILL.md", "references/advanced-patterns.md"],
+      "files": [
+        "SKILL.md",
+        "references/advanced-patterns.md"
+      ],
       "sha256": {
         "SKILL.md": "bfa843d97934e8a44686575219825ac21009949b684bf59a96d82b23ca75ec86",
         "references/advanced-patterns.md": "f5f0036b4990badcd241263298b4f9ef3d358d94e3db5d08307d5b80369ed584"
@@ -1015,7 +1034,10 @@
       "source": "wshobson/agents",
       "skillPath": "wshobson/agents/python-testing-patterns",
       "commitSha": "87b81e9d642d7bb9602b33d1e2dadf1c2a619f2b",
-      "files": ["SKILL.md", "references/advanced-patterns.md"],
+      "files": [
+        "SKILL.md",
+        "references/advanced-patterns.md"
+      ],
       "sha256": {
         "SKILL.md": "a6ea3b484d944b786531ee75d74e07363ef08bc932d52ad8e2416e2bf9c1d0c5",
         "references/advanced-patterns.md": "f560ee8b3cffc0fe971e78269bed21dc74f541c2056eae58d34259d9e537176a"
@@ -1034,7 +1056,9 @@
       "source": "wshobson/agents",
       "skillPath": "wshobson/agents/fastapi-templates",
       "commitSha": "87b81e9d642d7bb9602b33d1e2dadf1c2a619f2b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "4ae819c65b5cd74a8b6bdac208617304ac4532685fd00a2dbd8ae4d2e0667237"
       },
@@ -1052,7 +1076,9 @@
       "source": "wshobson/agents",
       "skillPath": "wshobson/agents/python-background-jobs",
       "commitSha": "87b81e9d642d7bb9602b33d1e2dadf1c2a619f2b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "18326a62e5af79968704429d79b315797d87aa7e4d841e228fdf77901f4750f6"
       },
@@ -1158,7 +1184,9 @@
       "source": "neondatabase/agent-skills",
       "skillPath": "neondatabase/agent-skills/neon-postgres",
       "commitSha": "38c7da85db656c8c9efd1e6433c200212926fd2d",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "b78bf0e158d841aa710e0c3fd1906dad412d5f191abafc8ee228a5609de38ac2"
       },
@@ -1224,7 +1252,10 @@
       "source": "expo/skills",
       "skillPath": "expo/skills/native-data-fetching",
       "commitSha": "8f26555fe105f72cf43051cf671771ad227a2f8f",
-      "files": ["SKILL.md", "references/expo-router-loaders.md"],
+      "files": [
+        "SKILL.md",
+        "references/expo-router-loaders.md"
+      ],
       "sha256": {
         "SKILL.md": "ab855acdad6f593eb597b2891671808bf57fc4618fb0eaa26a84ea30576a5d5e",
         "references/expo-router-loaders.md": "f842c86483a15380c44a4b49db27bf3d41e17b48b1f44b9a2bbacc563a9dcbe6"
@@ -1275,7 +1306,9 @@
       "source": "expo/skills",
       "skillPath": "expo/skills/expo-tailwind-setup",
       "commitSha": "8f26555fe105f72cf43051cf671771ad227a2f8f",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "6abfc223a376571e0ee84014b3b474a3f2828ac2ebcde59c5c2b6b4bc802e233"
       },
@@ -1293,7 +1326,9 @@
       "source": "expo/skills",
       "skillPath": "expo/skills/expo-dev-client",
       "commitSha": "8f26555fe105f72cf43051cf671771ad227a2f8f",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "aa79e42e9cd96ea92d4e691fb8222145055dec1b868b7defce224a41d8878a5f"
       },
@@ -1341,7 +1376,12 @@
       "source": "expo/skills",
       "skillPath": "expo/skills/expo-cicd-workflows",
       "commitSha": "8f26555fe105f72cf43051cf671771ad227a2f8f",
-      "files": ["SKILL.md", "scripts/fetch.js", "scripts/package.json", "scripts/validate.js"],
+      "files": [
+        "SKILL.md",
+        "scripts/fetch.js",
+        "scripts/package.json",
+        "scripts/validate.js"
+      ],
       "sha256": {
         "SKILL.md": "484e1867238a1760d775dd9492ad720ef5099367fbef6907974c69a6a8adc723",
         "scripts/fetch.js": "6e00c6fa7277c429c18ae211d1b6515caf2fdf500136cf297921c05d27447483",
@@ -1362,7 +1402,9 @@
       "source": "expo/skills",
       "skillPath": "expo/skills/expo-api-routes",
       "commitSha": "8f26555fe105f72cf43051cf671771ad227a2f8f",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "db4d2cd6fbce04d9a7914db6e37513c218d5fb678e962c034ebfc122c7406fd3"
       },
@@ -1380,7 +1422,9 @@
       "source": "expo/skills",
       "skillPath": "expo/skills/use-dom",
       "commitSha": "8f26555fe105f72cf43051cf671771ad227a2f8f",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "7041bb26db02e24c45eb6c4c4879138a0f52786dd928eefd66c90a35b0e3197d"
       },
@@ -1397,7 +1441,7 @@
     "flutter-expert": {
       "source": "jeffallan/claude-skills",
       "skillPath": "jeffallan/claude-skills/flutter-expert",
-      "commitSha": "5b761018cebd430edcecbeeb46bdde6150d22c65",
+      "commitSha": "efebc44c90ae6eb3b36ff1c53802a765418481b9",
       "files": [
         "SKILL.md",
         "references/bloc-state.md",
@@ -1408,7 +1452,7 @@
         "references/widget-patterns.md"
       ],
       "sha256": {
-        "SKILL.md": "4e80b00ec5d5010cffb20e30e16018d4970de4f523bc3b7e915eb5585c9dfd71",
+        "SKILL.md": "0fe1313754652dc7e98e9189f5c16565cfeeb5d8c96682ce74cbe940f9076f78",
         "references/bloc-state.md": "f31710e75f1ac069c747e4c6ee25dabac73815241f40073c44884d1e997f5091",
         "references/gorouter-navigation.md": "a1a37bd90ffca0b711ebec0f571c09386efa5524972300ad3625dd1f7793c900",
         "references/performance.md": "a16c8c76f49213a3ed08bde55d849cba247cf1fb58e66a94e21b3f3000946eda",
@@ -1416,20 +1460,20 @@
         "references/riverpod-state.md": "ba711b618e2a5f32649e63233b5c7f632c6932a103d98db7627ee0c71389d433",
         "references/widget-patterns.md": "2e3737c470b7d6c41655cd2505eb4d363a0f7e30d41d1126fb9c4bd7eeaad540"
       },
-      "bundleHash": "0857b95c53a388f79c08b2410818cb97a66d1ae196f20cef6a29a15c7102ab2f",
+      "bundleHash": "71285453d40e4949865bf47cf63b7f41dd4461f44cd1a3970eb3eb0e76b9025b",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill content is on-topic Flutter guidance with benign commands and documentation links, and contains no prompt injection, secrets, suspicious URLs, or destructive instructions.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T16:31:29.905Z"
+        "reviewedAt": "2026-04-30T08:52:05.677Z"
       }
     },
     "php-pro": {
       "source": "jeffallan/claude-skills",
       "skillPath": "jeffallan/claude-skills/php-pro",
-      "commitSha": "5b761018cebd430edcecbeeb46bdde6150d22c65",
+      "commitSha": "efebc44c90ae6eb3b36ff1c53802a765418481b9",
       "files": [
         "SKILL.md",
         "references/async-patterns.md",
@@ -1439,27 +1483,30 @@
         "references/testing-quality.md"
       ],
       "sha256": {
-        "SKILL.md": "585706f474de2e86cffbd756396b4ac4ded86443b4100c8a4aec66cde786f56b",
+        "SKILL.md": "6aa71a7bd4129ab0bf1921a9402bcb441cd31513ffa10406f539b8959a525d10",
         "references/async-patterns.md": "3d75c066c70ba0fe18c7e3ccb1063953fc910ee71952a85e04d3ef62492c67a6",
         "references/laravel-patterns.md": "39c4e9e9e564a0fcbc1d6bf34dce0fd2e3568f5fca75d40921e7f2eacf6f3a39",
         "references/modern-php-features.md": "04a6a64dad160622eb1f8465e842681aad8c97261f39383195566aac59fae159",
         "references/symfony-patterns.md": "fa9f01da37e3f0d1981e5ec3af3ea51edf20d4f1ea6e3f85f436ca73ee5a2ba2",
         "references/testing-quality.md": "922245444396b5f2aebf1eda3825d616de1f879cd6413d86e9eb30f06c041de0"
       },
-      "bundleHash": "b2579edfdbabccc26485d92e29cb71aeea79b4a2c6cedf3bede6d474c7e4ab28",
+      "bundleHash": "a3010d6ac7a48f5d4a79e1b03d28855f223740a03208a35233627ae7ad9e1037",
       "review": {
-        "status": "approved",
-        "flags": [],
-        "summary": "review skipped (--no-review)",
+        "status": "flagged",
+        "flags": [
+          "embedded-secrets",
+          "broad-shell-commands"
+        ],
+        "summary": "Mostly on-topic PHP guidance, but it includes hardcoded example credentials/passwords and instructs running project commands that should be human-checked.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T16:31:29.908Z"
+        "reviewedAt": "2026-04-30T08:55:09.262Z"
       }
     },
     "laravel-specialist": {
       "source": "jeffallan/claude-skills",
       "skillPath": "jeffallan/claude-skills/laravel-specialist",
-      "commitSha": "5b761018cebd430edcecbeeb46bdde6150d22c65",
+      "commitSha": "efebc44c90ae6eb3b36ff1c53802a765418481b9",
       "files": [
         "SKILL.md",
         "references/eloquent.md",
@@ -1469,27 +1516,27 @@
         "references/testing.md"
       ],
       "sha256": {
-        "SKILL.md": "d7637ae586bfbba8a0af739631474d2f0bfc90ee08566a352bf7c1f5176a869b",
+        "SKILL.md": "eb3c286d02b4a314a1ffd73b796fb433e94d7628783820e9fb6a5eb2f92eda2d",
         "references/eloquent.md": "2b38872ceacd35e607d577dc26d58a7b8f5c740c4488c68c70b7e71e0be60b2b",
         "references/livewire.md": "940d3fff5da545ed9f27027c80e1ec03109d6956dd85421d7d7b6ca50563b10c",
         "references/queues.md": "2d949cc5d3a37a8ce8582186c7defc6afa1c9288ab96eb150dc77db720cfd134",
         "references/routing.md": "108ebc7524de46262914bbfe3a754252858d5029dcc0b91be980fc15329986e1",
         "references/testing.md": "ae6bb2b11e4a44146dbaaea437eeb91a3aa28e304139ad0308d5bfcc424d32da"
       },
-      "bundleHash": "22aeb9be67725f07a1b18afbb1397e0bff5559d7b3ecf045adfd61ca6ffa2c66",
+      "bundleHash": "2c82583b493a684650ba87fed88128d1e483e0d89f365557fce5387c85c06ab5",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill content is on-topic Laravel guidance with no prompt injection, embedded secrets, suspicious links, or clearly destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T16:31:29.911Z"
+        "reviewedAt": "2026-04-30T08:52:13.042Z"
       }
     },
     "pandas-pro": {
       "source": "jeffallan/claude-skills",
       "skillPath": "jeffallan/claude-skills/pandas-pro",
-      "commitSha": "5b761018cebd430edcecbeeb46bdde6150d22c65",
+      "commitSha": "efebc44c90ae6eb3b36ff1c53802a765418481b9",
       "files": [
         "SKILL.md",
         "references/aggregation-groupby.md",
@@ -1499,21 +1546,21 @@
         "references/performance-optimization.md"
       ],
       "sha256": {
-        "SKILL.md": "528518b4cddf2e71636ba8772e6aa5cbc65b4fa90aac2e33cf5d392c68994bc3",
+        "SKILL.md": "4c026295382b0cc8cc4bf38a01644dd19a5b1ecb4a89ce693b2960d6a9d954a8",
         "references/aggregation-groupby.md": "d71f9e011ebbcc62e4b695932c8e526cfe45b37ec05088bf2995a6f49f26a68d",
         "references/data-cleaning.md": "99468b768f3bfe7a6efb24999462d80791292861c3037ca46b8073d2828490f4",
         "references/dataframe-operations.md": "ea3807160696538f33abda69d557f2810bdff7e746f01673e94f1a349dca3e3e",
         "references/merging-joining.md": "f51f06377908a6aaa9ed498a673d993826bd6d642e3d6af2c26878dd9c80bb87",
         "references/performance-optimization.md": "a34ad5df2cba5465ceea51ed61191b0eaf9adf38c65bc2ef18aacd21ca5ecb48"
       },
-      "bundleHash": "01ea748d2e1753faad8c0ab6866804a0d02b7eb52a87bfa1ae3fa149d6109c81",
+      "bundleHash": "61f79ae3c9a29fd452e5cf8dee9891f1d0ab7da72fa80aa0366784bcd2b46d2b",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill content is on-topic pandas guidance with no prompt injection, secrets, suspicious links, hidden content, or destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T16:31:29.914Z"
+        "reviewedAt": "2026-04-30T08:52:15.714Z"
       }
     },
     "flutter-animations": {
@@ -1611,7 +1658,10 @@
       "bundleHash": "f34ffc3826f5273b90e50085e10fddda8ca2456b148ce65193cdddadee5e9c1f",
       "review": {
         "status": "flagged",
-        "flags": ["destructive_commands", "embedded_secret_example"],
+        "flags": [
+          "destructive_commands",
+          "embedded_secret_example"
+        ],
         "summary": "The skill is on-topic and mostly procedural, but it includes unconditional file-deletion commands and placeholder API key usage that merit human review.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
@@ -1900,7 +1950,9 @@
       "source": "tanstack-skills/tanstack-skills",
       "skillPath": "tanstack-skills/tanstack-skills/tanstack-start",
       "commitSha": "6f5521ecbdfbfa3d54d335eba6c8b4df0b804c03",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "39a01e178e5b438afb78a42d38cc21b7eed056b151960cc935e6782ae12b2199"
       },
@@ -1918,7 +1970,9 @@
       "source": "mindrally/skills",
       "skillPath": "mindrally/skills/chrome-extension-development",
       "commitSha": "47f47c12e62f62b5e171bd5af61d0fc24b329701",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "9c1104b40becd824c7b36e37318bf3c1ae6925302c827874e633f5f90f033a5a"
       },
@@ -1936,7 +1990,9 @@
       "source": "mindrally/skills",
       "skillPath": "mindrally/skills/deno-typescript",
       "commitSha": "47f47c12e62f62b5e171bd5af61d0fc24b329701",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "0cf8612f15831b4b1dcdd850a6be3c427f806f1c7c298c448f392ffe6995faff"
       },
@@ -1954,7 +2010,9 @@
       "source": "mindrally/skills",
       "skillPath": "mindrally/skills/fastapi-python",
       "commitSha": "47f47c12e62f62b5e171bd5af61d0fc24b329701",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "cd00a58e397f688897b03de5771a3885cd55da6dc36752c8d9a566c1be574b3c"
       },
@@ -1971,26 +2029,31 @@
     "clerk": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk",
-      "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
-      "files": ["SKILL.md"],
+      "commitSha": "9d32bf4b90f4ee4160d70f9486d63186d720f3f6",
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
-        "SKILL.md": "d1c1de82328aa1e4e584f0e0c09b5fe4722a73f11889cd78488390e4cbe50e2c"
+        "SKILL.md": "60094930cdd36257691589dc346328b0efa4060da329df571275aa83c06566c2"
       },
-      "bundleHash": "272e4f3c4fcac175ea7f46740f0ad1bf56167110d1bcecde5b33ecb129871d37",
+      "bundleHash": "fb1a2d626fa0506151f7fb635ef32727dc0552872b020588aeb1709d4bd2418d",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill file is a benign Clerk routing guide with no prompt injection, secrets, suspicious links, or dangerous commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:41:39.198Z"
+        "reviewedAt": "2026-04-30T08:52:27.784Z"
       }
     },
     "clerk-setup": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-setup",
       "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
-      "files": ["SKILL.md", "evals/evals.json"],
+      "files": [
+        "SKILL.md",
+        "evals/evals.json"
+      ],
       "sha256": {
         "SKILL.md": "0225ed4f6a7d4623aa651868ff8b36b63564a6dd925563db9f3533abe72d47d2",
         "evals/evals.json": "ea479ca5cf858c61c6c5805a215ea556b8dd0f2a8679637bdcd99ad48ce771b9"
@@ -2038,7 +2101,7 @@
     "clerk-backend-api": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-backend-api",
-      "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
+      "commitSha": "9d32bf4b90f4ee4160d70f9486d63186d720f3f6",
       "files": [
         "SKILL.md",
         "evals/evals.json",
@@ -2049,7 +2112,7 @@
         "scripts/extract-tags.js"
       ],
       "sha256": {
-        "SKILL.md": "3827e6f54e615b029f896b1b14d324bdec4cc1fd91382fc8b0c54352f63af253",
+        "SKILL.md": "a96917330774f7d67e505bf975ce3650f23c7c34871a67063265c014595f9e60",
         "evals/evals.json": "3fc5f74828422b80a14e68cbbbad9a3108d0382380db26569e1ceb7a71f8e92c",
         "scripts/api-specs-context.sh": "e0dc3e952ae91e53466e25d098eac3b02ac1ad7bf184f7caef78aaa557c55aa0",
         "scripts/execute-request.sh": "d0c534b563fb650adb6582d471c17494ee8b05f14a529e6d58730fa2431a9c01",
@@ -2057,20 +2120,24 @@
         "scripts/extract-tag-endpoints.sh": "f3aa015fe7fa1cc472f0149d29a3faffa00709060bbccec5fae22a86f797e84d",
         "scripts/extract-tags.js": "35cc4d6f5dcccf04f41e7e029df609d71ffa991b793ded9d7c6fce5a682de947"
       },
-      "bundleHash": "1b8f6b94395bd00123ae80abd52c617e95585f600c1fdc84dd6813a0ce799cc8",
+      "bundleHash": "9fbc43a070268e24851697445a6e940065ef71bc02ba96cf27c8ec80aaf27da6",
       "review": {
-        "status": "approved",
-        "flags": [],
-        "summary": "review skipped (--no-review)",
+        "status": "flagged",
+        "flags": [
+          "credential-handling instructions",
+          "broad shell/API execution patterns",
+          "scope-bypass language"
+        ],
+        "summary": "The skill is on-topic but includes commands that inspect sensitive environment variables and mentions bypassing scope restrictions, so it should be human-reviewed.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:41:39.206Z"
+        "reviewedAt": "2026-04-30T08:55:10.605Z"
       }
     },
     "clerk-orgs": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-orgs",
-      "commitSha": "f49091048946d4304d8f390cbfe164afac089bb4",
+      "commitSha": "9d32bf4b90f4ee4160d70f9486d63186d720f3f6",
       "files": [
         "SKILL.md",
         "evals/evals.json",
@@ -2080,28 +2147,31 @@
         "references/roles-permissions.md"
       ],
       "sha256": {
-        "SKILL.md": "98896baa5794faf743b32715ea702177ca1e8262d7ec41aa44771749fe9de13e",
+        "SKILL.md": "6d86e55fb26c99a61d2d4ab04004a0a5cf66c87d8444728254b62f2ca02a64e7",
         "evals/evals.json": "891d01132d6cbfd22361a52b2b9a2c7dffbb9170052d73f2106b9ae8a4a4fc9e",
         "references/enterprise-sso.md": "b190fdfd3bdce551956d6873f4ef97629cb2e0bc1404a7936769c097ef945b77",
         "references/invitations.md": "0499cabe30b89b95a1789617d688a4a61c7aafce5cd954aa3a4b7fc0af9a3708",
         "references/nextjs-patterns.md": "76f83ae108c664ba7efc36e0db890667632e43d9825e12db7ac8785e6b1a3e15",
         "references/roles-permissions.md": "09a077982add3079e769dd8a6a57818a62b386cc097a9fb96a7801379629030b"
       },
-      "bundleHash": "90ba77cb7983c132ae329d8b33bfefb38b67ed78de0fb14a657015d523930d17",
+      "bundleHash": "079f9d185fab81265e15c5310a87a96e320fa482d17551cbc64027b5f8505060",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "The skill content is on-topic documentation with no prompt injection, embedded secrets, suspicious links, or destructive commands.",
+        "summary": "The skill content is on-topic Clerk documentation with no prompt injection, embedded secrets, suspicious exfiltration, or destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:29:09.508Z"
+        "reviewedAt": "2026-04-30T08:52:32.337Z"
       }
     },
     "clerk-webhooks": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-webhooks",
       "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
-      "files": ["SKILL.md", "evals/evals.json"],
+      "files": [
+        "SKILL.md",
+        "evals/evals.json"
+      ],
       "sha256": {
         "SKILL.md": "fe7ab04ca085660a391dbfe3e6615bcac7bfc83408a5682de1e471676f02e64d",
         "evals/evals.json": "2856c7b01d7c8b68721ecc0639852a37ef5a0b76ad5f7851da1d9f54b5750380"
@@ -2120,7 +2190,9 @@
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-testing",
       "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "0db14edb4d69fe703eb3cf7c2e99421e2283e49c5b1c35b3fd8a22827ae0afbf"
       },
@@ -2471,7 +2543,7 @@
     "clerk-chrome-extension-patterns": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-chrome-extension-patterns",
-      "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
+      "commitSha": "9d32bf4b90f4ee4160d70f9486d63186d720f3f6",
       "files": [
         "SKILL.md",
         "evals/evals.json",
@@ -2484,7 +2556,7 @@
         "templates/chrome-ext-basic-auth/tsconfig.json"
       ],
       "sha256": {
-        "SKILL.md": "d6e10298d3674d695d0dbc094cdfeb33f29cc60e3dc023f5dc1ad5be0e7e5db7",
+        "SKILL.md": "364ccf66dd86ae3c1eecf6724d635ccf5bb6b89e0fd76aae938243711f0fc441",
         "evals/evals.json": "0c6e4215bc0f14777579af0707e5b60bb6b8f31170f19967b9d3404e0213bea4",
         "references/content-scripts.md": "9aab31092a40291d20cfede1c0b8a77d68fcfb8139dc3dd033bb6345d0dcb2d9",
         "references/create-clerk-client.md": "3c5aee8f5ef0d3c0df9d96a2717b561b16ba3660f5e97a35aa753fd71a8088ea",
@@ -2494,21 +2566,29 @@
         "templates/chrome-ext-basic-auth/src/popup.tsx": "c6ac9597ead147e5d91e7e781737988f54a61089774f59616bbe9a1567e2f613",
         "templates/chrome-ext-basic-auth/tsconfig.json": "e8c1f3abe503b31fd979dcfa928d963508c41c8b74bdcd190f893e10428273b7"
       },
-      "bundleHash": "f1601abddf64191d2d04307f46f726e74ff8ebaffaf1b5e91eb687bd8fe87327",
+      "bundleHash": "d9e43d5a433371c5f51b573d86a92bd12eda1319165129f425dcd23f2e12c73f",
       "review": {
-        "status": "approved",
-        "flags": [],
-        "summary": "review skipped (--no-review)",
+        "status": "flagged",
+        "flags": [
+          "Contains example curl command with placeholder secret authorization header",
+          "Suggests broad host permission pattern `<all_urls>` in content script manifest example",
+          "Includes instruction to disable bot protection/security feature in dashboard"
+        ],
+        "summary": "Mostly on-topic Clerk Chrome extension guidance, but it includes security-sensitive examples and broad permissions that warrant human review.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:41:39.236Z"
+        "reviewedAt": "2026-04-30T08:55:13.097Z"
       }
     },
     "clerk-swift": {
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-swift",
       "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
-      "files": ["SKILL.md", "references/custom.md", "references/prebuilt.md"],
+      "files": [
+        "SKILL.md",
+        "references/custom.md",
+        "references/prebuilt.md"
+      ],
       "sha256": {
         "SKILL.md": "e904eda064220c4849cb9d5abde47d5d9b244f7e2806a6a18aa4a3bc9d3d3455",
         "references/custom.md": "6546d93b0296fcf9b220297bc9b11ac20b34b597032860bb4e79b0a4f49ddc07",
@@ -2528,7 +2608,11 @@
       "source": "clerk/skills",
       "skillPath": "clerk/skills/clerk-android",
       "commitSha": "43d2211beca1885a8dcceb2cbabb39c55d419f16",
-      "files": ["SKILL.md", "references/custom.md", "references/prebuilt.md"],
+      "files": [
+        "SKILL.md",
+        "references/custom.md",
+        "references/prebuilt.md"
+      ],
       "sha256": {
         "SKILL.md": "6513585b205a2fc95ad70a967c2d56f8127f57de6247c001e89bef45c96ab7f0",
         "references/custom.md": "2507e52797688bcaba0af8a933db3d248c9d15969b58eeb6ae94fec7e4eaae1d",
@@ -2547,7 +2631,7 @@
     "turborepo": {
       "source": "vercel/turborepo",
       "skillPath": "vercel/turborepo/turborepo",
-      "commitSha": "99f27c49b02f65019c019536c61250eb419728e1",
+      "commitSha": "70e935397e83f8139f5d34938648f076be6bfdbd",
       "files": [
         "SKILL.md",
         "command/turborepo.md",
@@ -2577,12 +2661,12 @@
         "references/watch/RULE.md"
       ],
       "sha256": {
-        "SKILL.md": "61c777ee33b9258916d511cb99e8561a43baee542d25949e07049cb664d3057e",
+        "SKILL.md": "3cf7556b5ec44506a625a67a36b19d182d26fc14972b8b345f146a0f9e2378f4",
         "command/turborepo.md": "a85db9121e226f0001e3f78e3521de4893a48c83bdd51546268e609ba3a3275e",
         "references/best-practices/RULE.md": "ab7d339168386107d0a6b9259f2e6586b1526d53975682a08442babfa1b7bb58",
         "references/best-practices/dependencies.md": "422cbba88be554e857fd2bce4bd60983198bfd48e253f8b57ac833741077f3d3",
         "references/best-practices/packages.md": "eb393cfc4e2824612e862db5d30868948952e22c48b9885b20ef43f5d982732e",
-        "references/best-practices/structure.md": "0533e0f1d4de05916a2ef804daa599f33b1b04a00e9e824063a8438a56f6e8b7",
+        "references/best-practices/structure.md": "f546ca407fdde495acb020f6c6ee8770f4a946710face11ac1ed02d9a23cddde",
         "references/boundaries/RULE.md": "70d66f5ba31c0caa788b68b99b8f010eb71d1ab1a55d1d6faec024d4a86afb56",
         "references/caching/RULE.md": "f79ae3c2036472a56de4582116ccca873b40e15341d26470bb24d2b2a6d3f551",
         "references/caching/gotchas.md": "b27acdf3ee955dfc8d00ad68bbea949c78dc7f2c4d3f7c380123840a6fc3fef9",
@@ -2593,25 +2677,25 @@
         "references/ci/vercel.md": "be87a22776dfcd2717aaa21bcb16cc9d2bc1bb5e6640c8659c1cd3068f64b891",
         "references/cli/RULE.md": "7f323ad405086b17fbafa516a9feec597ad94323492954329e9aafb5b51f8e18",
         "references/cli/commands.md": "723ed30b76447b3a52d73811979c4b11c69e6eee50f3ef211fe8779e48c4ba46",
-        "references/configuration/RULE.md": "19e32724f235d5eb5bde77f9b3ba251f7d79a7f4250d4b0b15349234e524ae37",
+        "references/configuration/RULE.md": "6e5373e72b36ccbc4d3789823dd28d3cfdb6844fdf5610018b8eaef688b17923",
         "references/configuration/global-options.md": "50e085885e08c061f23b3b0c480f304fa142f29a8a5dcfdf1b51ec184cef204e",
         "references/configuration/gotchas.md": "5342e3720c6530ad9306fd21f588317b46083b33ed9d9d6071b6bfa6db74c717",
         "references/configuration/tasks.md": "b909cc8802d388195b0f032d57402bdb4e1574c4bc43c212026279684d1825b2",
-        "references/environment/RULE.md": "174dcaead3325c17e5f8351a610259bb5b044e51a87b829693ad7376b7dda4d3",
-        "references/environment/gotchas.md": "8eaf18653142dc1a628f732c4639e866cf4cc5ba5b3d1f4778a0fddbf33cf21b",
+        "references/environment/RULE.md": "7a79798a78be8c07d5aa4213c7f46271847d08b8831c45b76abe7c2ed4bdb63a",
+        "references/environment/gotchas.md": "529f466d5ade393a80fd61f41060d353319206bb11b49c01bb6df866956ee525",
         "references/environment/modes.md": "29550669e10f5d84b8208ca44c1877b6ce70c8db9f16aca1fac2d0f19ba4b4eb",
         "references/filtering/RULE.md": "b93549585bf8a266f92929b0f9a7536527954fcee51b9cdfa5cbd63100d6f46b",
         "references/filtering/patterns.md": "c412ffaf156908e773ac1039aaeaf1c1843b43f2e836eb25aa4c66bd84fa22c2",
         "references/watch/RULE.md": "6f39b8c107964882d1646d36beb2c293aed136fa113bb5263d13da282258df81"
       },
-      "bundleHash": "7a4fdfa6bec01e502214a0ecf54d863bbce70a5646ff41e23982ba22af431f3c",
+      "bundleHash": "fd27be587062baeba611e0e7d12c6939e6df859cb8984cf7fe4bdc6d6d3dcde1",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill content is on-topic Turborepo guidance with no prompt injection, embedded secrets, suspicious links, or destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:42:02.565Z"
+        "reviewedAt": "2026-04-30T08:52:43.777Z"
       }
     },
     "azure-deploy": {
@@ -2709,7 +2793,12 @@
       "bundleHash": "6334818ba5cde438847676fd008d1e4f3b744b486e0638e27f93c7de61588f1d",
       "review": {
         "status": "flagged",
-        "flags": ["dangerous-command", "broad-shell-usage", "uses-eval", "curl-pipe-shell"],
+        "flags": [
+          "dangerous-command",
+          "broad-shell-usage",
+          "uses-eval",
+          "curl-pipe-shell"
+        ],
         "summary": "Mostly on-topic Azure deployment guidance, but it includes risky command patterns such as `curl | bash` installation and multiple `eval $(azd env get-values)` examples that should be reviewed.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
@@ -2771,9 +2860,10 @@
     "azure-diagnostics": {
       "source": "microsoft/github-copilot-for-azure",
       "skillPath": "microsoft/github-copilot-for-azure/azure-diagnostics",
-      "commitSha": "d01826fce9dc4139dc52230338a1808ab74bbc86",
+      "commitSha": "070bf6454d7849a5cb0218a421ee2b61b8fcdea0",
       "files": [
         "SKILL.md",
+        "references/app-service/README.md",
         "references/azure-resource-graph.md",
         "references/container-apps/README.md",
         "references/functions/README.md",
@@ -2790,10 +2880,22 @@
         "troubleshooting/aks/references/structured-input-modes.md",
         "troubleshooting/aks/spot-and-zone-issues.md",
         "troubleshooting/aks/upgrade-operations.md",
+        "troubleshooting/messaging/README.md",
+        "troubleshooting/messaging/auth-best-practices.md",
+        "troubleshooting/messaging/azure-eventhubs-dotnet.md",
+        "troubleshooting/messaging/azure-eventhubs-java.md",
+        "troubleshooting/messaging/azure-eventhubs-js.md",
+        "troubleshooting/messaging/azure-eventhubs-py.md",
+        "troubleshooting/messaging/azure-servicebus-dotnet.md",
+        "troubleshooting/messaging/azure-servicebus-java.md",
+        "troubleshooting/messaging/azure-servicebus-js.md",
+        "troubleshooting/messaging/azure-servicebus-py.md",
+        "troubleshooting/messaging/service-troubleshooting.md",
         "version.json"
       ],
       "sha256": {
-        "SKILL.md": "34d1b40a7cf66ea95ae0d8563e45217a8efc73e29bcba372ff379af7bf02b0c2",
+        "SKILL.md": "e933026031a5d96defbc0222cbfa1f9aebd0bec2f3c663c8e444cb04187bd2f8",
+        "references/app-service/README.md": "51ac514c8f5333232ae921b8ad3b43933d762e5d7c6d6b49e593cc5e6f7db0c9",
         "references/azure-resource-graph.md": "e6b707e38a07cbc4b9c26333f730a262268223686aaecd75951bb208e32e8421",
         "references/container-apps/README.md": "8d7772007db8635af33cce1dde78f82e22f8c9df143e10a960e841cb2e479dd4",
         "references/functions/README.md": "c251fd5a6201d88f325c8f5da3c39409719e277dc3e2b561c8d204eb5b0481c7",
@@ -2810,23 +2912,39 @@
         "troubleshooting/aks/references/structured-input-modes.md": "eb1d1efe70567b5583d56c155a640ed6d3964befba1e63589d57045ee0640119",
         "troubleshooting/aks/spot-and-zone-issues.md": "00531f4c15aafa5d89d9d8696d2b83c37611fbf7014600308252ef2382ec0379",
         "troubleshooting/aks/upgrade-operations.md": "a159e73391f2436c0184790deb9a3296c766288269cead50d07f3d021331dc88",
+        "troubleshooting/messaging/README.md": "060a285a2fab6038e198261f9a6d2b6151707f8e0aa29951f08816bba0766d2c",
+        "troubleshooting/messaging/auth-best-practices.md": "34f6fe88e2b5819c1a0f24aa3930a060d9504fee68ea4b363f0912a78daa5396",
+        "troubleshooting/messaging/azure-eventhubs-dotnet.md": "d168fd1529ad865409707fd0e208d44877ae3e9306de25f36ad141fe916e7b5e",
+        "troubleshooting/messaging/azure-eventhubs-java.md": "f81e0671f1472545a805cb8ed5982fc3fb3ab743ac7111a26549be1500bb2e49",
+        "troubleshooting/messaging/azure-eventhubs-js.md": "f4794520b65453a99ba1ede3fe9c7d34742d37a5148710a957ad8c6ba3033bb4",
+        "troubleshooting/messaging/azure-eventhubs-py.md": "4511039cc6ce513e8ff4eaedc46b7248bb64d12897b52003bf66709a0c4a4e78",
+        "troubleshooting/messaging/azure-servicebus-dotnet.md": "49ee74f9327aa2fe311d56d0bed2b80d757c807b82e6385833497570a1eb3927",
+        "troubleshooting/messaging/azure-servicebus-java.md": "d5c07b964c79225c52f7dcaea2c46cef5fdb320aec67cbf3ba0fc03d46675910",
+        "troubleshooting/messaging/azure-servicebus-js.md": "ef4131010dbaa59fea9dd9c5b6b6a4d866e83d375fd4d920c79d25ccadf0e16b",
+        "troubleshooting/messaging/azure-servicebus-py.md": "274162fa4cec6f96fea056639c7cf0d8821bce277af82eb01343f6a9e74f647b",
+        "troubleshooting/messaging/service-troubleshooting.md": "206d243b21e22a129b68a4ba36729e18b740bffaf2dfa1aecc9fd36dc7d4df02",
         "version.json": "6a195defa97943ab8d9ce89a7c35611e4a12c4494aa7bc2d219065e93baade35"
       },
-      "bundleHash": "d871872784faa9866b79b39ced12d8703366fcbdc01e5d419f2c41736bbdd434",
+      "bundleHash": "9b6e89e0d0d441861e2fbe1a55f564f90cf6d562fb1f03ef3bdf343a04ed56b3",
       "review": {
         "status": "flagged",
-        "flags": ["embedded secrets", "broad access to sensitive telemetry"],
-        "summary": "The skill is mostly safe diagnostic guidance, but it includes instructions to retrieve and expose Application Insights instrumentation keys and connection strings, which are sensitive and should be human-reviewed.",
+        "flags": [
+          "embedded secrets exposure guidance",
+          "broad potentially sensitive data retrieval commands"
+        ],
+        "summary": "The skill is generally on-topic and safe, but it includes commands and queries that retrieve instrumentation keys, connection strings, and app settings, which should be human-reviewed to avoid inadvertent secret exposure.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:32:00.374Z"
+        "reviewedAt": "2026-04-30T08:55:15.077Z"
       }
     },
     "elevenlabs-tts": {
       "source": "inferen-sh/skills",
       "skillPath": "inferen-sh/skills/elevenlabs-tts",
       "commitSha": "d5e75fdb44099754b214a0b2728e7b61084e936b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "ad734a57b5fef9b91d7b4dc43efd15663c28a9a8fcc8ab2d468fa8184f0ccff1"
       },
@@ -2848,7 +2966,9 @@
       "source": "inferen-sh/skills",
       "skillPath": "inferen-sh/skills/elevenlabs-music",
       "commitSha": "d5e75fdb44099754b214a0b2728e7b61084e936b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "63d679aab2e247c06e951e36b82be28acd2a09f0c65a9b6172c79135699970b2"
       },
@@ -2869,7 +2989,9 @@
       "source": "inferen-sh/skills",
       "skillPath": "inferen-sh/skills/python-executor",
       "commitSha": "d5e75fdb44099754b214a0b2728e7b61084e936b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "9e98dc54bc17e186935f3b3bd844048d3e74dd646ef6a18aea17993990989dbd"
       },
@@ -2890,7 +3012,7 @@
     "cloudflare": {
       "source": "cloudflare/skills",
       "skillPath": "cloudflare/skills/cloudflare",
-      "commitSha": "0438a075b419f737eb091d1c91800b7387e3a75f",
+      "commitSha": "7c449def4e0c63daa27212d853094e4c8e37bbe8",
       "files": [
         "SKILL.md",
         "references/agents-sdk/README.md",
@@ -2998,6 +3120,11 @@
         "references/email-workers/configuration.md",
         "references/email-workers/gotchas.md",
         "references/email-workers/patterns.md",
+        "references/flagship/README.md",
+        "references/flagship/api.md",
+        "references/flagship/configuration.md",
+        "references/flagship/gotchas.md",
+        "references/flagship/patterns.md",
         "references/graphql-api/README.md",
         "references/graphql-api/api.md",
         "references/graphql-api/configuration.md",
@@ -3210,7 +3337,7 @@
         "references/zaraz/patterns.md"
       ],
       "sha256": {
-        "SKILL.md": "35e0b84b83e6ecc5c2d5f2bdea4ceb7d99a832c9a40d8a5955c64b1e16b041b0",
+        "SKILL.md": "99be50a67ea1dbae086af3f2bac668c38dd57f71b25ed11f754827a7f206a89d",
         "references/agents-sdk/README.md": "b8bbf95920b105cc587b93280209bca95104cd32d944b6e7344cffd0a751e6c2",
         "references/agents-sdk/api.md": "3c5b0816e92ff702a851bf071ddf2f2e814c4f841d5313fc86d3f7bdfa64ab8f",
         "references/agents-sdk/configuration.md": "4a24fc6be3cbc5578fa58d6ded8495fed77831909af599000c7f9849e9282afd",
@@ -3316,6 +3443,11 @@
         "references/email-workers/configuration.md": "984d84d6842f4adda147cb783537ffd51ac887c331a0de3c100374c63c06d33e",
         "references/email-workers/gotchas.md": "d1eccc06d83dce5ac8b0fab47bad9694e5b067752ebad52b51bd8f32fcde45bb",
         "references/email-workers/patterns.md": "e8704f7beac19235631b246420c5ce730b054ccf899f43548366d70fe430737d",
+        "references/flagship/README.md": "eda518e70dc3c7cd1f829dcfd838b124cbb885f54bc602fdbbfc98924da467ac",
+        "references/flagship/api.md": "1c97b6fad897f6effce69ff263dbfac08d1a199c8df2a68b4ae03ce644ccad0f",
+        "references/flagship/configuration.md": "a067854b48b4f6cbbb7fac4ca886ef6a14ddd1fc108650ec2f096ca730d55c02",
+        "references/flagship/gotchas.md": "efc1933a4b0f59bf88ed9d3bd9eff9827f7974033ba85f30fa9afe7cbe62c676",
+        "references/flagship/patterns.md": "464e6d473c38b8449b60d0a4338140ed925b21dfd54e7cfc5564f8cab50f811e",
         "references/graphql-api/README.md": "324df669a01caceff7f0dbdb25e3b35dcaa40a5c20700605628c4bcb66b0d093",
         "references/graphql-api/api.md": "0c0250cdf31adfbf2c7f96bf3ec257c32d14709160a8552b3238a861b3540de5",
         "references/graphql-api/configuration.md": "765e696dfd11bfa87d231c011b10fb2c10a2e33d704d7c6d04f1f125585c5b92",
@@ -3527,21 +3659,23 @@
         "references/zaraz/gotchas.md": "30378f48fde6e866780466228a3e698005a9ce23a24188c8ed520195b03eac3e",
         "references/zaraz/patterns.md": "2ea1d00fe81b1e881c00090fd18c96d8c78ebb41fcc55f540b68150320d90d17"
       },
-      "bundleHash": "da4a0ac8024248882401e17848856237e063620c7781f47bd89fcdcf72f902b3",
+      "bundleHash": "ed01e97370f2c5060338ebef9189ac5f7652addf325e1ec4b9b30ed9653122c2",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "The skill content is on-topic Cloudflare documentation and examples without prompt injection, embedded secrets, hidden payloads, or destructive commands.",
+        "summary": "The Cloudflare skill content is on-topic documentation/configuration guidance with no prompt injection, embedded secrets, hidden content, or clearly destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:19:18.707Z"
+        "reviewedAt": "2026-04-30T08:53:20.410Z"
       }
     },
     "wrangler": {
       "source": "cloudflare/skills",
       "skillPath": "cloudflare/skills/wrangler",
       "commitSha": "0438a075b419f737eb091d1c91800b7387e3a75f",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "42abe11ba6c0cb0c135deed1d591d844838fe0b61fc8c6d675a832435508a61b"
       },
@@ -3563,7 +3697,11 @@
       "source": "cloudflare/skills",
       "skillPath": "cloudflare/skills/workers-best-practices",
       "commitSha": "0397d7d88fa6ac7517a88389622eb0799e86ded2",
-      "files": ["SKILL.md", "references/review.md", "references/rules.md"],
+      "files": [
+        "SKILL.md",
+        "references/review.md",
+        "references/rules.md"
+      ],
       "sha256": {
         "SKILL.md": "099432ff265ff6080327ef0b392c118b835d2a5bda98a7de07e1afd115ed6458",
         "references/review.md": "3e32da345be0906d020e5235d01f2b6398a41216900b5370a267e3f17757ade0",
@@ -3583,7 +3721,9 @@
       "source": "cloudflare/skills",
       "skillPath": "cloudflare/skills/web-perf",
       "commitSha": "0397d7d88fa6ac7517a88389622eb0799e86ded2",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "94c5cb37766676a8321a82861d2ac1072d3dd0ef612f0c946792014ad48fb0c2"
       },
@@ -3685,7 +3825,11 @@
       "source": "cloudflare/skills",
       "skillPath": "cloudflare/skills/sandbox-sdk",
       "commitSha": "0397d7d88fa6ac7517a88389622eb0799e86ded2",
-      "files": ["SKILL.md", "references/api-quick-ref.md", "references/examples.md"],
+      "files": [
+        "SKILL.md",
+        "references/api-quick-ref.md",
+        "references/examples.md"
+      ],
       "sha256": {
         "SKILL.md": "0f3501e6510921401be3f54bcb24d2a432a1b5c63af8f719eded3a087ad88ea9",
         "references/api-quick-ref.md": "a4e33b6a4543aff84a4cee75fb6b3b26bf96340c7026266a5fc4df3aa699f08c",
@@ -3704,26 +3848,32 @@
     "terraform-style-guide": {
       "source": "hashicorp/agent-skills",
       "skillPath": "hashicorp/agent-skills/terraform-style-guide",
-      "commitSha": "de4323afdfbc30d1387f287b55062fa8d82b62e8",
-      "files": ["SKILL.md"],
+      "commitSha": "b129bb5c0a8d857d5c36d1fd12492e943730aacf",
+      "files": [
+        "SECURITY.md",
+        "SKILL.md"
+      ],
       "sha256": {
-        "SKILL.md": "9d08cde101042ff656c473b6db9e8a7bcfc0cc191441b8613be3b47f11fec060"
+        "SECURITY.md": "85b5784b87b00a7ee477145c744e4287d1b6e574a1966c6c94e8d5529c4ee8dc",
+        "SKILL.md": "fea8a0eadf68f1ac45cae3b1d6dc4c66b489fb6e40a3d41762120059c49540c2"
       },
-      "bundleHash": "d00e23ed563bf2ae8a99ab5ae2537469727bc0fde3c5f82c4e8b753cf9986a7f",
+      "bundleHash": "70f4304607fe5513213a2d0a948acb55335f79b24a823a9ddf1bfc7df24f0525",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill content is on-topic Terraform style and security guidance with no prompt injection, embedded secrets, suspicious links, or destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:42:33.355Z"
+        "reviewedAt": "2026-04-30T08:53:29.903Z"
       }
     },
     "refactor-module": {
       "source": "hashicorp/agent-skills",
       "skillPath": "hashicorp/agent-skills/refactor-module",
       "commitSha": "de4323afdfbc30d1387f287b55062fa8d82b62e8",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "51357bb86eb46cb8f9afbe1cb04fdfb2355a66d7db4189a7d013c4c6d1bcba4c"
       },
@@ -3772,7 +3922,7 @@
     "swiftui-expert-skill": {
       "source": "avdlee/swiftui-agent-skill",
       "skillPath": "avdlee/swiftui-agent-skill/swiftui-expert-skill",
-      "commitSha": "a5f130a0be5f3fe9da564e33a3b94739be6e18a6",
+      "commitSha": "0066966574a22d30e6b89242be265b39fd19a0f4",
       "files": [
         "SKILL.md",
         "references/accessibility-patterns.md",
@@ -3834,38 +3984,40 @@
         "references/sheet-navigation-patterns.md": "eda4200c089b0baeb77d29a0ad94ed99062a1c79a78fdd7dfa59b00347d701e8",
         "references/state-management.md": "839d5ea42e3281d69c9d0ec3f797c5dd9f7cdf61e3f3cf273b234efbef40eeda",
         "references/text-patterns.md": "58d2fc91e553a67787c31aceee75421836bc1d5085df2562b7c8abd3cbd80a30",
-        "references/trace-analysis.md": "085443330ec41ff45dc484c4adbe009def7640ccc1789b2521bf0fafd27897b1",
+        "references/trace-analysis.md": "7b0aba8e633a079bad03597c51657fc9b744035ea064fe4198b55e41e5ec4bc1",
         "references/trace-recording.md": "bded408f9133fd3848548f698b19e213a655bb59141df28112bcdc222720712a",
         "references/view-structure.md": "43f37285d1e60efcb0fc4de1dcdf2cb6c57c87f22a335fc7ca65fd289e27f62b",
-        "scripts/analyze_trace.py": "ec21775df24e72c5dd10332f3792b91b098d9171d1de3ca5e4b2d7648629fa89",
+        "scripts/analyze_trace.py": "f40d49cfd4b5afcea717560787c34dcef1574f831a55a7d846303910df539636",
         "scripts/instruments_parser/__init__.py": "fdf7c99bed236e0fb71524b155be864a00a71af4997d6848c6c33f49fce62861",
-        "scripts/instruments_parser/causes.py": "d1dfcab1761c8522fece210dee48c123d5b6174faf3b9b7736dff5520bcdd300",
+        "scripts/instruments_parser/causes.py": "cf6e067e5f47130562522ed27ca4f2551d0b2de669b5063db950e220e19cbd1f",
         "scripts/instruments_parser/correlate.py": "c4bd0c6d14cc96e03cf058ae134c661ace6de5d9b95d417e742278a9c86d064b",
-        "scripts/instruments_parser/events.py": "407582dae6a0eb2098a003b6bfeb8d50fd7bdd62f447962e3509e1024fd1c8ca",
-        "scripts/instruments_parser/hangs.py": "a727232d05662d966adc1ab72ccd61bc205db3d0012ceec413187c9ad044a993",
-        "scripts/instruments_parser/hitches.py": "cd3647877ee9a32a8db4f33f667c9abf133483cd8ad0be91690a2cb6a0e8caf5",
+        "scripts/instruments_parser/events.py": "e389fed14c398732aadb04bddeed399d4856eca24741396e3c845d4a4a95be57",
+        "scripts/instruments_parser/hangs.py": "af779727b7342186606021acad8f38dfb88778ee068a95d0a9b119f415bc5162",
+        "scripts/instruments_parser/hitches.py": "39c4a6d96fa4447709eeff98f033a2a6cac1a70b205fd543b7711e1d4759dd2f",
         "scripts/instruments_parser/summary.py": "dc856a29008aa2218cf30fc82db133f75efc1f67580b27fb3077f17ccc365296",
-        "scripts/instruments_parser/swiftui.py": "3843f884cc549851d43e6abe7fb70320167e3e27db0ada4b25f162c44d0d0fa1",
-        "scripts/instruments_parser/time_profiler.py": "6ba7bb9a4f059fefd4b021ba2a4cff2d82e48fb93ae0dd132950270074bd8ef9",
-        "scripts/instruments_parser/xctrace.py": "2a3cfb97e037feea0bea37a79052497cc31e7c9976f43a83fa39077868704cf5",
-        "scripts/instruments_parser/xml_utils.py": "574d392e601db9adf2204441d4d70cf4d9fea78b9ab286ea43a482ca79541307",
+        "scripts/instruments_parser/swiftui.py": "f499b222b24c2129208284ccc61d6d0ac27bfe67831a5f7db51848f83d20fdd5",
+        "scripts/instruments_parser/time_profiler.py": "dd3ab3f6e8e41b8ad00bbbd38ac96ada12a945bd82e51c923ac912fc46bff9b6",
+        "scripts/instruments_parser/xctrace.py": "b680bddb80d7f63ff97b7ba69b1c9ddda57d4080d601e9a1a47f09e81c2870ce",
+        "scripts/instruments_parser/xml_utils.py": "f0f4476f0f1f0ce9ad5779509b59c2c77b0f7438a57d358aa76e715e7a23b4d6",
         "scripts/record_trace.py": "915d97c9f68b3065fe7921a31709e82d299cf113b310e78b855776e9cdde33d3"
       },
-      "bundleHash": "7d8c33074db5981173092a081a36686095dac4c5dcf36e18fa95b3d22a763f48",
+      "bundleHash": "28cb5b5859abf517a4a551a2d88a8e92849d899b6a6542825bac4546bc70dbb6",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "The skill content is on-topic SwiftUI guidance and trace tooling usage with no prompt injection, embedded secrets, suspicious URLs, or destructive commands.",
+        "summary": "The skill content is on-topic SwiftUI and Instruments guidance with no prompt injection, secrets, suspicious URLs, or clearly destructive commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:19:35.365Z"
+        "reviewedAt": "2026-04-30T08:53:37.882Z"
       }
     },
     "oxlint": {
       "source": "delexw/claude-code-misc",
       "skillPath": "delexw/claude-code-misc/oxlint",
       "commitSha": "c729be07588f3b64a3878cc9f5e99c362388554c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "2bb36d27249b172283e96ec4a877fb11230d7f73293a666da3adaeca65df9b31"
       },
@@ -3883,7 +4035,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-core",
       "commitSha": "03d9f0c3dbf91e0b60582b64ed040c8911ca0174",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "3887b47e050ab5afbe2a9a820f23d39fa02ab785e06a343be44c6f91d84d12b3"
       },
@@ -3901,7 +4055,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-scrolltrigger",
       "commitSha": "03d9f0c3dbf91e0b60582b64ed040c8911ca0174",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "9351b6666a4749c0740406ea363aaccb99a087ff45cc5e8b99a0f367facf3ef4"
       },
@@ -3919,7 +4075,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-performance",
       "commitSha": "03d9f0c3dbf91e0b60582b64ed040c8911ca0174",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "cb5408d6fba707aabcbfe3320317a14c1f8fca6070074e5261047930f50d441e"
       },
@@ -3937,7 +4095,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-plugins",
       "commitSha": "aed9cfd3277740755f6bfc1155c7aa645403b760",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "5838b856c74c07fbc9fa99b6dfd1eee34ea554c3e530c30e0d58014b707d70a4"
       },
@@ -3955,7 +4115,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-timeline",
       "commitSha": "03d9f0c3dbf91e0b60582b64ed040c8911ca0174",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "1a8b0f39cc4be3ed3d834b89672e4ae2f151b901dc3450bebf10bbc45379fe02"
       },
@@ -3973,7 +4135,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-utils",
       "commitSha": "03d9f0c3dbf91e0b60582b64ed040c8911ca0174",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "1927bcc4ea95b38203404ad5ea1d060b15c4a886c65ae53e885ff1793aabe0ba"
       },
@@ -3991,7 +4155,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-frameworks",
       "commitSha": "aed9cfd3277740755f6bfc1155c7aa645403b760",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "842d9d3659ec3ddc8abbdc524708f8facf81f468ac25d0577f48c759c4fa31e6"
       },
@@ -4009,7 +4175,9 @@
       "source": "greensock/gsap-skills",
       "skillPath": "greensock/gsap-skills/gsap-react",
       "commitSha": "03d9f0c3dbf91e0b60582b64ed040c8911ca0174",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "88e2a5312b45e8cc7b3c496637ff5bc9af2ae9c925b555c8b235b34cbc989d74"
       },
@@ -4027,7 +4195,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-animation",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "b24dc96c7a854ab97fa797a8e20d6bf981f155dfc625fd1ef347042395b7754c"
       },
@@ -4045,7 +4215,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-fundamentals",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "eb66d52f53f489067d602b9b62df507adb391d8220bdd1a8aae6b73e6cee578a"
       },
@@ -4063,7 +4235,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-shaders",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "6702267bd3ee70d458b54078211db36b1c3738c3faa0570e88e33dceaf478a4d"
       },
@@ -4081,7 +4255,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-geometry",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "8337bcf86621411f54ef39727b338c84890815e4b3612ce635d593dd9c321a3e"
       },
@@ -4099,7 +4275,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-interaction",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "1bb23f0388d39863432494ff00ea0a96ae7d093c0c6f3149fb223ba1e673fef6"
       },
@@ -4117,7 +4295,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-materials",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "d5846d1b8254b903eacb3014486efbe331101518604b451098fd31989c3e7fe7"
       },
@@ -4135,7 +4315,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-postprocessing",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "570b86434c30ad9bdc30f4f6d4e8c04124a07dd4ccaa778d4717ecc211dc1d90"
       },
@@ -4153,7 +4335,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-lighting",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "777875f7d6a75219d009ac69310772236231eec7cb57287c0509bb53e994af9d"
       },
@@ -4171,7 +4355,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-textures",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "2a90ce70931e9b172fa5b70c13fd12e7b6f1600482d3ba0c73d95570fe728b65"
       },
@@ -4189,7 +4375,9 @@
       "source": "cloudai-x/threejs-skills",
       "skillPath": "cloudai-x/threejs-skills/threejs-loaders",
       "commitSha": "b1c623076c661fc9b03dac19292e825a5d106823",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "03e0d7319692bb7eaa13cfada5d27d39840c7520c5ddc3fc8cc07b645dcba2e9"
       },
@@ -4207,7 +4395,9 @@
       "source": "sickn33/antigravity-awesome-skills",
       "skillPath": "sickn33/antigravity-awesome-skills/nodejs-best-practices",
       "commitSha": "89714d02f94678092cf951707fa9f4a9c99aeaca",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "e588649daf39c0c8a1a4f5f011a5706a6ee5c53fc1a0e75b165849b260781638"
       },
@@ -4225,7 +4415,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/golang-patterns",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
       },
@@ -4243,7 +4435,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/golang-testing",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "2da1afcd9df6529392653cd450edc40eb8bbc0b073f3eda17a510f4b89411c1b"
       },
@@ -4261,7 +4455,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/java-coding-standards",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "687d56b0001f4588227e80e048d9d5605269f3bd7a31f6ced79b04b7379255e7"
       },
@@ -4279,7 +4475,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/laravel-patterns",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "b69b40b57bbf9bb106ed07c6f1192be9fc30ba6c63bc51bfb86fc1fdc6cd5e0a"
       },
@@ -4297,7 +4495,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/django-patterns",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "267eb89f537a6626937d60fc732675f685b11209fa9025599c80e0f322e9a503"
       },
@@ -4315,7 +4515,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/django-security",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "d5d174690a16dca99798693f47b5df17478bfc5ff0f91684caf56dc1e9bef8b5"
       },
@@ -4333,7 +4535,9 @@
       "source": "affaan-m/everything-claude-code",
       "skillPath": "affaan-m/everything-claude-code/python-patterns",
       "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "df0c0abbbd0e6a01811d1b1d10d8fa7a8a19ce73afdc9432d24843f62649cdd2"
       },
@@ -4351,7 +4555,9 @@
       "source": "denoland/skills",
       "skillPath": "denoland/skills/deno-expert",
       "commitSha": "1a4267f4fc60d75839d740ae39a7e0bb0170cf0b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "a1d20baf97eeef1f3a0a1d908df181bdf11f824b2b97fee269d5f6056130f260"
       },
@@ -4369,7 +4575,9 @@
       "source": "denoland/skills",
       "skillPath": "denoland/skills/deno-guidance",
       "commitSha": "1a4267f4fc60d75839d740ae39a7e0bb0170cf0b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "a4c192850535392ffa60de80031591d431250a82772b66371fca19fd97eccffa"
       },
@@ -4387,7 +4595,9 @@
       "source": "denoland/skills",
       "skillPath": "denoland/skills/deno-frontend",
       "commitSha": "1a4267f4fc60d75839d740ae39a7e0bb0170cf0b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "3c201028ba9a4b1eee8bce5b72be5d742caede78a3d96073936cfeebf6a749ea"
       },
@@ -4441,7 +4651,9 @@
       "source": "denoland/skills",
       "skillPath": "denoland/skills/deno-sandbox",
       "commitSha": "1a4267f4fc60d75839d740ae39a7e0bb0170cf0b",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "e4c8d3e3fc6c37e334275068cc58c8e2ee21a35399e5fdc4672e6baf27a720b0"
       },
@@ -4643,7 +4855,10 @@
       "source": "wordpress/agent-skills",
       "skillPath": "wordpress/agent-skills/wordpress-router",
       "commitSha": "c5c0697b120ec00e8fcf6a265f161c61dbc2581c",
-      "files": ["SKILL.md", "references/decision-tree.md"],
+      "files": [
+        "SKILL.md",
+        "references/decision-tree.md"
+      ],
       "sha256": {
         "SKILL.md": "38f4dc3356795a452c070ef9d42143aba720866e76736864958aa6eed6a923a8",
         "references/decision-tree.md": "862f6d2fc84fefe44f1f972a1fd0809bba8fea6a2af92b8a3a6ca32de675a1ae"
@@ -4662,7 +4877,11 @@
       "source": "wordpress/agent-skills",
       "skillPath": "wordpress/agent-skills/wp-project-triage",
       "commitSha": "c5c0697b120ec00e8fcf6a265f161c61dbc2581c",
-      "files": ["SKILL.md", "references/triage.schema.json", "scripts/detect_wp_project.mjs"],
+      "files": [
+        "SKILL.md",
+        "references/triage.schema.json",
+        "scripts/detect_wp_project.mjs"
+      ],
       "sha256": {
         "SKILL.md": "dafa04de97711453672517b2fd6a11cdbc0ba54e72d628052c4796275a340f79",
         "references/triage.schema.json": "f24dd91e56c2268a8026ca97235ada9240c70aded32c1c70985c62af4f306903",
@@ -4718,7 +4937,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/java-docs",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "9f837092e00114d9f18a9e744707ef11bfc68913247d8014adc534a29e46d087"
       },
@@ -4736,7 +4957,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/java-springboot",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "574898202ce298557226c49d35036a6e9e66a1cb205ea15c44db298e6d74e3bd"
       },
@@ -4754,7 +4977,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/dotnet-best-practices",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "3181f44dfc866313c96cd784a7f003b4b109836a6f02648f95b3323e73e85d62"
       },
@@ -4772,7 +4997,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/dotnet-design-pattern-review",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "e94f172c8e6cb96d962fe9f67d64c1b2b9886ef078eda4d41c9fc3e9dcbfa97b"
       },
@@ -4790,7 +5017,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/dotnet-upgrade",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "9e3e789579cc333971b04deaa3627e4e6fadfa2ad237f60a63730c34e8554587"
       },
@@ -4808,7 +5037,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/csharp-xunit",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "7a2d020e24a5788c4999c05c86902599bb31a5df70b2595b37c00beb802cdb49"
       },
@@ -4826,7 +5057,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/csharp-async",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "d52c0812a3e4325ab0d89aebd074efe5e6246e722522180f8613ef3c72a72acc"
       },
@@ -4844,7 +5077,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/csharp-docs",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "ddcc59c5f0320af04a59ba090b8e6490ce537aad2d8b2667fdf386686d037826"
       },
@@ -4862,7 +5097,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/csharp-nunit",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "f03540e3fc328ca1325293a7339e2268f2cbf0d5698a2741b79dabb1c94335ba"
       },
@@ -4880,7 +5117,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/csharp-mstest",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "325e70e82f3edecb7312a7e504a89e87c8fb684c8f2aa55df6f29905ef1bf859"
       },
@@ -4898,7 +5137,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/csharp-tunit",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "60bda4de96d73461f44acea9ef0978a5b4eadb0a1d764fd0398b66a75bfd2e03"
       },
@@ -4916,7 +5157,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/containerize-aspnetcore",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "ad4057ce6e1cca41005e1955df84e121d6b760a8d259e55ca9d051c679df37e0"
       },
@@ -4962,7 +5205,9 @@
       "source": "github/awesome-copilot",
       "skillPath": "github/awesome-copilot/aspnet-minimal-api-openapi",
       "commitSha": "8fbf6c4a798df51d1d1d8fd37a1aa7e94203109c",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "16e632ce8cb514d413e968811a2e07b8e0f1e97c6e2e93174efd6cec2e49e86f"
       },
@@ -5166,7 +5411,9 @@
       "source": "stripe/ai",
       "skillPath": "stripe/ai/upgrade-stripe",
       "commitSha": "dd6deb03137908d0102ffde97e60c90cf79bf929",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "1af9308cff0bf58a3668c1a3282fc8b5aec93723063ed5e2b7ba67cd6e8be426"
       },
@@ -5184,7 +5431,9 @@
       "source": "yusukebe/hono-skill",
       "skillPath": "yusukebe/hono-skill/hono",
       "commitSha": "0d2e8dc6fa7e9c6e1c872abdb65db422e95e9de0",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "205b6c5d9bed5031f25827b5da90982a90f7b4e5818f1cac04864b2c01956207"
       },
@@ -5202,7 +5451,10 @@
       "source": "bobmatnyc/claude-mpm-skills",
       "skillPath": "bobmatnyc/claude-mpm-skills/pydantic",
       "commitSha": "fe13e4b9ad6aad34c0f30373867cef6520b4feea",
-      "files": ["SKILL.md", "metadata.json"],
+      "files": [
+        "SKILL.md",
+        "metadata.json"
+      ],
       "sha256": {
         "SKILL.md": "b370a330c9f2ca486b58e306853aae31edf5c70ca8fd24d3cfbb79127fe269a5",
         "metadata.json": "2872ae441f33d9f5a7810b5ac6d03913c89112ade5f138b043b748b910c7fb1a"
@@ -5255,7 +5507,9 @@
       "source": "dotnet/skills",
       "skillPath": "dotnet/skills/minimal-api-file-upload",
       "commitSha": "59c795c896a7fbce1ef7fa6257e8cc6639b1ba7d",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "18232bea3b8bdfdc6b9cc3a2081e193b923150431b90d7c033f57943a96af21e"
       },
@@ -5447,7 +5701,11 @@
       "source": "lucianghinda/superpowers-ruby",
       "skillPath": "lucianghinda/superpowers-ruby/test-driven-development",
       "commitSha": "cb03f9260db866af832f576f5c5767898749f5ef",
-      "files": ["SKILL.md", "testing-anti-patterns.md", "testing-strategy.md"],
+      "files": [
+        "SKILL.md",
+        "testing-anti-patterns.md",
+        "testing-strategy.md"
+      ],
       "sha256": {
         "SKILL.md": "88ccfcb6ce6d89104f6f6bc6ed8cea0d8bb8844261f02271bb88e1da85882bac",
         "testing-anti-patterns.md": "c685f94e167aad6944d64c59e24b8d900f88689750979adb059a66b6b6ed3b4b",
@@ -5551,7 +5809,12 @@
       "source": "igmarin/rails-agent-skills",
       "skillPath": "igmarin/rails-agent-skills/rails-code-review",
       "commitSha": "96f35ddbae8bf6f07077da570a72fc3eafbb1bdb",
-      "files": ["REVIEW_CHECKLIST.md", "SKILL.md", "assets/checklist.md", "assets/examples.md"],
+      "files": [
+        "REVIEW_CHECKLIST.md",
+        "SKILL.md",
+        "assets/checklist.md",
+        "assets/examples.md"
+      ],
       "sha256": {
         "REVIEW_CHECKLIST.md": "3fc46233950f3cc3da007e2dd5f536f749c2368817a82c2b78f744621b9e4ab5",
         "SKILL.md": "931ce920232ac57ac666639af21f2fe0579c6b3ff191e1265de6b67c779b8210",
@@ -5572,7 +5835,10 @@
       "source": "igmarin/rails-agent-skills",
       "skillPath": "igmarin/rails-agent-skills/rails-migration-safety",
       "commitSha": "96f35ddbae8bf6f07077da570a72fc3eafbb1bdb",
-      "files": ["PATTERNS.md", "SKILL.md"],
+      "files": [
+        "PATTERNS.md",
+        "SKILL.md"
+      ],
       "sha256": {
         "PATTERNS.md": "ce724519dcf6b63084b701d6e334d59516b1e8a35dfa0d56db24fafabbdc76a4",
         "SKILL.md": "f82f2ba2a243822dfcb323e4ca079136717390f456f61580e87e761ec95316b6"
@@ -5591,7 +5857,10 @@
       "source": "igmarin/rails-agent-skills",
       "skillPath": "igmarin/rails-agent-skills/rails-security-review",
       "commitSha": "96f35ddbae8bf6f07077da570a72fc3eafbb1bdb",
-      "files": ["PITFALLS.md", "SKILL.md"],
+      "files": [
+        "PITFALLS.md",
+        "SKILL.md"
+      ],
       "sha256": {
         "PITFALLS.md": "ee3cf597d191b8e90abae338cac895e230f4f1c7d902d1c835059fca580914b5",
         "SKILL.md": "23cfe891c08d62cd654677a9b484305683aee3e59b2425929b1ce786fbb4cb0d"
@@ -5610,7 +5879,12 @@
       "source": "igmarin/rails-agent-skills",
       "skillPath": "igmarin/rails-agent-skills/rails-background-jobs",
       "commitSha": "96f35ddbae8bf6f07077da570a72fc3eafbb1bdb",
-      "files": ["BACKENDS.md", "SKILL.md", "assets/job_patterns.md", "assets/retry_examples.md"],
+      "files": [
+        "BACKENDS.md",
+        "SKILL.md",
+        "assets/job_patterns.md",
+        "assets/retry_examples.md"
+      ],
       "sha256": {
         "BACKENDS.md": "7632bf108d71dd31b18a29a9104e743db7bba8dc5e6a11388a1d20755c5d3312",
         "SKILL.md": "280b5cca693319c1f0b35dabf66352ec592f09c42e130f1ebbecd2bb697546d2",
@@ -5631,7 +5905,11 @@
       "source": "igmarin/rails-agent-skills",
       "skillPath": "igmarin/rails-agent-skills/rspec-best-practices",
       "commitSha": "96f35ddbae8bf6f07077da570a72fc3eafbb1bdb",
-      "files": ["EXAMPLES.md", "SKILL.md", "assets/spec_templates.md"],
+      "files": [
+        "EXAMPLES.md",
+        "SKILL.md",
+        "assets/spec_templates.md"
+      ],
       "sha256": {
         "EXAMPLES.md": "09f3135681b9cb4e0945df02eccd31ad1ac817e95e349d39ad639946c3a471dc",
         "SKILL.md": "b176949799e3cfc624b209730c191de9e9800d9da116d29eca54796c763f05cf",
@@ -5677,7 +5955,9 @@
       "source": "igmarin/rails-agent-skills",
       "skillPath": "igmarin/rails-agent-skills/rails-tdd-slices",
       "commitSha": "96f35ddbae8bf6f07077da570a72fc3eafbb1bdb",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "766f0966a9590922aa91ddbb959bf79903525322de7e88e6f0314a04dcb62eec"
       },
@@ -5722,11 +6002,12 @@
     "rails-upgrade": {
       "source": "ombulabs/claude-code_rails-upgrade-skill",
       "skillPath": "ombulabs/claude-code_rails-upgrade-skill/rails-upgrade",
-      "commitSha": "cd72298fd759515f07176a36244bb217a8205d5b",
+      "commitSha": "903cd29bbf0099dc983c23661c5e5757bd811457",
       "files": [
         "CHANGELOG.md",
         "SKILL.md",
         "detection-scripts/patterns/rails-40-patterns.yml",
+        "detection-scripts/patterns/rails-41-patterns.yml",
         "detection-scripts/patterns/rails-42-patterns.yml",
         "detection-scripts/patterns/rails-50-patterns.yml",
         "detection-scripts/patterns/rails-60-patterns.yml",
@@ -5746,6 +6027,7 @@
         "templates/app-update-preview-template.md",
         "templates/upgrade-report-template.md",
         "version-guides/upgrade-3.2-to-4.0.md",
+        "version-guides/upgrade-4.0-to-4.1.md",
         "version-guides/upgrade-4.1-to-4.2.md",
         "version-guides/upgrade-4.2-to-5.0.md",
         "version-guides/upgrade-5.0-to-5.1.md",
@@ -5758,17 +6040,19 @@
         "version-guides/upgrade-7.2-to-8.0.md",
         "version-guides/upgrade-8.0-to-8.1.md",
         "workflows/app-update-preview-workflow.md",
+        "workflows/ci-sync-workflow.md",
         "workflows/direct-detection-workflow.md",
         "workflows/test-suite-verification-workflow.md",
         "workflows/upgrade-report-workflow.md"
       ],
       "sha256": {
-        "CHANGELOG.md": "f36a2bbfac764ade05d3fe8fd91892f752fd9ce109e56e5a127a0b441312fba4",
-        "SKILL.md": "ed271bb77a972deb3df4cd839e013b19490b9ef5e6ed18959a6a813f67fe4e35",
+        "CHANGELOG.md": "97a2ac3f555e4b7c20ce3d794809735ff90203860b0344605fdedfd3910a8a22",
+        "SKILL.md": "83b364016dc41a2d80927b4c974cbfcd7e3ce52c1f57283c9a776d8e2d3cbff3",
         "detection-scripts/patterns/rails-40-patterns.yml": "1e5826c7e214bb3ace8fbf5630bd32147a1474dc4c6129a9614b53cc0a069402",
+        "detection-scripts/patterns/rails-41-patterns.yml": "bbcb5620a0c6df4921adf8ebf85d54b42ece797cef0a4211e52b7da5bd5be04d",
         "detection-scripts/patterns/rails-42-patterns.yml": "9c5352a6af66c624a81907804f3ad17e5e599d6967bcac06052545bc8847e88e",
         "detection-scripts/patterns/rails-50-patterns.yml": "d2109d2171d2732acae91e7f149497a28c635436936b399bd788e90a1fc1590d",
-        "detection-scripts/patterns/rails-60-patterns.yml": "8d0f8420ffb5e90c39dd3a68088328e8535bcd4267fcccb88158380d80ccc53d",
+        "detection-scripts/patterns/rails-60-patterns.yml": "3cf6aee92c9ba527e318e774d13a2ad986db157d28801e1fce06016368f8dbbe",
         "detection-scripts/patterns/rails-70-patterns.yml": "81a16f07c8b2e8f1388a7d593e97b8e94c10d3ce8f3f72ba6256f96bf6060f08",
         "detection-scripts/patterns/rails-71-patterns.yml": "ac8ee6afcf237820638490aa3a5dfca4f0d87c83b26e0dfaa936ec8f70fbc3fa",
         "detection-scripts/patterns/rails-72-patterns.yml": "f30d85f313d7ef0917879c28c6200e4a61cf48a7b867875136aee1dd9e60ddf1",
@@ -5785,6 +6069,7 @@
         "templates/app-update-preview-template.md": "de0bacdf445dbee745207cc92cbf954459291d2f8e869ce4a466fb648e5db30e",
         "templates/upgrade-report-template.md": "3eb33eff157b57d41cfb55c6f149e6c6e53a23f0e38566ba2391a9bbf059a989",
         "version-guides/upgrade-3.2-to-4.0.md": "07dd9f173051ae47d409794b4ba8a14a50138065138d4c524c570acdb2071c52",
+        "version-guides/upgrade-4.0-to-4.1.md": "a1d5ce3f4773ef768da75f472ecebfdbc98725bae0eb29d2c0e31bae10c8f85e",
         "version-guides/upgrade-4.1-to-4.2.md": "83f369dc29a10e30746e78ad173a0237d1eb6c98e3734f46ba017fb3a3c343c4",
         "version-guides/upgrade-4.2-to-5.0.md": "8aa8740a9847f7045a5de8403fa9bbb904dde86d1b29e994f8fc160c116e6f70",
         "version-guides/upgrade-5.0-to-5.1.md": "c02406694bbf8302fb1367a2b9fb6be57c2650bf4c4f58f3460cf94d6ede2fca",
@@ -5797,23 +6082,23 @@
         "version-guides/upgrade-7.2-to-8.0.md": "e8cb3ecc786d05df09258f26045cb97dab41b7a3f00a1e749df9cdb690b855e8",
         "version-guides/upgrade-8.0-to-8.1.md": "d41bb990284c62333d61d3f0ffd4c1fc13a866966ded4929cf4fc3fc60b22a90",
         "workflows/app-update-preview-workflow.md": "c1d470f021dc09a29ecceb05cd09792720c09b1ac7be189cff1a9b2cef646621",
+        "workflows/ci-sync-workflow.md": "2f37f00abc154ee8d838dfbf106585dc8dec86c5f61b3151fdcba027e8840ef8",
         "workflows/direct-detection-workflow.md": "651d6f70654c0c0b4efa635c479e45f6cb6debfef8a06f48f47ad8a774c553eb",
         "workflows/test-suite-verification-workflow.md": "8e3cb4c921725404f0b651ad83709629475a0ac53a3009b057e38b81e6a1dd70",
         "workflows/upgrade-report-workflow.md": "11b322f8683c022ce9601775a6a9e4c930ae2bf95fea728ac7d439952d4eb5db"
       },
-      "bundleHash": "915a1833a77ec58d92531229f279807180b2b8eaafbf29a545c4ffbfbb6a7346",
+      "bundleHash": "42fca39fcfa3a21d8b8e69b5dc9daf7abf4f0e67c87b4da7d76573722fd1a9b7",
       "review": {
         "status": "flagged",
         "flags": [
-          "broad shell commands and executable script creation",
-          "network access instructions using curl to external API",
-          "instructions to create and chmod a bin script with a mismatched name (`bin/brakeman` requiring bundler-audit)",
-          "external links included throughout without strict necessity"
+          "broad shell commands",
+          "external links without clear necessity",
+          "questionable command naming in 8.1 guide"
         ],
-        "summary": "The skill is largely on-topic and safe, but it includes several broad command examples, external network calls, and a potentially confusing script-generation step that merits human review.",
+        "summary": "The skill is largely on-topic and safe, but it contains many executable shell commands and one likely mistaken instruction creating `bin/brakeman` for bundler-audit that should be human-reviewed.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:32:02.495Z"
+        "reviewedAt": "2026-04-30T08:55:16.259Z"
       }
     },
     "redis-development": {
@@ -10130,7 +10415,12 @@
       "source": "pluginagentmarketplace/custom-plugin-python",
       "skillPath": "pluginagentmarketplace/custom-plugin-python/pandas-data-analysis",
       "commitSha": "44155176545a0add3265a1b8ac8e632bd1b75934",
-      "files": ["SKILL.md", "assets/config.yaml", "references/GUIDE.md", "scripts/helper.py"],
+      "files": [
+        "SKILL.md",
+        "assets/config.yaml",
+        "references/GUIDE.md",
+        "scripts/helper.py"
+      ],
       "sha256": {
         "SKILL.md": "bc34839f62156d535cc268132143da05d66a6fc580dde20451c56ee9534c0ca8",
         "assets/config.yaml": "920d72a54a9649e0156212aec46b802b67eea9e0906e784104ce6e16be763856",
@@ -10248,7 +10538,7 @@
     "tailwind-v4-shadcn": {
       "source": "secondsky/claude-skills",
       "skillPath": "secondsky/claude-skills/tailwind-v4-shadcn",
-      "commitSha": "88da5ffe9767d2b75bd5a5545165ca4bcd868168",
+      "commitSha": "b30de6b7f8d72f3467282861a376d017025d044d",
       "files": [
         "SKILL.md",
         "references/advanced-usage.md",
@@ -10264,7 +10554,7 @@
         "templates/vite.config.ts"
       ],
       "sha256": {
-        "SKILL.md": "ba664c44d4956200c92db3d115f91d5b1a2601f11dfc25a8d38c0488e9282d27",
+        "SKILL.md": "7197cbbf653597542b39398f47f49c6153c165e5a4b010c1c34183c274b9a2d9",
         "references/advanced-usage.md": "f6ab5fed69adbd14f3d03940035ae44d4d711d91220a6ecac46919c4b818082f",
         "references/common-gotchas.md": "b42d35ce713ae2f7ff0a77072cbbb70f89428f01b8e0ac77ee325368841fb835",
         "references/dark-mode.md": "3392626694dcf970bdadd4537b425de5825fc0a2a8725474110f246528c87e34",
@@ -10277,21 +10567,27 @@
         "templates/utils.ts": "51bbf14cd1f84f49aab2e0dbee420137015d56b6677bb439e83a908cd292cce1",
         "templates/vite.config.ts": "37171894fd3d8b7709d1ea15c4db5f4ba0faa1b58d7c7418d11ce4e30eb5562d"
       },
-      "bundleHash": "ccb851c374e9d60af52bf37d80481dbeec54c3cebf6a9dc67492ea2f8514e283",
+      "bundleHash": "551eb86a35cbf35747cc1a58059ed7e73aacdf03d2fd2e12f63208ea2c0a4ae9",
       "review": {
-        "status": "approved",
-        "flags": [],
-        "summary": "review skipped (--no-review)",
+        "status": "flagged",
+        "flags": [
+          "prompt-injection-like agent instructions",
+          "external URL unrelated to core skill domain",
+          "broad shell command deletion"
+        ],
+        "summary": "Mostly on-topic Tailwind/shadcn guidance, but it includes AI-agent-directed instructions, an unrelated production/example URL, and an unconditional file deletion command that merits human review.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:44:31.223Z"
+        "reviewedAt": "2026-04-30T08:55:16.647Z"
       }
     },
     "react-three-fiber": {
       "source": "vercel-labs/json-render",
       "skillPath": "vercel-labs/json-render/react-three-fiber",
       "commitSha": "7e4d107dbafa474ad6b33335158feba44b831a71",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "f1120aeaf7cf695838b4daa37879403b007014babaf7ec3fed1eaafc7fb61593"
       },
@@ -10309,7 +10605,10 @@
       "source": "anthropics/skills",
       "skillPath": "anthropics/skills/frontend-design",
       "commitSha": "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c",
-      "files": ["LICENSE.txt", "SKILL.md"],
+      "files": [
+        "LICENSE.txt",
+        "SKILL.md"
+      ],
       "sha256": {
         "LICENSE.txt": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
         "SKILL.md": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0"
@@ -10328,7 +10627,11 @@
       "source": "addyosmani/web-quality-skills",
       "skillPath": "addyosmani/web-quality-skills/accessibility",
       "commitSha": "fed9617111260e19f4f54b72a2874a3f3de8ff94",
-      "files": ["SKILL.md", "references/A11Y-PATTERNS.md", "references/WCAG.md"],
+      "files": [
+        "SKILL.md",
+        "references/A11Y-PATTERNS.md",
+        "references/WCAG.md"
+      ],
       "sha256": {
         "SKILL.md": "65021e9ccab70165539db82070257d4e2e2c7d7b0f857825299da2e4a7a8704c",
         "references/A11Y-PATTERNS.md": "f10e238dd4dd3c4f51134c2056bc02d3dd4f8fb6ccc9145c2c1ba7aab4d58140",
@@ -10348,7 +10651,9 @@
       "source": "addyosmani/web-quality-skills",
       "skillPath": "addyosmani/web-quality-skills/seo",
       "commitSha": "fed9617111260e19f4f54b72a2874a3f3de8ff94",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "f3e546112a3168515486c533d13156a1d4dcd9402f3d116730cef573a20e2804"
       },
@@ -10582,7 +10887,9 @@
       "source": "angular/angular",
       "skillPath": "angular/angular/reference-core",
       "commitSha": "a0d45639a9f2d8c30e4a69c5ed875d1fc7647b46",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "c4c1c69569c62394fd6727ed0d09ca281d842fe48fd812d766e56b11320239d6"
       },
@@ -10600,7 +10907,10 @@
       "source": "angular/angular",
       "skillPath": "angular/angular/reference-signal-forms",
       "commitSha": "a0d45639a9f2d8c30e4a69c5ed875d1fc7647b46",
-      "files": ["SKILL.md", "references/integration.md"],
+      "files": [
+        "SKILL.md",
+        "references/integration.md"
+      ],
       "sha256": {
         "SKILL.md": "deb57ed84c4646e470c319a819653bc9ac2802a3cdb3a42a667e8825d282f299",
         "references/integration.md": "1a4524f91daa085c01f5843cf4cd72efdbf82811e7aa4477c2a8ee6e0dbe1b87"
@@ -10619,7 +10929,9 @@
       "source": "angular/angular",
       "skillPath": "angular/angular/reference-compiler-cli",
       "commitSha": "a0d45639a9f2d8c30e4a69c5ed875d1fc7647b46",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "583a3a6e77df7f1bb037789c83e22d35bab8ac2c65a24fc4ab33e450ce202c88"
       },
@@ -10636,19 +10948,21 @@
     "adev-writing-guide": {
       "source": "angular/angular",
       "skillPath": "angular/angular/adev-writing-guide",
-      "commitSha": "a0d45639a9f2d8c30e4a69c5ed875d1fc7647b46",
-      "files": ["SKILL.md"],
+      "commitSha": "4c9afb68a3447388f9ef1264888ea5dd6cb95dad",
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
-        "SKILL.md": "c2714354e092337da32765693aa32dbda2ae73175248a9a88cddf6850d547656"
+        "SKILL.md": "d979050f7dc20b0ba30d5aff07e8560b0f17e3e391d1b06d457b02a5556c3a84"
       },
-      "bundleHash": "8f088248ee2b10c69d502cba98d17c62ee8440cbc88a4dd1969ba3c9c8308f10",
+      "bundleHash": "b8933a369cba1517ae21800f9f108cbdb3ca4e7b4eacd850103117ed51039795",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "The skill is a straightforward writing/style guide for Angular documentation and contains no prompt injection, secrets, suspicious links, or dangerous commands.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-18T04:02:05.210Z"
+        "reviewedAt": "2026-04-30T08:51:36.675Z"
       }
     },
     "react-hook-form": {
@@ -11027,7 +11341,9 @@
       "source": "sleekdotdesign/agent-skills",
       "skillPath": "sleekdotdesign/agent-skills/design-mobile-apps",
       "commitSha": "7fc618cb0eb2a23e2752bace1fdadb2627506f46",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "60d9250cabaa179582ba45a4622fd129733fad8dfa3dc8cf02e8cd0586a5b326"
       },
@@ -11045,7 +11361,9 @@
       "source": "kevmoo/dash_skills",
       "skillPath": "kevmoo/dash_skills/dart-best-practices",
       "commitSha": "e56fe5d8f12561bf00f82db8d50c85667b5b57ea",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "44e7604bb01f26927bb73d96204b8077fbb2340a05c4b8ba13892e0d8a7c4090"
       },
@@ -11165,7 +11483,9 @@
       "source": "better-auth/skills",
       "skillPath": "better-auth/skills/best-practices",
       "commitSha": "6a1636950a1d7fc53602639ce7505a4a5d39c797",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "c62acc0464f80bf8be72e0b55046a06c7762fa1ffaac1e78f61159b50072c9cf"
       },
@@ -11183,7 +11503,9 @@
       "source": "better-auth/skills",
       "skillPath": "better-auth/skills/emailAndPassword",
       "commitSha": "6a1636950a1d7fc53602639ce7505a4a5d39c797",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "ef9b2d86e9e0ef89f1e8fd62ec86df212a370d4c8f6ebe43936e6f225c94cb63"
       },
@@ -11201,7 +11523,9 @@
       "source": "better-auth/skills",
       "skillPath": "better-auth/skills/organization",
       "commitSha": "6a1636950a1d7fc53602639ce7505a4a5d39c797",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "667aa2530d1e2df3f3bec5146bb6d37b9321e189a35a9e45a798af553d06cfb0"
       },
@@ -11219,7 +11543,9 @@
       "source": "better-auth/skills",
       "skillPath": "better-auth/skills/twoFactor",
       "commitSha": "6a1636950a1d7fc53602639ce7505a4a5d39c797",
-      "files": ["SKILL.md"],
+      "files": [
+        "SKILL.md"
+      ],
       "sha256": {
         "SKILL.md": "6ce79cab3240aa55eec9278b096d6daa6b9daea5fede6df638a2f744e32de503"
       },
@@ -11302,7 +11628,7 @@
     "use-ai-sdk": {
       "source": "vercel/ai",
       "skillPath": "vercel/ai/use-ai-sdk",
-      "commitSha": "f20e6b4c9c94c4918cd5865b8ed497c9d9fd4463",
+      "commitSha": "f943bb741612e8f0232eb47fda509bfec4f39b3c",
       "files": [
         "SKILL.md",
         "references/ai-gateway.md",
@@ -11312,19 +11638,22 @@
       ],
       "sha256": {
         "SKILL.md": "07e3ac5f423104015bb6e324d9840c61f9df52542ad6f3141de0a419d8aefd2f",
-        "references/ai-gateway.md": "f3c716c7f9ddad655044f19823ce5c2792985fba5589a0e99e8e3b1139fec90c",
+        "references/ai-gateway.md": "2a27b61047aab2304eca41d04db32ce0f3eea4f1bddc818a222d22ccaf5097f6",
         "references/common-errors.md": "6310b72c024b91ccfaf311447510283634c21c4a561b6be7af46739504ef711b",
         "references/devtools.md": "a07e778b4ce4279cb3a70321a6e5a6021614ed6188d29a5d59ea21e3e53e8d3d",
         "references/type-safe-agents.md": "7501751dd0d505e9ee3c9fbf8298d758e8bdae0395554d8f5333e4e017202ae8"
       },
-      "bundleHash": "cbb0ed818fe3ce82b3c28346020b5af301661322d3f911bf42afd9f762b56c61",
+      "bundleHash": "78ef7cd5ffec2f2781724bd8f14042e27194536964453e51d9c583c151943698",
       "review": {
-        "status": "approved",
-        "flags": [],
-        "summary": "review skipped (--no-review)",
+        "status": "flagged",
+        "flags": [
+          "broad shell/network commands",
+          "external links require review"
+        ],
+        "summary": "The skill is mostly on-topic and instructional, but it includes unconditional curl/jq and package-install commands plus external URLs that a human should double-check.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-18T04:03:27.483Z"
+        "reviewedAt": "2026-04-30T08:55:15.875Z"
       }
     },
     "cloudflare-deploy": {
@@ -12055,7 +12384,10 @@
       "source": "bobmatnyc/claude-mpm-skills",
       "skillPath": "bobmatnyc/claude-mpm-skills/sqlalchemy",
       "commitSha": "fe13e4b9ad6aad34c0f30373867cef6520b4feea",
-      "files": ["SKILL.md", "metadata.json"],
+      "files": [
+        "SKILL.md",
+        "metadata.json"
+      ],
       "sha256": {
         "SKILL.md": "5640ce321b248a6b7869d1aa2a0044f09e6e8b97f692e7170cf25d9f372483e2",
         "metadata.json": "ca29c4fab3b11d38eea8230f78069074caeea27c376ffc1409865d8362f5b8ed"

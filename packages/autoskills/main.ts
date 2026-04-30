@@ -21,6 +21,7 @@ import {
 } from "./colors.ts";
 import { printBanner, multiSelect, formatTime } from "./ui.ts";
 import { clearAutoskillsCache, installAll, loadRegistry } from "./installer.ts";
+import type { InstallSecurityCheck } from "./installer.ts";
 import { cleanupClaudeMd } from "./claude.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -218,6 +219,59 @@ function briefErrorReason(stderr: string, output: string): string {
   if (lines.length === 0) return "Unknown error";
   const line = lines[0];
   return line.length > 80 ? line.slice(0, 77) + "..." : line;
+}
+
+function visiblePad(value: string, width: number): string {
+  return value + " ".repeat(Math.max(0, width - stripAnsi(value).length));
+}
+
+function truncateVisible(value: string, width: number): string {
+  const plain = stripAnsi(value);
+  if (plain.length <= width) return value;
+  if (width <= 1) return "…";
+  return plain.slice(0, width - 1) + "…";
+}
+
+function formatSecurityFindings(check: InstallSecurityCheck): string {
+  const summary =
+    check.summary.trim() ||
+    (check.status === "warning"
+      ? "The sync review found issues that should be checked."
+      : "The sync review did not find security issues.");
+  if (check.findings.length === 0) return summary;
+  return `${summary} Findings: ${check.findings.join("; ")}`;
+}
+
+function printSecurityChecks(checks: InstallSecurityCheck[]): void {
+  if (checks.length === 0) return;
+
+  const sorted = [...checks].sort((a, b) => a.name.localeCompare(b.name));
+  const skillWidth = Math.min(34, Math.max(5, ...sorted.map((c) => c.name.length)));
+  const checkWidth = 7;
+  const terminalWidth = process.stdout.columns || 100;
+  const findingsWidth = Math.max(28, terminalWidth - skillWidth - checkWidth - 16);
+
+  log();
+  log(cyan("   ◆ ") + bold("Security checks"));
+  log();
+  log(
+    dim(
+      `   | ${visiblePad("Skill", skillWidth)} | ${visiblePad("Check", checkWidth)} | ${visiblePad("Findings", findingsWidth)} |`,
+    ),
+  );
+  log(
+    dim(
+      `   | ${"-".repeat(skillWidth)} | ${"-".repeat(checkWidth)} | ${"-".repeat(findingsWidth)} |`,
+    ),
+  );
+
+  for (const check of sorted) {
+    const status = check.status === "warning" ? yellow("warning") : green("ok");
+    const findings = truncateVisible(formatSecurityFindings(check), findingsWidth);
+    log(
+      `   | ${visiblePad(truncateVisible(check.name, skillWidth), skillWidth)} | ${visiblePad(status, checkWidth)} | ${visiblePad(findings, findingsWidth)} |`,
+    );
+  }
 }
 
 interface SummaryOptions {
@@ -435,9 +489,13 @@ async function main(): Promise<void> {
   log();
 
   const startTime = Date.now();
-  const { installed, failed, errors } = await installAll(selectedSkills, resolvedAgents, {
-    verbose,
-  });
+  const { installed, failed, errors, securityChecks } = await installAll(
+    selectedSkills,
+    resolvedAgents,
+    {
+      verbose,
+    },
+  );
   const elapsed = Date.now() - startTime;
   const claudeCleanup = cleanupClaudeMd(projectDir);
 
@@ -449,6 +507,7 @@ async function main(): Promise<void> {
   }
 
   printSummary({ installed, failed, errors, elapsed, verbose });
+  printSecurityChecks(securityChecks);
 
   if (claudeCleanup.cleaned) {
     if (claudeCleanup.deleted) {

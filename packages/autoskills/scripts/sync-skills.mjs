@@ -588,6 +588,16 @@ function writeSkillToRegistry(manifest, skill) {
       promptVersion: REVIEW_PROMPT_VERSION,
       reviewedAt: new Date().toISOString(),
     },
+    securityCheck: {
+      status: skill.review.status === "flagged" ? "warning" : "ok",
+      findings: skill.review.flags,
+      summary:
+        skill.review.summary ||
+        (skill.review.status === "flagged"
+          ? "The sync review found issues that should be checked."
+          : "The sync review did not find security issues."),
+      checkedAt: new Date().toISOString(),
+    },
   };
 }
 
