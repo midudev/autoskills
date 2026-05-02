@@ -127,7 +127,11 @@ export const SKILLS_MAP: Technology[] = [
     name: "Tailwind CSS",
     detect: {
       packages: ["tailwindcss", "@tailwindcss/vite"],
-      configFiles: ["tailwind.config.js", "tailwind.config.ts", "tailwind.config.cjs"],
+      configFiles: [
+        "tailwind.config.js",
+        "tailwind.config.ts",
+        "tailwind.config.cjs",
+      ],
     },
     skills: ["giuseppe-trisciuoglio/developer-kit/tailwind-css-patterns"],
   },
@@ -187,7 +191,9 @@ export const SKILLS_MAP: Technology[] = [
       packages: ["@playwright/test", "playwright"],
       configFiles: ["playwright.config.ts", "playwright.config.js"],
     },
-    skills: ["currents-dev/playwright-best-practices-skill/playwright-best-practices"],
+    skills: [
+      "currents-dev/playwright-best-practices-skill/playwright-best-practices",
+    ],
   },
   {
     id: "expo",
@@ -295,7 +301,12 @@ export const SKILLS_MAP: Technology[] = [
     id: "react-router",
     name: "React Router",
     detect: {
-      packages: ["react-router", "@react-router/node", "@react-router/dev", "@react-router/serve"],
+      packages: [
+        "react-router",
+        "@react-router/node",
+        "@react-router/dev",
+        "@react-router/serve",
+      ],
     },
     skills: [],
   },
@@ -417,7 +428,10 @@ export const SKILLS_MAP: Technology[] = [
     detect: {
       packages: ["elevenlabs"],
     },
-    skills: ["inferen-sh/skills/elevenlabs-tts", "inferen-sh/skills/elevenlabs-music"],
+    skills: [
+      "inferen-sh/skills/elevenlabs-tts",
+      "inferen-sh/skills/elevenlabs-music",
+    ],
   },
   {
     id: "vercel-deploy",
@@ -432,7 +446,11 @@ export const SKILLS_MAP: Technology[] = [
     id: "cloudflare",
     name: "Cloudflare",
     detect: {
-      packages: ["wrangler", "@cloudflare/workers-types", "@astrojs/cloudflare"],
+      packages: [
+        "wrangler",
+        "@cloudflare/workers-types",
+        "@astrojs/cloudflare",
+      ],
       configFiles: ["wrangler.toml", "wrangler.json", "wrangler.jsonc"],
     },
     skills: [
@@ -579,7 +597,13 @@ export const SKILLS_MAP: Technology[] = [
     id: "node",
     name: "Node.js",
     detect: {
-      configFiles: ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", ".nvmrc", ".node-version"],
+      configFiles: [
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        ".nvmrc",
+        ".node-version",
+      ],
     },
     skills: [
       "wshobson/agents/nodejs-backend-patterns",
@@ -715,7 +739,11 @@ export const SKILLS_MAP: Technology[] = [
     name: "Vitest",
     detect: {
       packages: ["vitest"],
-      configFiles: ["vitest.config.ts", "vitest.config.js", "vitest.config.mts"],
+      configFiles: [
+        "vitest.config.ts",
+        "vitest.config.js",
+        "vitest.config.mts",
+      ],
     },
     skills: ["antfu/skills/vitest"],
   },
@@ -814,7 +842,10 @@ export const SKILLS_MAP: Technology[] = [
         patterns: ["Microsoft.NET.Sdk.Web"],
       },
     },
-    skills: ["github/awesome-copilot/containerize-aspnetcore", "openai/skills/aspnet-core"],
+    skills: [
+      "github/awesome-copilot/containerize-aspnetcore",
+      "openai/skills/aspnet-core",
+    ],
   },
   {
     id: "aspnet-blazor",
@@ -822,7 +853,10 @@ export const SKILLS_MAP: Technology[] = [
     detect: {
       configFileContent: {
         scanDotNetLayout: true,
-        patterns: ["Microsoft.NET.Sdk.BlazorWebAssembly", "Microsoft.AspNetCore.Components"],
+        patterns: [
+          "Microsoft.NET.Sdk.BlazorWebAssembly",
+          "Microsoft.AspNetCore.Components",
+        ],
       },
     },
     skills: ["github/awesome-copilot/fluentui-blazor"],
@@ -895,7 +929,13 @@ export const SKILLS_MAP: Technology[] = [
     id: "python",
     name: "Python",
     detect: {
-      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+      configFiles: [
+        "pyproject.toml",
+        "requirements.txt",
+        "setup.py",
+        "setup.cfg",
+        "Pipfile",
+      ],
     },
     skills: [],
   },
@@ -925,7 +965,13 @@ export const SKILLS_MAP: Technology[] = [
     detect: {
       configFiles: ["manage.py"],
       configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+        files: [
+          "pyproject.toml",
+          "requirements.txt",
+          "setup.py",
+          "setup.cfg",
+          "Pipfile",
+        ],
         patterns: ["django", "Django"],
       },
     },
@@ -944,7 +990,13 @@ export const SKILLS_MAP: Technology[] = [
     name: "FastAPI",
     detect: {
       configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+        files: [
+          "pyproject.toml",
+          "requirements.txt",
+          "setup.py",
+          "setup.cfg",
+          "Pipfile",
+        ],
         patterns: ["fastapi", "FastAPI"],
       },
     },
@@ -1007,9 +1059,17 @@ export const SKILLS_MAP: Technology[] = [
     id: "python",
     name: "Python",
     detect: {
-      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+      configFiles: [
+        "pyproject.toml",
+        "requirements.txt",
+        "setup.py",
+        "Pipfile",
+      ],
     },
-    skills: ["inferen-sh/skills/python-executor", "wshobson/agents/python-testing-patterns"],
+    skills: [
+      "inferen-sh/skills/python-executor",
+      "wshobson/agents/python-testing-patterns",
+    ],
   },
   {
     id: "fastapi",
@@ -1020,7 +1080,10 @@ export const SKILLS_MAP: Technology[] = [
         patterns: ["fastapi", "FastAPI"],
       },
     },
-    skills: ["wshobson/agents/fastapi-templates", "mindrally/skills/fastapi-python"],
+    skills: [
+      "wshobson/agents/fastapi-templates",
+      "mindrally/skills/fastapi-python",
+    ],
   },
   {
     id: "django",
@@ -1042,7 +1105,13 @@ export const SKILLS_MAP: Technology[] = [
     name: "Flask",
     detect: {
       configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
+        files: [
+          "pyproject.toml",
+          "requirements.txt",
+          "setup.py",
+          "setup.cfg",
+          "Pipfile",
+        ],
         patterns: ["flask", "Flask"],
       },
     },
@@ -1175,25 +1244,36 @@ export const COMBO_SKILLS_MAP: ComboSkill[] = [
     id: "react-native-expo",
     name: "React Native + Expo",
     requires: ["react-native", "expo"],
-    skills: ["expo/skills/building-native-ui", "sleekdotdesign/agent-skills/design-mobile-apps"],
+    skills: [
+      "expo/skills/building-native-ui",
+      "sleekdotdesign/agent-skills/design-mobile-apps",
+    ],
   },
   {
     id: "nextjs-vercel-ai",
     name: "Next.js + Vercel AI SDK",
     requires: ["nextjs", "vercel-ai"],
-    skills: ["vercel/ai/use-ai-sdk", "vercel-labs/next-skills/next-best-practices"],
+    skills: [
+      "vercel/ai/use-ai-sdk",
+      "vercel-labs/next-skills/next-best-practices",
+    ],
   },
   {
     id: "nextjs-playwright",
     name: "Next.js + Playwright",
     requires: ["nextjs", "playwright"],
-    skills: ["currents-dev/playwright-best-practices-skill/playwright-best-practices"],
+    skills: [
+      "currents-dev/playwright-best-practices-skill/playwright-best-practices",
+    ],
   },
   {
     id: "react-shadcn",
     name: "React + shadcn/ui",
     requires: ["react", "shadcn"],
-    skills: ["shadcn/ui/shadcn", "vercel-labs/agent-skills/react-best-practices"],
+    skills: [
+      "shadcn/ui/shadcn",
+      "vercel-labs/agent-skills/react-best-practices",
+    ],
   },
   {
     id: "tailwind-shadcn",
@@ -1295,13 +1375,21 @@ export const COMBO_SKILLS_MAP: ComboSkill[] = [
     id: "swiftui-clerk",
     name: "SwiftUI + Clerk",
     requires: ["swiftui", "clerk"],
-    skills: ["clerk/skills/clerk-swift", "clerk/skills/clerk-setup", "clerk/skills/clerk"],
+    skills: [
+      "clerk/skills/clerk-swift",
+      "clerk/skills/clerk-setup",
+      "clerk/skills/clerk",
+    ],
   },
   {
     id: "android-clerk",
     name: "Android + Clerk",
     requires: ["android", "clerk"],
-    skills: ["clerk/skills/clerk-android", "clerk/skills/clerk-setup", "clerk/skills/clerk"],
+    skills: [
+      "clerk/skills/clerk-android",
+      "clerk/skills/clerk-setup",
+      "clerk/skills/clerk",
+    ],
   },
   {
     id: "rails-rspec",
@@ -1351,6 +1439,7 @@ export const AGENT_FOLDER_MAP: Record<string, string> = {
   ".codebuddy": "codebuddy",
   ".continue": "continue",
   ".kiro": "kiro-cli",
+  ".windsurf": "windsurf",
 };
 
 export const WEB_FRONTEND_EXTENSIONS: Set<string> = new Set([

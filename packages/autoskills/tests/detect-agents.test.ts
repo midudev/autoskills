@@ -34,6 +34,11 @@ describe("detectAgents", () => {
     ok(detectAgents(tmp.path).includes("kiro-cli"));
   });
 
+  it("detects windsurf from .windsurf/skills", () => {
+    mkdirSync(join(tmp.path, ".windsurf", "skills"), { recursive: true });
+    ok(detectAgents(tmp.path).includes("windsurf"));
+  });
+
   it("detects multiple agents", () => {
     mkdirSync(join(tmp.path, ".claude", "skills"), { recursive: true });
     mkdirSync(join(tmp.path, ".cline", "skills"), { recursive: true });
