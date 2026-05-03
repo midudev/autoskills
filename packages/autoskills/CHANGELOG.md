@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.5](https://github.com/midudev/autoskills/releases/tag/v0.3.5) (2026-05-03)
+
+### ✨ Features
+
+- feat(cli): surface skill security warnings [`aba2acf`](https://github.com/midudev/autoskills/commit/aba2acf)
+- feat(autoskills): display registry security checks [`df77e04`](https://github.com/midudev/autoskills/commit/df77e04)
+- feat(swiftui): support selecting xctrace runs [`050801e`](https://github.com/midudev/autoskills/commit/050801e)
+- feat(rails-upgrade): add legacy guide and ci sync workflow [`468fde3`](https://github.com/midudev/autoskills/commit/468fde3)
+- feat(cloudflare): add flagship feature flag references [`f1b429d`](https://github.com/midudev/autoskills/commit/f1b429d)
+- feat(azure-diagnostics): add app service and messaging guides [`260ddd4`](https://github.com/midudev/autoskills/commit/260ddd4)
+- feat(autoskills): add curated Bun skill [`2760757`](https://github.com/midudev/autoskills/commit/2760757)
+
+### 🐛 Bug Fixes
+
+- fix(ui): hide single selection group header [`e5c26da`](https://github.com/midudev/autoskills/commit/e5c26da)
+
+### 📦 Other Changes
+
+- chore(skills): refresh registry skill guidance [`5d301d5`](https://github.com/midudev/autoskills/commit/5d301d5)
+
 ## [0.3.4](https://github.com/midudev/autoskills/releases/tag/v0.3.4) (2026-04-28)
 
 ### ✨ Features
