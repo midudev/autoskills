@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "4.2.4",
-    "astro": "6.1.9",
+    "astro": "6.2.1",
     "geist": "1.7.0",
     "tailwindcss": "4.2.4"
   },
