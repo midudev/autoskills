@@ -16,7 +16,7 @@
     "hooks:install": "git config core.hooksPath .githooks"
   },
   "dependencies": {
-    "@tailwindcss/vite": "4.2.4",
+    "@tailwindcss/vite": "4.3.0",
     "astro": "6.3.1",
     "geist": "1.7.0",
     "tailwindcss": "4.3.0"
