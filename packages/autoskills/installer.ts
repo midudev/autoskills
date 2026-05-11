@@ -8,6 +8,7 @@ import {
   statSync,
   symlinkSync,
   writeFileSync,
+  lstatSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, relative } from "node:path";
@@ -776,6 +777,91 @@ async function installAllSimple(
   await Promise.all(workers);
 
   return { installed, failed, errors, securityChecks };
+}
+
+// ── Remove ────────────────────────────────────────────────────
+
+export interface RemoveResult {
+  success: boolean;
+  message: string;
+  removed: {
+    canonical: boolean;
+    symlinks: string[];
+    lockEntry: boolean;
+  };
+}
+
+function readSkillsLock(projectDir: string): { version: number; skills: Record<string, unknown> } {
+  const lockPath = join(projectDir, "skills-lock.json");
+  try {
+    return JSON.parse(readFileSync(lockPath, "utf-8"));
+  } catch {
+    return { version: 1, skills: {} };
+  }
+}
+
+function writeSkillsLock(projectDir: string, lock: Record<string, unknown>): void {
+  const lockPath = join(projectDir, "skills-lock.json");
+  const sortedSkills: Record<string, unknown> = {};
+  const skills = lock.skills as Record<string, unknown>;
+  if (skills) {
+    for (const k of Object.keys(skills).sort()) {
+      sortedSkills[k] = skills[k];
+    }
+  }
+  writeFileSync(lockPath, JSON.stringify({ ...lock, skills: sortedSkills }, null, 2) + "\n");
+}
+
+export function removeSkill(
+  skillName: string,
+  projectDir: string,
+  _opts: { dryRun?: boolean } = {},
+): RemoveResult {
+  const canonicalDir = join(projectDir, ".agents", "skills", skillName);
+  const removed: RemoveResult["removed"] = {
+    canonical: false,
+    symlinks: [],
+    lockEntry: false,
+  };
+
+  if (existsSync(canonicalDir)) {
+    if (_opts.dryRun) {
+      // dry run: just report what would be removed
+    } else {
+      rmSync(canonicalDir, { recursive: true, force: true });
+      removed.canonical = true;
+    }
+  }
+
+  for (const folder of Object.keys(AGENT_FOLDER_MAP)) {
+    const linkPath = join(projectDir, folder, "skills", skillName);
+    try {
+      const st = lstatSync(linkPath);
+      if (st.isSymbolicLink() || st.isDirectory()) {
+        removed.symlinks.push(linkPath);
+        if (!_opts.dryRun) {
+          rmSync(linkPath, { recursive: true, force: true });
+        }
+      }
+    } catch {
+      // path doesn't exist (including broken symlinks), nothing to remove
+    }
+  }
+
+  const lock = readSkillsLock(projectDir);
+  if (lock.skills && skillName in lock.skills) {
+    removed.lockEntry = true;
+    if (!_opts.dryRun) {
+      delete lock.skills[skillName];
+      writeSkillsLock(projectDir, lock);
+    }
+  }
+
+  return {
+    success: true,
+    message: `Removed ${skillName}`,
+    removed,
+  };
 }
 
 // ── Deprecated shim ──────────────────────────────────────────

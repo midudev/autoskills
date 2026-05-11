@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
-import { ok } from "node:assert/strict";
+import { ok, strictEqual } from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.ts";
 
@@ -474,6 +474,92 @@ describe("CLI", () => {
       const output = run(["--dry-run", "-a", "cursor"], tmp.path);
       ok(output.includes("Agents: cursor"));
       ok(!output.includes("universal"));
+    });
+  });
+
+  describe("remove", () => {
+    const tmp = useTmpDir();
+
+    it("shows informative message when no skills are installed", () => {
+      writePackageJson(tmp.path);
+      const output = run(["remove"], tmp.path);
+      ok(output.includes("No skills installed"));
+    });
+
+    it("shows dry-run message for remove when skill is installed", () => {
+      writePackageJson(tmp.path);
+      writeJson(tmp.path, "skills-lock.json", {
+        version: 1,
+        skills: { "react-best-practices": { source: "test", sourceType: "test", computedHash: "abc" } },
+      });
+      writeFile(tmp.path, ".agents/skills/react-best-practices/SKILL.md", "# React best practices");
+      const output = run(["remove", "react-best-practices", "--dry-run"], tmp.path);
+      ok(output.includes("Would remove"));
+      ok(output.includes("react-best-practices"));
+    });
+
+    it("removes skill from .agents/skills directory", () => {
+      writePackageJson(tmp.path);
+      writeJson(tmp.path, "skills-lock.json", {
+        version: 1,
+        skills: { "react-best-practices": { source: "test", sourceType: "test", computedHash: "abc" } },
+      });
+      writeFile(tmp.path, ".agents/skills/react-best-practices/SKILL.md", "# React best practices");
+      run(["remove", "react-best-practices", "-y"], tmp.path);
+      ok(!existsSync(join(tmp.path, ".agents/skills/react-best-practices")));
+    });
+
+    it("removes skill entry from skills-lock.json", () => {
+      writePackageJson(tmp.path);
+      writeJson(tmp.path, "skills-lock.json", {
+        version: 1,
+        skills: {
+          "react-best-practices": { source: "test", sourceType: "test", computedHash: "abc" },
+          "vue-best-practices": { source: "test", sourceType: "test", computedHash: "def" },
+        },
+      });
+      run(["remove", "react-best-practices", "-y"], tmp.path);
+      const lock = JSON.parse(readFileSync(join(tmp.path, "skills-lock.json"), "utf-8"));
+      ok(!("react-best-practices" in lock.skills));
+      ok("vue-best-practices" in lock.skills);
+    });
+
+    it("removes symlinks from all agent folders", () => {
+      writePackageJson(tmp.path);
+      writeJson(tmp.path, "skills-lock.json", {
+        version: 1,
+        skills: { "react-best-practices": { source: "test", sourceType: "test", computedHash: "abc" } },
+      });
+      writeFile(tmp.path, ".agents/skills/react-best-practices/SKILL.md", "# React best practices");
+      const canonicalPath = join(tmp.path, ".agents/skills/react-best-practices");
+      for (const folder of [".claude", ".cursor", ".junie"]) {
+        const skillsDir = join(tmp.path, folder, "skills");
+        mkdirSync(skillsDir, { recursive: true });
+        const linkPath = join(skillsDir, "react-best-practices");
+        try {
+          symlinkSync(canonicalPath, linkPath, "dir");
+        } catch {}
+      }
+      run(["remove", "react-best-practices", "-y"], tmp.path);
+      ok(!existsSync(join(tmp.path, ".claude/skills/react-best-practices")));
+      ok(!existsSync(join(tmp.path, ".cursor/skills/react-best-practices")));
+      ok(!existsSync(join(tmp.path, ".junie/skills/react-best-practices")));
+    });
+
+    it("shows informative message when removing non-installed skill", () => {
+      writePackageJson(tmp.path);
+      writeJson(tmp.path, "skills-lock.json", {
+        version: 1,
+        skills: { "vue-best-practices": { source: "test", sourceType: "test", computedHash: "def" } },
+      });
+      const output = run(["remove", "non-existent-skill"], tmp.path);
+      ok(output.includes("is not installed"));
+    });
+
+    it("shows remove command in help", () => {
+      const output = run(["--help"]);
+      ok(output.includes("remove"));
+      ok(output.includes("rm"));
     });
   });
 });

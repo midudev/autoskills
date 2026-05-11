@@ -1,33 +1,35 @@
-import { resolve, dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 
-import { detectTechnologies, collectSkills, detectAgents, getInstalledSkillNames } from "./lib.ts";
-import type { SkillEntry, Technology, ComboSkill } from "./lib.ts";
+import { cleanupClaudeMd } from "./claude.ts";
 import {
-  log,
-  write,
   bold,
-  dim,
-  green,
-  yellow,
   cyan,
-  magenta,
-  red,
-  pink,
+  dim,
   gray,
+  green,
+  log,
+  magenta,
   muted,
+  pink,
+  red,
   SHOW_CURSOR,
+  write,
+  yellow,
 } from "./colors.ts";
-import { printBanner, multiSelect, formatTime } from "./ui.ts";
+import type { InstallSecurityCheck } from "./installer.ts";
 import {
   clearAutoskillsCache,
   installAll,
   loadRegistry,
+  removeSkill,
   securityCheckForSkillPath,
 } from "./installer.ts";
-import type { InstallSecurityCheck } from "./installer.ts";
-import { cleanupClaudeMd } from "./claude.ts";
+import type { ComboSkill, SkillEntry, Technology } from "./lib.ts";
+import { collectSkills, detectAgents, detectTechnologies, getInstalledSkillNames } from "./lib.ts";
+import { formatTime, multiSelect, printBanner } from "./ui.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VERSION: string = (() => {
@@ -37,7 +39,7 @@ const VERSION: string = (() => {
     try {
       const pkg = JSON.parse(readFileSync(p, "utf-8"));
       if (pkg.name === "autoskills") return pkg.version;
-    } catch {}
+    } catch { }
   }
   return "0.0.0";
 })();
@@ -57,6 +59,7 @@ interface CliArgs {
   help: boolean;
   clearCache: boolean;
   agents: string[];
+  remove: string | undefined;
 }
 
 function parseArgs(): CliArgs {
@@ -69,6 +72,16 @@ function parseArgs(): CliArgs {
       agents.push(args[i]);
     }
   }
+
+  const removeIdx = args.findIndex((a) => a === "remove" || a === "rm");
+  let remove: string | undefined = undefined;
+  if (removeIdx !== -1) {
+    remove = args[removeIdx + 1] || "";
+    if (remove && remove.startsWith("-")) {
+      remove = "";
+    }
+  }
+
   return {
     autoYes: args.includes("-y") || args.includes("--yes"),
     dryRun: args.includes("--dry-run"),
@@ -76,6 +89,7 @@ function parseArgs(): CliArgs {
     help: args.includes("--help") || args.includes("-h"),
     clearCache: args.includes("--clear-cache"),
     agents,
+    remove,
   };
 }
 
@@ -89,6 +103,8 @@ function showHelp(): void {
     npx autoskills ${dim("--dry-run")}            Show what would be installed
     npx autoskills ${dim("--clear-cache")}        Clear downloaded skills cache
     npx autoskills ${dim("-a cursor claude-code")} Install for specific IDEs only
+    npx autoskills ${dim("remove <skill>")}        Remove an installed skill
+    npx autoskills ${dim("rm <skill>")}            Alias for remove
 
   ${bold("Options:")}
     -y, --yes       Skip confirmation prompt
@@ -477,13 +493,13 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
     shortcuts:
       installedCount > 0
         ? [
-            { key: "n", label: "new", fn: (items: SkillEntry[]) => items.map((s) => !s.installed) },
-            {
-              key: "i",
-              label: "installed",
-              fn: (items: SkillEntry[]) => items.map((s) => s.installed),
-            },
-          ]
+          { key: "n", label: "new", fn: (items: SkillEntry[]) => items.map((s) => !s.installed) },
+          {
+            key: "i",
+            label: "installed",
+            fn: (items: SkillEntry[]) => items.map((s) => s.installed),
+          },
+        ]
         : [],
   });
 
@@ -500,7 +516,7 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { autoYes, dryRun, verbose, help, clearCache, agents } = parseArgs();
+  const { autoYes, dryRun, verbose, help, clearCache, agents, remove } = parseArgs();
 
   if (help) {
     showHelp();
@@ -515,6 +531,105 @@ async function main(): Promise<void> {
         : dim(`   No autoskills cache found: ${cacheDir}`),
     );
     log();
+    process.exit(0);
+  }
+
+  if (remove !== undefined) {
+    const projectDir = resolve(".");
+    const installedNames = getInstalledSkillNames(projectDir);
+
+    if (installedNames.size === 0) {
+      log(dim("   No skills installed."));
+      log();
+      process.exit(0);
+    }
+
+    if (remove === "") {
+      const installedList = [...installedNames].sort();
+      log(cyan("   ◆ ") + bold(`Select skills to remove `) + dim(`(${installedList.length} installed)`));
+      log();
+
+      let selected: string[];
+      if (process.stdin.isTTY) {
+        selected = await multiSelect(installedList, {
+          labelFn: (name) => name,
+          initialSelected: Array(installedList.length).fill(false),
+          shortcuts: [],
+        });
+      } else {
+        selected = [];
+      }
+
+      if (selected.length === 0) {
+        log();
+        log(dim("   Nothing selected."));
+        log();
+        process.exit(0);
+      }
+
+      if (!autoYes) {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise<string>((resolve) => {
+          rl.question(
+            `   Remove ${selected.length} skill${selected.length !== 1 ? "s" : ""}? ${dim("[y/N]")} `,
+            (ans: string) => {
+              rl.close();
+              resolve(ans.trim());
+            },
+          );
+        });
+        if (answer.toLowerCase() !== "y") {
+          log(dim("   Cancelled."));
+          log();
+          process.exit(0);
+        }
+      }
+
+      for (const skillName of selected) {
+        const result = removeSkill(skillName, projectDir, { dryRun });
+        if (result.success) {
+          log(green(`   ✔ Removed ${skillName}`));
+        }
+      }
+      log();
+      process.exit(0);
+    }
+
+    if (!installedNames.has(remove)) {
+      log(dim(`   '${remove}' is not installed.`));
+      log();
+      process.exit(0);
+    }
+
+    if (dryRun) {
+      log(dim(`   Would remove: ${remove}`));
+      log();
+      process.exit(0);
+    }
+
+    if (!autoYes) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await new Promise<string>((resolve) => {
+        rl.question(
+          `   Remove '${remove}'? ${dim("[y/N]")} `,
+          (ans: string) => {
+            rl.close();
+            resolve(ans.trim());
+          },
+        );
+      });
+      if (answer.toLowerCase() !== "y") {
+        log(dim("   Cancelled."));
+        log();
+        process.exit(0);
+      }
+    }
+
+    const result = removeSkill(remove, projectDir);
+    if (result.success) {
+      log(green(`   ✔ Removed ${remove}`));
+      log();
+    }
     process.exit(0);
   }
 
