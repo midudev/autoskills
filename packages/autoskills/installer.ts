@@ -474,6 +474,17 @@ export async function installSkill(
   const projectDir = opts.projectDir || process.cwd();
   const command = `autoskills install ${skillPath}`;
 
+  // @internal — test-only escape hatch consumed by spawn-based subcommand tests.
+  if (process.env.AUTOSKILLS_MOCK_INSTALL === "1") {
+    return {
+      success: true,
+      output: `mock-installed ${skillPath}`,
+      stderr: "",
+      exitCode: 0,
+      command,
+    };
+  }
+
   const fail = (msg: string): InstallResult => ({
     success: false,
     output: msg,

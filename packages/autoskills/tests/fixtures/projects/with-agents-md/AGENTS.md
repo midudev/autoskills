@@ -1,0 +1,4 @@
+## Stack
+
+- Astro
+- Supabase

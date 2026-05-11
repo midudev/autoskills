@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 import type { Technology, ComboSkill, ConfigFileContentBlock } from "./skills-map.ts";
+import type { MarkdownMatch } from "./markdown-scanner.ts";
 
 export {
   SKILLS_MAP,
@@ -701,4 +702,59 @@ export function collectSkills({
   }
 
   return skills;
+}
+
+// ── Markdown Sources ─────────────────────────────────────────
+
+export interface MarkdownSource {
+  content: string;
+  path: string;
+}
+
+export function loadMarkdownSources(args: {
+  fromSpec?: string;
+  scanDocs?: boolean;
+  projectDir: string;
+}): MarkdownSource[] {
+  const out: MarkdownSource[] = [];
+  const seen = new Set<string>();
+
+  if (args.fromSpec) {
+    const p = resolve(args.projectDir, args.fromSpec);
+    if (!existsSync(p)) {
+      throw new Error(`spec file not found: ${args.fromSpec}`);
+    }
+    out.push({ path: p, content: readFileSync(p, "utf-8") });
+    seen.add(p);
+  }
+
+  if (args.scanDocs) {
+    for (const name of ["CLAUDE.md", "AGENTS.md", "README.md"]) {
+      const p = resolve(args.projectDir, name);
+      if (existsSync(p) && !seen.has(p)) {
+        out.push({ path: p, content: readFileSync(p, "utf-8") });
+        seen.add(p);
+      }
+    }
+  }
+
+  return out;
+}
+
+// ── Markdown Detection Merge ─────────────────────────────────
+
+/** Assumes `coreIds` is already deduplicated; preserves core order, then appends new scanner matches in scanner order. */
+export function mergeMarkdownDetections(
+  coreIds: string[],
+  matches: MarkdownMatch[],
+): string[] {
+  const seen = new Set(coreIds);
+  const out = [...coreIds];
+  for (const m of matches) {
+    if (!seen.has(m.techId)) {
+      out.push(m.techId);
+      seen.add(m.techId);
+    }
+  }
+  return out;
 }

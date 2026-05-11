@@ -21,6 +21,8 @@ export interface Technology {
   name: string;
   detect: DetectConfig;
   skills: string[];
+  aliases?: string[];
+  description?: string;
 }
 
 export interface ComboSkill {
@@ -47,6 +49,7 @@ export const SKILLS_MAP: Technology[] = [
   {
     id: "nextjs",
     name: "Next.js",
+    aliases: ["NextJS", "Next"],
     detect: {
       packages: ["next"],
       configFiles: ["next.config.js", "next.config.mjs", "next.config.ts"],
@@ -60,6 +63,7 @@ export const SKILLS_MAP: Technology[] = [
   {
     id: "vue",
     name: "Vue",
+    aliases: ["Vue.js"],
     detect: {
       packages: ["vue"],
     },
@@ -89,6 +93,7 @@ export const SKILLS_MAP: Technology[] = [
   {
     id: "svelte",
     name: "Svelte",
+    aliases: ["SvelteKit", "Svelte Kit"],
     detect: {
       packages: ["svelte", "@sveltejs/kit"],
       configFiles: ["svelte.config.js"],
@@ -126,6 +131,7 @@ export const SKILLS_MAP: Technology[] = [
   {
     id: "tailwind",
     name: "Tailwind CSS",
+    aliases: ["TailwindCSS", "tailwindcss", "Tailwind"],
     detect: {
       packages: ["tailwindcss", "@tailwindcss/vite"],
       configFiles: ["tailwind.config.js", "tailwind.config.ts", "tailwind.config.cjs"],
@@ -143,6 +149,7 @@ export const SKILLS_MAP: Technology[] = [
   {
     id: "typescript",
     name: "TypeScript",
+    aliases: ["TS"],
     detect: {
       packages: ["typescript"],
       configFiles: ["tsconfig.json"],
@@ -594,6 +601,7 @@ export const SKILLS_MAP: Technology[] = [
   {
     id: "node",
     name: "Node.js",
+    aliases: ["Node", "NodeJS"],
     detect: {
       configFiles: ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", ".nvmrc", ".node-version"],
     },

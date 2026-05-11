@@ -42,12 +42,166 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 
 ## Options
 
-| Flag              | Description                                           |
-| ----------------- | ----------------------------------------------------- |
-| `-y`, `--yes`     | Skip confirmation prompt, install all detected skills |
-| `--dry-run`       | Show detected skills without installing anything      |
-| `-v`, `--verbose` | Show install trace and error details                  |
-| `-h`, `--help`    | Show help message                                     |
+| Flag                    | Description                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `-y`, `--yes`           | Skip confirmation prompt, install all detected skills                                               |
+| `--dry-run`             | Show detected skills without installing                                                             |
+| `--clear-cache`         | Clear downloaded skills cache                                                                       |
+| `--json`                | Emit structured JSON (used with `--dry-run` or subcommands; errors return `{error:{code,message}}`) |
+| `--from-spec <path>`    | Scan a markdown spec file for tech (code fences + Tech Stack headings)                              |
+| `--scan-docs`           | Auto-scan `CLAUDE.md` / `AGENTS.md` / `README.md` in the project root                               |
+| `--show-specgen-prompt` | Print the shipped spec-generator prompt to stdout                                                   |
+| `--copy-specgen-prompt` | Copy the shipped spec-generator prompt to the OS clipboard                                          |
+| `-v`, `--verbose`       | Show install trace and error details                                                                |
+| `-a`, `--agent <ids>`   | Install for specific IDEs only (e.g. `cursor`, `claude-code`)                                       |
+| `-h`, `--help`          | Show help message                                                                                   |
+
+## Markdown scanner (opt-in)
+
+Detect tech from structured markdown docs — feature specs, `CLAUDE.md`,
+`AGENTS.md`, or `README.md` — without having to populate `package.json`.
+
+`--from-spec <path>` reads the file's contents regardless of extension.
+`.md`, `.mdx`, `.markdown`, or `.txt` all work as long as the content uses
+markdown code fences and headings.
+
+```bash
+# Scan a specific spec file
+npx autoskills --from-spec ./docs/feature-spec.md
+
+# Auto-scan CLAUDE.md / AGENTS.md in the current project
+npx autoskills --scan-docs
+
+# Combine with default detection (union)
+npx autoskills --scan-docs --dry-run
+```
+
+The scanner recognizes two structures:
+
+- **Code fences** — `json` (reads `dependencies`/`devDependencies`), `bash`/`sh`/`shell`/`zsh` (extracts `npm|pnpm|yarn|bun add/install` packages), `yaml`/`yml`/`toml`, `ruby`/`gemfile` (`gem '<name>'`).
+- **Stack headings** — `## Tech Stack`, `## Stack`, `## Dependencies`, `## Built With`, `## Technologies` (case-insensitive, h1–h3). Content under the heading is matched against technology names and aliases — see "Supported formats under stack headings" below for bullet, table, numbered-list, and inline shapes.
+
+Prose ("we'll use React") outside these structures is ignored to prevent false positives.
+
+### Supported formats under stack headings
+
+**Heading shapes recognized** (h1–h3, case-insensitive, keyword must be exact after stripping decoration):
+
+```markdown
+## Tech Stack
+## 2. Tech Stack
+## 1) Stack
+## 🚀 Tech Stack
+## **Dependencies**
+## __Dependencies__
+## [Stack]
+## Tech Stack:
+## Tech Stack (frontend)
+```
+
+Prose narrative headings like `## Why we chose our Stack` are rejected (decoration is stripped but the keyword itself must be the whole title).
+
+Valid keywords (after normalization, case-insensitive): `Tech Stack`, `Stack`, `Dependencies`, `Built With`, `Technologies`.
+
+**Content shapes recognized under the heading:**
+
+1. **Dash / asterisk / plus bullets**
+
+   ```markdown
+   ## Tech Stack
+   - Astro
+   - Tailwind CSS
+   ```
+
+2. **Numbered bullets** (`1.` or `1)`)
+
+   ```markdown
+   ## Tech Stack
+   1. Astro
+   2. Tailwind CSS
+   ```
+
+3. **GFM tables** — first column by default; if the header row contains a column matching `tech|technology|technologies|framework|library|libraries|package|packages|dependency|dependencies|name|stack` (case-insensitive), that column is used instead.
+
+   ```markdown
+   ## Tech Stack
+
+   | Category | Framework | Notes      |
+   | -------- | --------- | ---------- |
+   | UI       | React     | renderer   |
+   | Styling  | Tailwind  | utility    |
+   ```
+
+   Cell content is normalized: links (`[Astro](https://astro.build)` → `Astro`), bold/italic wrappers, backticks, images, and leading emoji are stripped. Multi-tech cells are split on commas (`| Astro, Tailwind |`).
+
+4. **Comma-separated inline** — a non-bullet line with commas is split and each piece is matched
+
+   ```markdown
+   ## Tech Stack
+
+   Astro, Tailwind CSS, TypeScript
+   ```
+
+   Note: prefixes like `"Also: Astro, Tailwind"` are NOT parsed — `normalizeBullet` does not strip colon-prefixed labels. Use plain `"Astro, Tailwind"`.
+
+**Bullet / inline-piece / cell normalization**
+
+After the format-specific extraction, each candidate string goes through:
+
+1. Parenthetical annotations are dropped — `Astro (SSR)` → `Astro`.
+2. Em-dash, en-dash, or space-hyphen-space + trailing text is dropped — `Astro — 4.0` → `Astro`; `Astro - 4.0` → `Astro`. (Inline hyphens without surrounding spaces are preserved — `shadcn/ui` is kept intact.)
+3. A trailing digit-leading version token is dropped — `Astro 4.0.1` → `Astro`. (Non-digit trailing tokens like `latest` are not stripped yet.)
+
+The resulting string must match a technology `name` or `alias` exactly (run `autoskills list --json` to see the catalog).
+
+Tables, bullets, inline comma-separated lines, and numbered lists **only** parse under a recognized stack heading — free-floating tables or lists elsewhere in the document are ignored.
+
+**Default behavior is unchanged.** No markdown is read unless `--from-spec` or `--scan-docs` is passed.
+
+## Subcommands (for LLM integration)
+
+Atomic subcommands let an external LLM CLI (Claude Code, Cursor, Codex) drive autoskills over prose specs that the structural scanner cannot parse.
+
+```bash
+# Full catalog as JSON (LLM uses this to map your requirement to canonical tech names)
+npx autoskills list --json
+
+# Spec-generator prompt (LLM guidance for writing docs/specs-initial.md)
+npx autoskills --show-specgen-prompt        # stdout
+npx autoskills --copy-specgen-prompt        # OS clipboard
+```
+
+The shipped prompt drives a **spec-doc workflow**:
+
+1. Run `autoskills --show-specgen-prompt` (stdout) or `autoskills --copy-specgen-prompt` (clipboard).
+2. Open your LLM chat. Describe your project (the problem, not the stack), then attach the prompt below it.
+3. The LLM fetches the catalog (`autoskills list --json`), matches techs from your requirement to canonical names, and writes `docs/specs-initial.md` with a `## Tech Stack` section the markdown scanner can parse.
+4. The LLM tells you to run `autoskills --from-spec docs/specs-initial.md` in another terminal — it does **not** install anything itself.
+5. You run `--from-spec`. autoskills detects + installs deterministically.
+
+#### What you actually type in the LLM chat
+
+**Option A — let the LLM fetch the prompt** (Claude Code, Cursor, Codex — chats with a `bash` tool):
+
+```text
+<your project requirement here>
+
+Run `autoskills --show-specgen-prompt` and follow the instructions it prints.
+```
+
+**Option B — paste from clipboard** (any chat, no tools required):
+
+```text
+<your project requirement here>
+
+<paste the output of `autoskills --copy-specgen-prompt` here>
+```
+
+Either way, the LLM ends by telling you to run `autoskills --from-spec docs/specs-initial.md` yourself.
+
+The shipped prompt lives at `prompts/spec-generator-prompt.md` inside the package.
+
+All subcommands emit structured JSON errors when `--json` is passed, for programmatic parsing. Error codes include `unknown-subcommand`, `install-missing-only`, `install-empty-only`, `install-unknown-id` (with fuzzy-match suggestion), `json-requires-subcommand-or-dry-run`, `cli-arg-invalid`, `internal-error`, and `prompt-file-missing`.
 
 ## Supported Technologies
 

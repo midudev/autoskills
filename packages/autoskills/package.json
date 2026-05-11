@@ -26,6 +26,7 @@
   "files": [
     "index.mjs",
     "dist/",
+    "prompts",
     "skills-registry/index.json"
   ],
   "type": "module",

@@ -2,8 +2,18 @@ import { resolve, dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { detectTechnologies, collectSkills, detectAgents, getInstalledSkillNames } from "./lib.ts";
+import {
+  detectTechnologies,
+  detectCombos,
+  collectSkills,
+  detectAgents,
+  getInstalledSkillNames,
+  loadMarkdownSources,
+  mergeMarkdownDetections,
+} from "./lib.ts";
 import type { SkillEntry, Technology, ComboSkill } from "./lib.ts";
+import { scanMarkdown } from "./markdown-scanner.ts";
+import { SKILLS_MAP } from "./skills-map.ts";
 import {
   log,
   write,
@@ -28,6 +38,8 @@ import {
 } from "./installer.ts";
 import type { InstallSecurityCheck } from "./installer.ts";
 import { cleanupClaudeMd } from "./claude.ts";
+import { runList, runPrompt, runInstall, runCopyPrompt } from "./subcommands.ts";
+import { serializeDryRun, serializeError } from "./cli-json.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VERSION: string = (() => {
@@ -50,6 +62,13 @@ process.on("SIGINT", () => {
 
 // ── CLI ──────────────────────────────────────────────────────
 
+class ArgError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ArgError";
+  }
+}
+
 interface CliArgs {
   autoYes: boolean;
   dryRun: boolean;
@@ -57,18 +76,81 @@ interface CliArgs {
   help: boolean;
   clearCache: boolean;
   agents: string[];
+  fromSpec?: string;
+  scanDocs: boolean;
+  copySpecgenPrompt: boolean;
+  showSpecgenPrompt: boolean;
+  // subcommand dispatch
+  subcommand?: string;
+  json: boolean;
+  only?: string;
+  filter?: string;
 }
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
+  const subcommand = args[0] && !args[0].startsWith("-") ? args[0] : undefined;
+  const consumed = new Set<number>();
+  if (subcommand !== undefined) consumed.add(0);
+
   const agents: string[] = [];
   const agentIdx = args.findIndex((a) => a === "-a" || a === "--agent");
   if (agentIdx !== -1) {
+    consumed.add(agentIdx);
     for (let i = agentIdx + 1; i < args.length; i++) {
       if (args[i].startsWith("-")) break;
       agents.push(args[i]);
+      consumed.add(i);
     }
   }
+
+  const fromSpecIdx = args.findIndex((a) => a === "--from-spec");
+  let fromSpec: string | undefined;
+  if (fromSpecIdx !== -1) {
+    consumed.add(fromSpecIdx);
+    const next = args[fromSpecIdx + 1];
+    if (!next || next.startsWith("-")) {
+      throw new ArgError("--from-spec requires a path argument");
+    }
+    fromSpec = next;
+    consumed.add(fromSpecIdx + 1);
+  }
+
+  const onlyIdx = args.findIndex((a) => a === "--only");
+  let only: string | undefined;
+  if (onlyIdx !== -1) {
+    consumed.add(onlyIdx);
+    const next = args[onlyIdx + 1];
+    if (!next || next.startsWith("-")) {
+      throw new ArgError("--only requires a value");
+    }
+    only = next;
+    consumed.add(onlyIdx + 1);
+  }
+
+  const filterIdx = args.findIndex((a) => a === "--filter");
+  let filter: string | undefined;
+  if (filterIdx !== -1) {
+    consumed.add(filterIdx);
+    const next = args[filterIdx + 1];
+    if (!next || next.startsWith("-")) {
+      throw new ArgError("--filter requires a value");
+    }
+    filter = next;
+    consumed.add(filterIdx + 1);
+  }
+
+  // Implicit filter: `autoskills list <id>` is equivalent to `autoskills list --filter <id>`.
+  // Scan for the first unconsumed non-flag token after the subcommand.
+  if (subcommand === "list" && filter === undefined) {
+    for (let i = 1; i < args.length; i++) {
+      if (consumed.has(i)) continue;
+      if (args[i].startsWith("-")) continue;
+      filter = args[i];
+      break;
+    }
+  }
+
   return {
     autoYes: args.includes("-y") || args.includes("--yes"),
     dryRun: args.includes("--dry-run"),
@@ -76,6 +158,14 @@ function parseArgs(): CliArgs {
     help: args.includes("--help") || args.includes("-h"),
     clearCache: args.includes("--clear-cache"),
     agents,
+    fromSpec,
+    scanDocs: args.includes("--scan-docs"),
+    copySpecgenPrompt: args.includes("--copy-specgen-prompt"),
+    showSpecgenPrompt: args.includes("--show-specgen-prompt"),
+    subcommand,
+    json: args.includes("--json"),
+    only,
+    filter,
   };
 }
 
@@ -84,19 +174,30 @@ function showHelp(): void {
   ${bold("autoskills")} — Auto-install the best AI skills for your project
 
   ${bold("Usage:")}
-    npx autoskills                   Detect & install skills
-    npx autoskills ${dim("-y")}                   Skip confirmation
-    npx autoskills ${dim("--dry-run")}            Show what would be installed
-    npx autoskills ${dim("--clear-cache")}        Clear downloaded skills cache
-    npx autoskills ${dim("-a cursor claude-code")} Install for specific IDEs only
+    npx autoskills                              Detect & install skills
+    npx autoskills ${dim("-y")}                            Skip confirmation
+    npx autoskills ${dim("--dry-run")} ${dim("[--json]")}            Show what would be installed
+    npx autoskills ${dim("--clear-cache")}                 Clear downloaded skills cache
+    npx autoskills ${dim("-a cursor claude-code")}          Install for specific IDEs only
+    npx autoskills ${dim("list")} ${dim("[--json] [--filter <id>]")}  List catalog
+    npx autoskills ${dim("--show-specgen-prompt")}          Print spec-generator prompt to stdout
+    npx autoskills ${dim("--copy-specgen-prompt")}          Copy spec-generator prompt to clipboard
+    npx autoskills ${dim("install --only <ids>")} ${dim("[-a agents] [-y] [--json]")}
 
   ${bold("Options:")}
-    -y, --yes       Skip confirmation prompt
-    --dry-run       Show skills without installing
-    --clear-cache   Clear downloaded skills cache
-    -v, --verbose   Show install trace and error details
-    -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
-    -h, --help      Show this help message
+    -y, --yes              Skip confirmation prompt
+    --dry-run              Show skills without installing
+    --clear-cache          Clear downloaded skills cache
+    -v, --verbose          Show install trace and error details
+    -a, --agent            Install for specific IDEs only (e.g. cursor, claude-code)
+    --from-spec <path>     Detect tech from a markdown spec file
+    --scan-docs            Auto-scan CLAUDE.md / AGENTS.md in project root
+    --show-specgen-prompt  Print spec-generator prompt to stdout
+    --copy-specgen-prompt  Copy spec-generator prompt to clipboard
+    --json                 JSON output (subcommands / dry-run)
+    --only <ids>           Comma-separated tech ids for 'install'
+    --filter <id>          Filter catalog for 'list'
+    -h, --help             Show this help message
 `);
 }
 
@@ -500,11 +601,68 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { autoYes, dryRun, verbose, help, clearCache, agents } = parseArgs();
+  const args = parseArgs();
+  const { autoYes, dryRun, verbose, help, clearCache, agents, fromSpec, scanDocs } = args;
 
   if (help) {
     showHelp();
     process.exit(0);
+  }
+
+  // show wins over copy if both passed — cheaper, no clipboard side effect, no failure mode.
+  if (args.showSpecgenPrompt) {
+    const code = runPrompt();
+    process.exit(code);
+  }
+
+  if (args.copySpecgenPrompt) {
+    const code = await runCopyPrompt();
+    process.exit(code);
+  }
+
+  // ── Subcommand dispatch (BEFORE any default-flow side-effects) ──
+  if (args.subcommand !== undefined) {
+    const KNOWN = new Set(["list", "install"]);
+    if (!KNOWN.has(args.subcommand)) {
+      const msg = {
+        code: "unknown-subcommand",
+        message: `unknown subcommand '${args.subcommand}'`,
+        hint: "run 'autoskills --help'",
+      };
+      if (args.json) {
+        write(JSON.stringify(serializeError(msg)) + "\n");
+      } else {
+        console.error(red(`   error: ${msg.message}. ${msg.hint}`));
+      }
+      process.exit(1);
+    }
+    let code = 0;
+    switch (args.subcommand) {
+      case "list":
+        code = runList({ json: args.json, filter: args.filter, version: VERSION });
+        break;
+      case "install":
+        code = await runInstall({
+          only: args.only ?? "",
+          agents: args.agents,
+          autoYes: args.autoYes,
+          json: args.json,
+          verbose: args.verbose,
+        });
+        break;
+    }
+    process.exit(code);
+  }
+
+  // MUST stay before any write() to stdout when args.json is true. Any new branch added
+  // between dispatch and this gate could leak banner/detection output and break JSON consumers.
+  if (args.json && !args.dryRun) {
+    const msg = {
+      code: "json-requires-subcommand-or-dry-run",
+      message: "--json requires a subcommand (list/prompt/install) or --dry-run",
+    };
+    write(JSON.stringify(serializeError(msg)) + "\n");
+    process.exit(1);
   }
 
   if (clearCache) {
@@ -518,31 +676,72 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  await printBanner(VERSION);
+  if (!args.json) {
+    await printBanner(VERSION);
+  }
 
   const projectDir = resolve(".");
 
-  write(dim("   Scanning project...\r"));
-  const { detected, isFrontend, combos } = detectTechnologies(projectDir);
-  write("\x1b[K");
+  if (!args.json) {
+    write(dim("   Scanning project...\r"));
+  }
+  const core = detectTechnologies(projectDir);
+  if (!args.json) {
+    write("\x1b[K");
+  }
+
+  // Merge markdown-scanner results (opt-in) — default path unchanged.
+  let detected: Technology[] = core.detected;
+  let combos: ComboSkill[] = core.combos;
+  let isFrontend = core.isFrontend;
+
+  if (fromSpec || scanDocs) {
+    const sources = loadMarkdownSources({
+      fromSpec,
+      scanDocs,
+      projectDir,
+    });
+    if (scanDocs && !fromSpec && sources.length === 0) {
+      console.error(yellow("   warning: no CLAUDE.md, AGENTS.md, or README.md found"));
+    }
+    if (sources.length > 0) {
+      const mdMatches = sources.flatMap(s => scanMarkdown(s.content, SKILLS_MAP));
+      const coreIds = core.detected.map(t => t.id);
+      const mergedIds = mergeMarkdownDetections(coreIds, mdMatches);
+      // mergeMarkdownDetections only appends; length !== means scanner contributed new ids.
+      if (mergedIds.length !== coreIds.length) {
+        detected = mergedIds
+          .map(id => SKILLS_MAP.find(t => t.id === id))
+          .filter((t): t is Technology => t !== undefined);
+        combos = detectCombos(mergedIds);
+        // isFrontend stays as core.isFrontend — core's heuristic is file-system based, not ID-based
+      }
+    }
+  }
 
   if (detected.length === 0 && !isFrontend) {
-    log(yellow("   ⚠ No supported technologies detected."));
-    log(dim("   Make sure you run this in a project directory."));
-    log();
+    if (!args.json) {
+      log(yellow("   ⚠ No supported technologies detected."));
+      log(dim("   Make sure you run this in a project directory."));
+      log();
+    }
     process.exit(0);
   }
 
-  printDetected(detected, combos, isFrontend);
+  if (!args.json) {
+    printDetected(detected, combos, isFrontend);
+  }
 
   const installedNames = getInstalledSkillNames(projectDir);
   const skills = collectSkills({ detected, isFrontend, combos, installedNames });
   const resolvedAgents = agents.length > 0 ? agents : detectAgents();
 
   if (skills.length === 0) {
-    log(yellow("   No skills available for your stack yet."));
-    log(dim("   Check https://autoskills.sh for the latest."));
-    log();
+    if (!args.json) {
+      log(yellow("   No skills available for your stack yet."));
+      log(dim("   Check https://autoskills.sh for the latest."));
+      log();
+    }
     process.exit(0);
   }
 
@@ -551,6 +750,22 @@ async function main(): Promise<void> {
   }
 
   if (dryRun) {
+    if (args.json) {
+      const payload = serializeDryRun({
+        detected_technologies: detected.map((t) => t.id),
+        detected_combos: combos.map((c) => c.id),
+        is_frontend: isFrontend,
+        skills_resolved: skills.map((s) => ({
+          id: s.skill,
+          path: s.skill,
+          source_tech: s.sources[0] ?? "",
+          installed: s.installed,
+        })),
+        agents_detected: resolvedAgents,
+      });
+      write(JSON.stringify(payload, null, 2) + "\n");
+      return;
+    }
     printSkillsList(skills);
     log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
     log(dim("   --dry-run: nothing was installed."));
@@ -598,6 +813,14 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: Error) => {
-  console.error(red(`\n   Error: ${err.message}\n`));
+  const isArgError = err instanceof ArgError;
+  if (process.argv.includes("--json")) {
+    write(JSON.stringify(serializeError({
+      code: isArgError ? "cli-arg-invalid" : "internal-error",
+      message: err.message,
+    })) + "\n");
+  } else {
+    console.error(red(`\n   Error: ${err.message}\n`));
+  }
   process.exit(1);
 });
