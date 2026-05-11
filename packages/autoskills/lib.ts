@@ -377,7 +377,44 @@ export function resolveWorkspaces(projectDir: string, preloaded?: PreloadedManif
 
   return [];
 }
+// ── Informal Multi-Project Fallback ────────────────────────────────────────
 
+/**
+ * Scans immediate subdirectories of projectDir for those that contain a
+ * package.json, deno.json, or deno.jsonc file. Used as a fallback when no
+ * formal workspace config exists (pnpm-workspace.yaml, npm/yarn workspaces,
+ * deno.json workspace) but the user is running autoskills from a parent
+ * directory that contains multiple independent sub-projects.
+ *
+ * Only goes 1 level deep. Skips SCAN_SKIP_DIRS and hidden directories.
+ */
+function scanSubdirProjects(projectDir: string): string[] {
+  const dirs: string[] = [];
+  let entries: import("node:fs").Dirent[];
+
+  try {
+    entries = readdirSync(projectDir, { withFileTypes: true });
+  } catch {
+    return dirs;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (SCAN_SKIP_DIRS.has(entry.name) || entry.name.startsWith(".")) continue;
+
+    const subDir = join(projectDir, entry.name);
+
+    if (
+      existsSync(join(subDir, "package.json")) ||
+      existsSync(join(subDir, "deno.json")) ||
+      existsSync(join(subDir, "deno.jsonc"))
+    ) {
+      dirs.push(subDir);
+    }
+  }
+
+  return dirs;
+}
 // ── Detection ─────────────────────────────────────────────────
 
 export function readGemfile(dir: string): string[] {
@@ -564,7 +601,16 @@ export function detectTechnologies(projectDir: string): DetectResult {
   const seenIds = new Map<string, Technology>(root.detected.map((t) => [t.id, t]));
   let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
 
-  const workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
+  let workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
+
+  // Fallback for informal multi-project directories: if no formal workspace
+  // config was found AND root detection yielded nothing, scan immediate
+  // subdirectories. This fixes issue #51 where running autoskills from a
+  // parent folder containing multiple independent projects shows
+  // "No technologies detected".
+  if (workspaceDirs.length === 0 && root.detected.length === 0) {
+    workspaceDirs = scanSubdirProjects(projectDir);
+  }
   for (const wsDir of workspaceDirs) {
     const ws = detectTechnologiesInDir(wsDir, { skipFrontendFiles: isFrontend });
 
