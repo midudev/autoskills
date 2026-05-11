@@ -549,11 +549,16 @@ async function main(): Promise<void> {
       log(cyan("   ◆ ") + bold(`Select skills to remove `) + dim(`(${installedList.length} installed)`));
       log();
 
-      const selected = await multiSelect(installedList, {
-        labelFn: (name) => name,
-        initialSelected: Array(installedList.length).fill(false),
-        shortcuts: [],
-      });
+      let selected: string[];
+      if (process.stdin.isTTY) {
+        selected = await multiSelect(installedList, {
+          labelFn: (name) => name,
+          initialSelected: Array(installedList.length).fill(false),
+          shortcuts: [],
+        });
+      } else {
+        selected = [];
+      }
 
       if (selected.length === 0) {
         log();
