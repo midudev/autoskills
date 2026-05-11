@@ -158,6 +158,14 @@ export const SKILLS_MAP: Technology[] = [
     skills: ["pproenca/dot-skills/react-hook-form"],
   },
   {
+    id: "swr",
+    name: "SWR",
+    detect: {
+      packages: ["swr"],
+    },
+    skills: ["https://github.com/vercel-labs/vercel-plugin#swr"],
+  },
+  {
     id: "zod",
     name: "Zod",
     detect: {

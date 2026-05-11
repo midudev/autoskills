@@ -51,7 +51,7 @@ Built to work across modern frontend, backend, mobile, cloud, and media stacks.
 - **Languages & Runtimes:** TypeScript, Node.js, Go, Bun, Deno, Dart
 - **Backend & APIs:** Express, Hono, NestJS, Spring Boot
 - **Mobile & Desktop:** Expo, React Native, Flutter, SwiftUI, Android, Kotlin Multiplatform, Tauri, Electron
-- **Data & Storage:** Supabase, Neon, Prisma, Drizzle ORM, Zod, React Hook Form
+- **Data & Storage:** Supabase, Neon, Prisma, Drizzle ORM, Zod, React Hook Form, SWR
 - **Auth & Billing:** Better Auth, Clerk, Stripe
 - **Testing:** Vitest, Playwright
 - **Cloud & Infrastructure:** Vercel, Vercel AI SDK, Cloudflare, Durable Objects, Cloudflare Agents, Cloudflare AI, AWS, Azure, Terraform

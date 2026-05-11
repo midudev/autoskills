@@ -275,6 +275,14 @@ describe("detectTechnologies", () => {
     ok(combos.some((c) => c.id === "react-hook-form-zod"));
   });
 
+  it("detects SWR from dependencies", () => {
+    writePackageJson(tmp.path, { dependencies: { swr: "^2.3.4" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const swr = detected.find((t) => t.id === "swr");
+    ok(swr);
+    ok(swr.skills.includes("https://github.com/vercel-labs/vercel-plugin#swr"));
+  });
+
   it("detects Go from go.mod", () => {
     writePackageJson(tmp.path);
     writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");

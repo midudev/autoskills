@@ -111,6 +111,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | Supabase        | `@supabase/supabase-js`, `@supabase/ssr`                 |
 | Zod             | `zod` package                                            |
 | React Hook Form | `react-hook-form` package                                |
+| SWR             | `swr` package                                            |
 | Neon Postgres   | `@neondatabase/serverless`                               |
 | Prisma          | `prisma`, `@prisma/client`                               |
 | Drizzle ORM     | `drizzle-orm`, `drizzle-kit`                             |
