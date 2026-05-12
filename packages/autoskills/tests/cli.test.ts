@@ -453,6 +453,26 @@ describe("CLI", () => {
       ok(output.includes("Spring Boot"));
     });
 
+    it("does NOT detect web frontend for Python-only project with --dry-run", () => {
+      writeFile(tmp.path, "requirements.txt", "flask==3.0.0");
+      writeFile(tmp.path, "app/main.py", "from flask import Flask");
+      writeFile(tmp.path, "templates/index.html", "<html><body>Hello</body></html>");
+
+      const output = run(["--dry-run"], tmp.path);
+
+      ok(output.includes("Python"));
+      ok(!output.includes("Web frontend detected"));
+      ok(!output.includes("frontend-design"));
+    });
+
+    it("detects Python from requirements.txt with --dry-run", () => {
+      writeFile(tmp.path, "requirements.txt", "flask==3.0.0");
+
+      const output = run(["--dry-run"], tmp.path);
+
+      ok(output.includes("Python"));
+    });
+
     it("adds web fundamentals when npm frontend is detected too", () => {
       writePackageJson(tmp.path, { dependencies: { react: "^19", next: "^15" } });
       const output = run(["--dry-run"], tmp.path);

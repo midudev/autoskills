@@ -9,6 +9,7 @@ export {
   COMBO_SKILLS_MAP,
   FRONTEND_PACKAGES,
   FRONTEND_BONUS_SKILLS,
+  BACKEND_ONLY_IDS,
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
 } from "./skills-map.ts";
@@ -20,6 +21,7 @@ import {
   COMBO_SKILLS_MAP,
   FRONTEND_PACKAGES,
   FRONTEND_BONUS_SKILLS,
+  BACKEND_ONLY_IDS,
   WEB_FRONTEND_EXTENSIONS,
   AGENT_FOLDER_MAP,
 } from "./skills-map.ts";
@@ -440,7 +442,6 @@ export function getAllPackageNames(pkg: Record<string, unknown> | null): string[
 }
 
 interface DetectInDirOptions {
-  skipFrontendFiles?: boolean;
   pkg?: Record<string, unknown> | null;
   denoJson?: Record<string, unknown> | null;
 }
@@ -448,16 +449,11 @@ interface DetectInDirOptions {
 interface DetectInDirResult {
   detected: Technology[];
   isFrontendByPackages: boolean;
-  isFrontendByFiles: boolean;
 }
 
 function detectTechnologiesInDir(
   dir: string,
-  {
-    skipFrontendFiles = false,
-    pkg: preloadedPkg,
-    denoJson: preloadedDeno,
-  }: DetectInDirOptions = {},
+  { pkg: preloadedPkg, denoJson: preloadedDeno }: DetectInDirOptions = {},
 ): DetectInDirResult {
   const pkg = preloadedPkg !== undefined ? preloadedPkg : readPackageJson(dir);
   const allPackages = getAllPackageNames(pkg);
@@ -545,10 +541,8 @@ function detectTechnologiesInDir(
   }
 
   const isFrontendByPackages = allDepsArray.some((p) => FRONTEND_PACKAGES.has(p));
-  const isFrontendByFiles =
-    isFrontendByPackages || skipFrontendFiles ? false : hasWebFrontendFiles(dir);
 
-  return { detected, isFrontendByPackages, isFrontendByFiles };
+  return { detected, isFrontendByPackages };
 }
 
 export interface DetectResult {
@@ -562,11 +556,11 @@ export function detectTechnologies(projectDir: string): DetectResult {
   const denoJson = readDenoJson(projectDir);
   const root = detectTechnologiesInDir(projectDir, { pkg, denoJson });
   const seenIds = new Map<string, Technology>(root.detected.map((t) => [t.id, t]));
-  let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
+  let isFrontend = root.isFrontendByPackages;
 
   const workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
   for (const wsDir of workspaceDirs) {
-    const ws = detectTechnologiesInDir(wsDir, { skipFrontendFiles: isFrontend });
+    const ws = detectTechnologiesInDir(wsDir);
 
     for (const tech of ws.detected) {
       if (!seenIds.has(tech.id)) {
@@ -574,13 +568,21 @@ export function detectTechnologies(projectDir: string): DetectResult {
       }
     }
 
-    if (ws.isFrontendByPackages || ws.isFrontendByFiles) {
+    if (ws.isFrontendByPackages) {
       isFrontend = true;
     }
   }
 
   const detected = [...seenIds.values()];
   const detectedIds = detected.map((t) => t.id);
+
+  // Backend-only stacks (e.g. Python, Java) often contain .html templates
+  // or static .css files that should not trigger frontend classification.
+  if (!isFrontend && !detectedIds.some((id) => BACKEND_ONLY_IDS.has(id))) {
+    isFrontend =
+      hasWebFrontendFiles(projectDir) || workspaceDirs.some((dir) => hasWebFrontendFiles(dir));
+  }
+
   const combos = detectCombos(detectedIds);
 
   return { detected, isFrontend, combos };
