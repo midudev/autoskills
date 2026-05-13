@@ -40,6 +40,7 @@ This keeps the package small while avoiding live downloads from third-party skil
 ```
 -y, --yes       Skip confirmation prompt
 --dry-run       Show what would be installed without installing
+-r, --remove    Remove installed skills (interactive)
 -h, --help      Show help message
 ```
 

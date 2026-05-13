@@ -36,6 +36,14 @@ npx autoskills -y
 npx autoskills --dry-run
 ```
 
+### Remove installed skills
+
+```bash
+npx autoskills -r
+```
+
+Lists every skill currently installed in your project, lets you pick which ones to remove, and cleans up the canonical `.agents/skills/<name>` directory, the per-agent symlinks (`.claude/skills/<name>`, `.cline/skills/<name>`, etc.), and the matching `skills-lock.json` entry. Pass `-y` to remove all installed skills without confirmation.
+
 ### Claude Code summary
 
 If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CLAUDE.md` file in your project root summarizing the markdown files installed under `.claude/skills`.
@@ -46,6 +54,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | ----------------- | ----------------------------------------------------- |
 | `-y`, `--yes`     | Skip confirmation prompt, install all detected skills |
 | `--dry-run`       | Show detected skills without installing anything      |
+| `-r`, `--remove`  | Remove installed skills (interactive)                 |
 | `-v`, `--verbose` | Show install trace and error details                  |
 | `-h`, `--help`    | Show help message                                     |
 

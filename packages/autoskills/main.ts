@@ -28,6 +28,7 @@ import {
 } from "./installer.ts";
 import type { InstallSecurityCheck } from "./installer.ts";
 import { cleanupClaudeMd } from "./claude.ts";
+import { listInstalledSkills, uninstallAll } from "./uninstaller.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VERSION: string = (() => {
@@ -56,6 +57,7 @@ interface CliArgs {
   verbose: boolean;
   help: boolean;
   clearCache: boolean;
+  remove: boolean;
   agents: string[];
 }
 
@@ -75,6 +77,7 @@ function parseArgs(): CliArgs {
     verbose: args.includes("--verbose") || args.includes("-v"),
     help: args.includes("--help") || args.includes("-h"),
     clearCache: args.includes("--clear-cache"),
+    remove: args.includes("--remove") || args.includes("-r"),
     agents,
   };
 }
@@ -88,12 +91,14 @@ function showHelp(): void {
     npx autoskills ${dim("-y")}                   Skip confirmation
     npx autoskills ${dim("--dry-run")}            Show what would be installed
     npx autoskills ${dim("--clear-cache")}        Clear downloaded skills cache
+    npx autoskills ${dim("-r")}                   Remove installed skills (interactive)
     npx autoskills ${dim("-a cursor claude-code")} Install for specific IDEs only
 
   ${bold("Options:")}
     -y, --yes       Skip confirmation prompt
     --dry-run       Show skills without installing
     --clear-cache   Clear downloaded skills cache
+    -r, --remove    Remove installed skills (interactive)
     -v, --verbose   Show install trace and error details
     -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
     -h, --help      Show this help message
@@ -497,10 +502,137 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
   return selected;
 }
 
+// ── Remove Flow ──────────────────────────────────────────────
+
+async function selectSkillsToRemove(installed: string[], autoYes: boolean): Promise<string[]> {
+  if (autoYes) {
+    log(
+      red("   ◆ ") +
+        bold(
+          `Removing all ${installed.length} installed skill${installed.length === 1 ? "" : "s"}`,
+        ),
+    );
+    log();
+    return installed;
+  }
+
+  const maxLabel = Math.max(...installed.map((s) => s.length));
+  log(red("   ◆ ") + bold(`Select skills to remove `) + dim(`(${installed.length} installed)`));
+  log();
+
+  const selected = await multiSelect(installed, {
+    labelFn: (name) => red(name) + " ".repeat(Math.max(0, maxLabel - name.length)),
+    // Start with everything unchecked — removal is destructive, opt-in only.
+    initialSelected: installed.map(() => false),
+    confirmLabel: "remove",
+  });
+
+  return selected;
+}
+
+function printRemoveSummary({
+  uninstalled,
+  failed,
+  errors,
+  elapsed,
+}: {
+  uninstalled: number;
+  failed: number;
+  errors: { name: string; output: string; stderr: string }[];
+  elapsed: number;
+}): void {
+  log();
+
+  if (failed === 0) {
+    log(
+      green(
+        bold(
+          `   ✔ Done! ${uninstalled} skill${uninstalled !== 1 ? "s" : ""} removed in ${formatTime(elapsed)}.`,
+        ),
+      ),
+    );
+  } else {
+    log(
+      yellow(
+        `   Done: ${green(`${uninstalled} removed`)}, ${red(`${failed} failed`)} in ${formatTime(elapsed)}.`,
+      ),
+    );
+
+    if (errors.length > 0) {
+      log();
+      log(bold(red("   Errors:")));
+      for (const { name, output } of errors) {
+        log(red(`     ✘ ${name}`));
+        log(dim(`       ${output}`));
+      }
+      log();
+      log(dim(`   If it looks like an autoskills bug, please create an issue: ${ISSUES_URL}`));
+    }
+  }
+  log();
+}
+
+async function runRemoveFlow(
+  projectDir: string,
+  { autoYes, verbose }: { autoYes: boolean; verbose: boolean },
+): Promise<void> {
+  const installed = listInstalledSkills(projectDir);
+
+  if (installed.length === 0) {
+    log(yellow("   ⚠ No installed skills found in this project."));
+    log(dim("   Nothing to remove."));
+    log();
+    process.exit(0);
+  }
+
+  const toRemove = await selectSkillsToRemove(installed, autoYes);
+
+  if (toRemove.length === 0) {
+    log();
+    log(dim("   Nothing selected."));
+    log();
+    process.exit(0);
+  }
+
+  log();
+  log(red("   ◆ ") + bold("Removing skills..."));
+  log();
+
+  const startTime = Date.now();
+  const { uninstalled, failed, errors } = await uninstallAll(toRemove, {
+    projectDir,
+    verbose,
+  });
+  const elapsed = Date.now() - startTime;
+
+  // If every autoskills-installed skill is gone, clean up the CLAUDE.md
+  // section too so it doesn't reference skills that no longer exist.
+  const remaining = listInstalledSkills(projectDir);
+  if (remaining.length === 0) {
+    const claudeCleanup = cleanupClaudeMd(projectDir);
+    if (claudeCleanup.cleaned) {
+      if (claudeCleanup.deleted) {
+        log(dim("   Removed autoskills section from CLAUDE.md (file was empty, deleted)."));
+      } else {
+        log(dim("   Removed autoskills section from CLAUDE.md."));
+      }
+    }
+  } else if (existsSync(join(projectDir, "CLAUDE.md"))) {
+    log(
+      dim(
+        "   Note: CLAUDE.md may still reference removed skills. " +
+          "Re-run `npx autoskills` to refresh it.",
+      ),
+    );
+  }
+
+  printRemoveSummary({ uninstalled, failed, errors, elapsed });
+}
+
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { autoYes, dryRun, verbose, help, clearCache, agents } = parseArgs();
+  const { autoYes, dryRun, verbose, help, clearCache, remove, agents } = parseArgs();
 
   if (help) {
     showHelp();
@@ -521,6 +653,11 @@ async function main(): Promise<void> {
   await printBanner(VERSION);
 
   const projectDir = resolve(".");
+
+  if (remove) {
+    await runRemoveFlow(projectDir, { autoYes, verbose });
+    return;
+  }
 
   write(dim("   Scanning project...\r"));
   const { detected, isFrontend, combos } = detectTechnologies(projectDir);

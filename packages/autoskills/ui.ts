@@ -92,11 +92,20 @@ interface MultiSelectOptions<T> {
   groupFn?: (item: T) => string;
   initialSelected?: boolean[];
   shortcuts?: { key: string; label: string; fn: (items: T[]) => boolean[] }[];
+  /** Verb shown in the bottom help line. Defaults to "confirm". */
+  confirmLabel?: string;
 }
 
 export function multiSelect<T>(
   items: T[],
-  { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }: MultiSelectOptions<T>,
+  {
+    labelFn,
+    hintFn,
+    groupFn,
+    initialSelected,
+    shortcuts = [],
+    confirmLabel = "confirm",
+  }: MultiSelectOptions<T>,
 ): Promise<T[]> {
   if (initialSelected && initialSelected.length !== items.length) {
     throw new Error(
@@ -181,7 +190,7 @@ export function multiSelect<T>(
           dim(" all · ") +
           shortcutPart +
           white(bold("[enter]")) +
-          dim(` confirm (${count}/${items.length})`),
+          dim(` ${confirmLabel} (${count}/${items.length})`),
       );
     }
 
