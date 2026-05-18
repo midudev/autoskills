@@ -6,7 +6,10 @@ import { computeChanges, confirmDestructive } from "../changes.ts";
 import type { SkillEntry } from "../lib.ts";
 
 function skill(name: string, installed: boolean): SkillEntry {
-  return { skill: name, sources: ["React"], installed };
+  // Mirror the registry shape (`author/repo/skillName`) so tests exercise
+  // the same path parseSkillPath would see in production.
+  const fullPath = name.includes("/") ? name : `acme/skills/${name}`;
+  return { skill: fullPath, sources: ["React"], installed };
 }
 
 // Suppress stdout noise from the prompt when running confirmDestructive tests.
@@ -25,7 +28,7 @@ describe("computeChanges", () => {
 
     deepStrictEqual(
       installs.map((s) => s.skill),
-      ["a", "b"],
+      ["acme/skills/a", "acme/skills/b"],
     );
     deepStrictEqual(removes, []);
     deepStrictEqual(keeps, []);
@@ -37,6 +40,7 @@ describe("computeChanges", () => {
     const { installs, removes, keeps, skips } = computeChanges(skills, [false, false]);
 
     deepStrictEqual(installs, []);
+    // `removes` is the bare last-segment name (what uninstallSkill accepts).
     deepStrictEqual(removes, ["a", "b"]);
     deepStrictEqual(keeps, []);
     deepStrictEqual(skips, []);
@@ -51,18 +55,19 @@ describe("computeChanges", () => {
     ];
     const { installs, removes, keeps, skips } = computeChanges(skills, [true, false, false, true]);
 
+    // installs / keeps carry the full registry path — installAll needs it.
     deepStrictEqual(
       installs.map((s) => s.skill),
-      ["new-keep"],
+      ["acme/skills/new-keep"],
     );
     deepStrictEqual(removes, ["old-remove"]);
     deepStrictEqual(
       keeps.map((s) => s.skill),
-      ["old-keep"],
+      ["acme/skills/old-keep"],
     );
     deepStrictEqual(
       skips.map((s) => s.skill),
-      ["new-skip"],
+      ["acme/skills/new-skip"],
     );
   });
 
@@ -73,7 +78,7 @@ describe("computeChanges", () => {
     deepStrictEqual(installs, []);
     deepStrictEqual(
       keeps.map((s) => s.skill),
-      ["a"],
+      ["acme/skills/a"],
     );
     deepStrictEqual(removes, []);
   });
@@ -81,6 +86,34 @@ describe("computeChanges", () => {
   it("handles an empty list", () => {
     const out = computeChanges([], []);
     deepStrictEqual(out, { installs: [], removes: [], keeps: [], skips: [] });
+  });
+
+  it("removes contains the bare last-segment name, not the full author/repo/name", () => {
+    // Registry uses `author/repo/skillName`, but skills-lock.json keys on
+    // skillName and uninstallSkill rejects path separators. computeChanges
+    // bridges the two by extracting the last segment.
+    const skills: SkillEntry[] = [
+      {
+        skill: "sickn33/antigravity-awesome-skills/nodejs-best-practices",
+        sources: ["Node.js"],
+        installed: true,
+      },
+    ];
+    const { removes } = computeChanges(skills, [false]);
+
+    deepStrictEqual(removes, ["nodejs-best-practices"]);
+  });
+
+  it("drops removes for URL-style skills with no parseable name", () => {
+    // parseSkillPath returns skillName: "" for raw http(s) URLs. Those
+    // can't be passed to uninstallSkill safely; we drop them rather than
+    // letting the empty string poison the remove call.
+    const skills: SkillEntry[] = [
+      { skill: "https://example.com/skill.md", sources: ["Custom"], installed: true },
+    ];
+    const { removes } = computeChanges(skills, [false]);
+
+    deepStrictEqual(removes, []);
   });
 
   it("throws when selected length does not match skills length", () => {

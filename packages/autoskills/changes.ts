@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 
 import { bold, dim, yellow } from "./colors.ts";
+import { parseSkillPath } from "./lib.ts";
 import type { SkillEntry } from "./lib.ts";
 
 // ── Symmetric Selection Helpers ──────────────────────────────
@@ -13,7 +14,12 @@ import type { SkillEntry } from "./lib.ts";
 export interface SkillChanges {
   /** Not previously installed and currently checked. */
   installs: SkillEntry[];
-  /** Previously installed and currently unchecked — to be removed. */
+  /**
+   * Bare last-segment names of skills to remove — the same form used as
+   * keys in `skills-lock.json` and accepted by `uninstallSkill`. Derived
+   * from `SkillEntry.skill` via `parseSkillPath().skillName`. Empty-string
+   * names (e.g. raw URL skills with no parseable name) are dropped.
+   */
   removes: string[];
   /** Previously installed and still checked — left alone. */
   keeps: SkillEntry[];
@@ -35,8 +41,10 @@ export function computeChanges(skills: SkillEntry[], selected: boolean[]): Skill
     const s = skills[i];
     const checked = selected[i];
     if (s.installed && checked) keeps.push(s);
-    else if (s.installed && !checked) removes.push(s.skill);
-    else if (!s.installed && checked) installs.push(s);
+    else if (s.installed && !checked) {
+      const { skillName } = parseSkillPath(s.skill);
+      if (skillName) removes.push(skillName);
+    } else if (!s.installed && checked) installs.push(s);
     else skips.push(s);
   }
   return { installs, removes, keeps, skips };
