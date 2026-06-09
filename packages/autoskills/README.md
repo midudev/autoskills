@@ -38,9 +38,10 @@ npx autoskills --dry-run
 
 ### Force specific technologies
 
-Skip auto-detection and install skills for the technologies you specify:
+Skip auto-detection and install skills for the technology ids you specify:
 
 ```bash
+npx autoskills --tech react nextjs
 npx autoskills --tech react --tech nextjs
 npx autoskills --tech react,nextjs,tailwind
 ```
@@ -56,7 +57,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | `-y`, `--yes`     | Skip confirmation prompt, install all detected skills |
 | `--dry-run`       | Show detected skills without installing anything      |
 | `-v`, `--verbose` | Show install trace and error details                  |
-| `-t`, `--tech`    | Force specific technologies (skip auto-detect)        |
+| `-t`, `--tech`    | Force technology ids (skip auto-detect)               |
 | `-h`, `--help`    | Show help message                                     |
 
 ## Supported Technologies

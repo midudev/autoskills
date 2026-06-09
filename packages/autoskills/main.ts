@@ -65,7 +65,21 @@ interface CliArgs {
   help: boolean;
   clearCache: boolean;
   agents: string[];
+  forceTechnologies: boolean;
   technologies: string[];
+}
+
+interface ForcedTechnologiesResult {
+  detected: Technology[];
+  isFrontend: boolean;
+  combos: ComboSkill[];
+}
+
+function appendCommaSeparatedValues(target: string[], value: string): void {
+  for (const part of value.split(",")) {
+    const trimmed = part.trim();
+    if (trimmed) target.push(trimmed);
+  }
 }
 
 function parseArgs(): CliArgs {
@@ -80,14 +94,26 @@ function parseArgs(): CliArgs {
   }
 
   const technologies: string[] = [];
+  let forceTechnologies = false;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "-t" || args[i] === "--tech") {
-      const val = args[i + 1];
-      if (val && !val.startsWith("-")) {
-        for (const v of val.split(",")) {
-          const trimmed = v.trim();
-          if (trimmed) technologies.push(trimmed);
-        }
+    const arg = args[i];
+
+    if (arg.startsWith("--tech=")) {
+      forceTechnologies = true;
+      appendCommaSeparatedValues(technologies, arg.slice("--tech=".length));
+      continue;
+    }
+
+    if (arg.startsWith("-t=")) {
+      forceTechnologies = true;
+      appendCommaSeparatedValues(technologies, arg.slice("-t=".length));
+      continue;
+    }
+
+    if (arg === "-t" || arg === "--tech") {
+      forceTechnologies = true;
+      while (args[i + 1] && !args[i + 1].startsWith("-")) {
+        appendCommaSeparatedValues(technologies, args[i + 1]);
         i++;
       }
     }
@@ -100,7 +126,43 @@ function parseArgs(): CliArgs {
     help: args.includes("--help") || args.includes("-h"),
     clearCache: args.includes("--clear-cache"),
     agents,
+    forceTechnologies,
     technologies,
+  };
+}
+
+function technologyImpliesFrontend(tech: Technology): boolean {
+  if (FRONTEND_PACKAGES.has(tech.id)) return true;
+  return (tech.detect.packages ?? []).some((pkg) => FRONTEND_PACKAGES.has(pkg));
+}
+
+function resolveForcedTechnologies(technologies: string[]): ForcedTechnologiesResult {
+  const knownIds = new Set(SKILLS_MAP.map((tech) => tech.id));
+  const forcedIds = new Set<string>();
+  const unknownIds = new Set<string>();
+
+  if (technologies.length === 0) {
+    log(yellow("   ⚠ No technology ids provided for --tech."));
+  }
+
+  for (const id of technologies) {
+    if (knownIds.has(id)) {
+      forcedIds.add(id);
+    } else {
+      unknownIds.add(id);
+    }
+  }
+
+  for (const id of unknownIds) {
+    log(yellow(`   ⚠ Unknown technology "${id}" — skipping.`));
+  }
+
+  const detected = SKILLS_MAP.filter((tech) => forcedIds.has(tech.id));
+  const detectedIds = detected.map((tech) => tech.id);
+  return {
+    detected,
+    isFrontend: detected.some(technologyImpliesFrontend),
+    combos: detectCombos(detectedIds),
   };
 }
 
@@ -114,7 +176,7 @@ function showHelp(): void {
     npx autoskills ${dim("--dry-run")}            Show what would be installed
     npx autoskills ${dim("--clear-cache")}        Clear downloaded skills cache
     npx autoskills ${dim("-a cursor claude-code")} Install for specific IDEs only
-    npx autoskills ${dim("-t react nextjs")}     Force specific technologies
+    npx autoskills ${dim("-t react nextjs")}      Force specific technologies
 
   ${bold("Options:")}
     -y, --yes       Skip confirmation prompt
@@ -122,20 +184,25 @@ function showHelp(): void {
     --clear-cache   Clear downloaded skills cache
     -v, --verbose   Show install trace and error details
     -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
-    -t, --tech      Force specific technologies (skip auto-detect)
+    -t, --tech      Force technology ids (skip auto-detect)
     -h, --help      Show this help message
 `);
 }
 
 // ── Display ──────────────────────────────────────────────────
 
-function printDetected(detected: Technology[], combos: ComboSkill[], isFrontend: boolean): void {
+function printDetected(
+  detected: Technology[],
+  combos: ComboSkill[],
+  isFrontend: boolean,
+  { forced = false }: { forced?: boolean } = {},
+): void {
   if (detected.length > 0) {
     const withSkills = detected.filter((t) => t.skills.length > 0);
     const withoutSkills = detected.filter((t) => t.skills.length === 0);
     const allTech = [...withSkills, ...withoutSkills];
 
-    log(cyan("   ◆ ") + bold("Detected technologies:"));
+    log(cyan("   ◆ ") + bold(forced ? "Selected technologies:" : "Detected technologies:"));
     log();
 
     const COLS = 3;
@@ -158,7 +225,7 @@ function printDetected(detected: Technology[], combos: ComboSkill[], isFrontend:
 
     if (combos.length > 0) {
       log();
-      log(magenta("   ◆ ") + bold("Detected combos:"));
+      log(magenta("   ◆ ") + bold(forced ? "Selected combos:" : "Detected combos:"));
       log();
       for (const combo of combos) {
         log(magenta(`     ⚡ `) + combo.name);
@@ -527,7 +594,8 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { autoYes, dryRun, verbose, help, clearCache, agents, technologies } = parseArgs();
+  const { autoYes, dryRun, verbose, help, clearCache, agents, forceTechnologies, technologies } =
+    parseArgs();
 
   if (help) {
     showHelp();
@@ -553,21 +621,11 @@ async function main(): Promise<void> {
   let isFrontend: boolean;
   let combos: ComboSkill[];
 
-  if (technologies.length > 0) {
-    const validIds = new Set(SKILLS_MAP.map((t) => t.id));
-    const forcedIds = new Set<string>();
-    for (const id of technologies) {
-      if (validIds.has(id)) {
-        forcedIds.add(id);
-      } else {
-        log(yellow(`   ⚠ Unknown technology "${id}" — skipping.`));
-      }
-    }
-
-    detected = SKILLS_MAP.filter((t) => forcedIds.has(t.id));
-    isFrontend = detected.some((t) => FRONTEND_PACKAGES.has(t.id));
-    const detectedIds = detected.map((t) => t.id);
-    combos = detectCombos(detectedIds);
+  if (forceTechnologies) {
+    const forced = resolveForcedTechnologies(technologies);
+    detected = forced.detected;
+    isFrontend = forced.isFrontend;
+    combos = forced.combos;
   } else {
     write(dim("   Scanning project...\r"));
     const result = detectTechnologies(projectDir);
@@ -584,7 +642,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  printDetected(detected, combos, isFrontend);
+  printDetected(detected, combos, isFrontend, { forced: forceTechnologies });
 
   const installedNames = getInstalledSkillNames(projectDir);
   const skills = collectSkills({ detected, isFrontend, combos, installedNames });
