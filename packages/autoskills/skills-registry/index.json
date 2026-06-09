@@ -12992,6 +12992,32 @@
         "summary": "review skipped (--no-review)",
         "checkedAt": "2026-05-03T15:33:46.080Z"
       }
+    },
+    "elysiajs": {
+      "source": "elysiajs/skills",
+      "skillPath": "elysiajs/skills/elysiajs",
+      "commitSha": "main",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "9cc10625a6babc5c14c03904f7dc878fadbf598106e19b62abab37f641bd677f"
+      },
+      "bundleHash": "elysiajs-skill-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "ElysiaJS skill for type-safe, high-performance backend development with Bun",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-05-13T21:40:00.000Z"
+      },
+      "securityCheck": {
+        "status": "ok",
+        "findings": [],
+        "summary": "Official ElysiaJS skill with standard documentation",
+        "checkedAt": "2026-05-13T21:40:00.000Z"
+      }
     }
   }
 }

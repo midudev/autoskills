@@ -592,6 +592,14 @@ export const SKILLS_MAP: Technology[] = [
     skills: ["midudev/autoskills/bun"],
   },
   {
+    id: "elysia",
+    name: "Elysia",
+    detect: {
+      packages: ["elysia"],
+    },
+    skills: ["elysiajs/skills/elysiajs"],
+  },
+  {
     id: "node",
     name: "Node.js",
     detect: {

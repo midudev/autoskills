@@ -94,6 +94,7 @@ const popularityOrder = [
   'expo',
   'react-native',
   'bun',
+  'elysia',
   'deno',
   'supabase',
   'cloudflare',
@@ -168,7 +169,7 @@ const skillsMap = [...SKILLS_MAP].sort((a: any, b: any) => {
     <!-- Terminal (mobile/tablet only — on desktop it's the fixed right panel) -->
     <div class="mb-16 lg:fixed lg:top-0 lg:right-0 lg:w-1/2 lg:h-screen lg:mb-0 lg:flex lg:flex-col lg:p-8 xl:p-12 lg:border-l lg:border-zinc-800/50 lg:z-10">
       <p class="text-zinc-600 mb-2 uppercase tracking-widest text-xs lg:hidden">Output</p>
-      <div class="border border-zinc-800 bg-zinc-950 lg:w-full lg:rounded-lg lg:overflow-hidden lg:shadow-2xl lg:shadow-black/20 lg:flex lg:flex-col lg:max-h-full" id="terminal" data-version={cliVersion}>
+      <div class="border border-zinc-800 bg-zinc-950 lg:w-full lg:rounded-lg lg:overflow-hidden lg:shadow-2xl lg:shadow-black/20 lg:flex lg:flex-col lg:max-h-full lg:h-full" id="terminal" data-version={cliVersion}>
         <div class="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-800 shrink-0">
           <span class="w-2.5 h-2.5 rounded-full bg-zinc-800"></span>
           <span class="w-2.5 h-2.5 rounded-full bg-zinc-800"></span>
