@@ -308,7 +308,7 @@ describe("collectSkills", () => {
 
   it("discriminates between React shadcn and Svelte shadcn", () => {
     const detected = [
-      { id: "svelte", name: "Svelte", detect: {}, skills: ["ejirocodes/agent-skills/svelte5-best-practices"] },
+      { id: "svelte", name: "Svelte", detect: {}, skills: ["spences10/skills/svelte-runes"] },
       { id: "shadcn", name: "shadcn/ui", detect: {}, skills: ["shadcn/ui/shadcn"] },
     ];
     const combos = [

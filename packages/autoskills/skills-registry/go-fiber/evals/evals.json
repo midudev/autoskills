@@ -1,0 +1,74 @@
+[
+  {
+    "id": "go-fiber-rest-middleware",
+    "prompt": "Build a Go Fiber v3 REST API for a task management service with the following requirements: Create CRUD endpoints for tasks under /api/v1/tasks with proper route grouping. Include a middleware stack with recovery, request ID injection, structured JSON logging, JWT authentication, and rate limiting. Validate request bodies using go-playground/validator. Return structured JSON error responses from a custom ErrorHandler. Implement graceful shutdown. Include table-driven tests for the create and list endpoints.",
+    "assertions": [
+      {
+        "id": "fiber-app-config",
+        "type": "contains_concept",
+        "expected": "Fiber app is created with fiber.New(fiber.Config{...}) including a custom ErrorHandler, ReadTimeout, WriteTimeout, and BodyLimit configuration",
+        "weight": 1.0
+      },
+      {
+        "id": "route-grouping-middleware",
+        "type": "contains_concept",
+        "expected": "Routes are organized with app.Group('/api/v1') and middleware is applied in the correct order: recovery first, then request ID, logging, and auth middleware on the group, with rate limiter on specific routes",
+        "weight": 1.0
+      },
+      {
+        "id": "validation-binding",
+        "type": "contains_concept",
+        "expected": "Request structs have validate tags, c.BodyParser() is called to parse the body, and a validator instance validates the struct with structured field-level error responses returned as 400 JSON",
+        "weight": 1.0
+      },
+      {
+        "id": "custom-error-handler",
+        "type": "contains_concept",
+        "expected": "A custom ErrorHandler function is defined that checks for *fiber.Error, validation errors, and sentinel errors, mapping each to a consistent JSON envelope with code, message, and optional details fields",
+        "weight": 1.0
+      },
+      {
+        "id": "handler-tests",
+        "type": "contains_concept",
+        "expected": "Tests use app.Test() with httptest.NewRequest to exercise the create and list endpoints, asserting on status codes and JSON response bodies in a table-driven pattern with t.Run subtests",
+        "weight": 1.0
+      }
+    ]
+  },
+  {
+    "id": "go-fiber-websocket",
+    "prompt": "Create a Go Fiber v3 service that serves both REST endpoints and WebSocket connections. The REST part should have a GET /api/health endpoint and a POST /api/messages endpoint that publishes messages. The WebSocket part at /ws should upgrade connections with a middleware check, manage connection lifecycles with ping/pong, broadcast messages from the REST endpoint to all connected WebSocket clients, handle client disconnection gracefully, and set read limits. Include tests for both the REST health endpoint and a test that verifies the WebSocket upgrade handshake.",
+    "assertions": [
+      {
+        "id": "websocket-setup",
+        "type": "contains_concept",
+        "expected": "WebSocket route is registered with app.Get('/ws', websocket.New(handler)) and an upgrade-check middleware verifies the websocket upgrade header before allowing the connection",
+        "weight": 1.0
+      },
+      {
+        "id": "connection-lifecycle",
+        "type": "contains_concept",
+        "expected": "WebSocket handler sets read deadline, read limit (SetReadLimit), and configures ping/pong handlers with SetPongHandler or SetPingHandler for connection liveness detection",
+        "weight": 1.0
+      },
+      {
+        "id": "broadcast-pattern",
+        "type": "contains_concept",
+        "expected": "A connection hub or registry manages active WebSocket connections with thread-safe add/remove operations using a mutex or channel, and the REST POST endpoint publishes messages through this hub to all connected clients",
+        "weight": 1.0
+      },
+      {
+        "id": "graceful-disconnect",
+        "type": "contains_concept",
+        "expected": "The WebSocket handler defers connection removal from the hub and connection close, handles read errors by breaking the read loop, and sends close frames before disconnecting",
+        "weight": 1.0
+      },
+      {
+        "id": "rest-and-ws-tests",
+        "type": "contains_concept",
+        "expected": "Tests verify the health endpoint returns 200 with app.Test(), and a separate test verifies the WebSocket upgrade path returns 101 or tests the upgrade middleware rejection for non-WebSocket requests",
+        "weight": 1.0
+      }
+    ]
+  }
+]

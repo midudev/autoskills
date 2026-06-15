@@ -94,8 +94,11 @@ export const SKILLS_MAP: Technology[] = [
       configFiles: ["svelte.config.js"],
     },
     skills: [
-      "ejirocodes/agent-skills/svelte5-best-practices",
-      "sveltejs/ai-tools/svelte-code-writer",
+      "spences10/skills/svelte-runes",
+      "spences10/skills/sveltekit-structure",
+      "spences10/skills/svelte-core-bestpractices",
+      "spences10/skills/sveltekit-data-flow",
+      "spences10/skills/svelte-components",
     ],
   },
   {
@@ -635,6 +638,7 @@ export const SKILLS_MAP: Technology[] = [
     skills: [
       "affaan-m/everything-claude-code/golang-patterns",
       "affaan-m/everything-claude-code/golang-testing",
+      "seba3567/go-fiber",
     ],
   },
   {
