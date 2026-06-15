@@ -788,6 +788,32 @@
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
+    "svelte-layerchart": {
+      "source": "spences10/skills",
+      "skillPath": "spences10/skills/svelte-layerchart",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md",
+        "references/full-patterns.md",
+        "references/tooltip-modes.md",
+        "references/graph-patterns.md"
+      ],
+      "sha256": {
+        "SKILL.md": "aeb2be3e32085d47ad5938afd6e96b2a4f9fd9e073ca27ec3f6df32371689b7c",
+        "references/full-patterns.md": "b311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d",
+        "references/tooltip-modes.md": "c2c574ce8290ef56fa8f7619c2897c8ca009ea72464d4077c7ba5ea23efb3570",
+        "references/graph-patterns.md": "d1c519d8d37232d58fc52cc453ba45cdd1152603288ed475d614845a5d820f34"
+      },
+      "bundleHash": "svelte-layerchart-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Svelte LayerChart data visualization component guidelines for Svelte 5",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
+      }
+    },
     "sveltekit-data-flow": {
       "source": "spences10/skills",
       "skillPath": "spences10/skills/sveltekit-data-flow",
