@@ -1,0 +1,35 @@
+# Disabled: skills-ref does not yet support the `user-invocable` frontmatter field,
+# which causes all validations to fail. Re-enable once resolved.
+# See https://github.com/agentskills/agentskills/issues/105
+#
+# name: Validate skills
+#
+# on:
+#   push:
+#     branches: [main]
+#     paths: ['skills/**']
+#   pull_request:
+#     paths: ['skills/**']
+#   workflow_dispatch: {}
+#
+# jobs:
+#   validate:
+#     if: github.event_name != 'schedule' || github.repository_owner == 'samber'
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v6
+#
+#       - name: Install skills-ref
+#         run: npm install -g skills-ref
+#
+#       - name: Validate all skills
+#         run: |
+#           exit_code=0
+#           for skill in skills/*/; do
+#             echo "::group::Validating ${skill}"
+#             if ! skills-ref validate "./${skill}"; then
+#               exit_code=1
+#             fi
+#             echo "::endgroup::"
+#           done
+#           exit $exit_code

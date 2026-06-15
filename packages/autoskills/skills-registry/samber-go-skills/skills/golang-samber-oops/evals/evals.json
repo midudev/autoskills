@@ -1,0 +1,154 @@
+[
+  {
+    "id": 1,
+    "name": "low-cardinality-error-messages",
+    "description": "Tests the critical rule: variable data goes in .With() attributes, not interpolated into the message string",
+    "prompt": "I'm using samber/oops in my Go service. Write error handling for a function that processes orders. When an order fails, I need to include the user ID, tenant ID, and order ID in the error for debugging.",
+    "trap": "Model may interpolate all variables into the Errorf message string (e.g., Errorf('failed to process order %s for user %s in tenant %s', orderID, userID, tenantID)) which breaks APM grouping",
+    "assertions": [
+      {"id": "1.1", "text": "Uses .With() for user_id, tenant_id, and order_id instead of interpolating them into the message"},
+      {"id": "1.2", "text": "The Errorf/Wrapf message string is static/low-cardinality (no variable interpolation for IDs)"},
+      {"id": "1.3", "text": "Uses the fluent builder pattern (chained method calls)"},
+      {"id": "1.4", "text": "Does NOT use fmt.Errorf or errors.New for the error creation"},
+      {"id": "1.5", "text": "Includes .In() to set the domain/feature context"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "wrap-nil-passthrough",
+    "description": "Tests that oops.Wrap returns nil if err is nil, so no nil check is needed",
+    "prompt": "I have a Go function using samber/oops. It calls another function that may return nil or an error. How should I handle the return value? Here's my code:\n\n```go\nfunc ProcessData(ctx context.Context) error {\n    err := fetchData(ctx)\n    if err != nil {\n        return oops.In(\"processor\").Wrapf(err, \"fetch failed\")\n    }\n    return nil\n}\n```\n\nIs there a simpler way to write this?",
+    "trap": "Model may say the code is fine as-is, not knowing that oops.Wrap/Wrapf returns nil when err is nil, making the nil check unnecessary",
+    "assertions": [
+      {"id": "2.1", "text": "Identifies that the nil check is unnecessary because oops.Wrapf returns nil if err is nil"},
+      {"id": "2.2", "text": "Shows the simplified form: return oops.In('processor').Wrapf(err, 'fetch failed') without the if block"},
+      {"id": "2.3", "text": "The simplified version removes both the if statement and the separate return nil"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "layered-error-context",
+    "description": "Tests that each architectural layer should add context via Wrap/Wrapf at package boundaries",
+    "prompt": "I have a 3-layer Go architecture: HTTP handler -> service -> repository. Each layer calls the next. How should I handle errors with samber/oops so that when an error reaches the top, I can see the full context of what happened at each layer?",
+    "trap": "Model may only wrap at the top level or only at the bottom level, instead of wrapping at each layer boundary with layer-specific context",
+    "assertions": [
+      {"id": "3.1", "text": "Each layer (handler, service, repository) adds its own .In() domain context"},
+      {"id": "3.2", "text": "Each layer wraps the error from the layer below using Wrap or Wrapf"},
+      {"id": "3.3", "text": "Different layers add different context attributes relevant to their scope (e.g., repository adds query/table info, handler adds request info)"},
+      {"id": "3.4", "text": "Uses .Tags() for categorization at one or more layers"},
+      {"id": "3.5", "text": "Handler layer uses .Request() to attach HTTP request context"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "public-vs-technical-messages",
+    "description": "Tests the separation between user-safe public messages and technical error details",
+    "prompt": "I'm building a Go API. When a user tries to buy a product that's out of stock, I need to return a user-friendly message to the frontend AND log detailed technical information. How do I handle this with samber/oops?",
+    "trap": "Model may put the user-facing message in Errorf (which is for technical details) instead of using .Public() for the user-safe message",
+    "assertions": [
+      {"id": "4.1", "text": "Uses .Public() to set a user-safe message (e.g., 'Not enough items in stock')"},
+      {"id": "4.2", "text": "Uses .Errorf() or .Wrapf() for the technical error message (separate from the public message)"},
+      {"id": "4.3", "text": "Uses .Code() to set a machine-readable error code (e.g., 'insufficient_stock')"},
+      {"id": "4.4", "text": "Uses .With() for structured attributes like requested quantity, available stock"},
+      {"id": "4.5", "text": "Shows how to retrieve the public message using oops.GetPublic(err, fallback)"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "panic-recovery-goroutine",
+    "description": "Tests that oops.Recover is used at goroutine boundaries to convert panics to structured errors",
+    "prompt": "I have a Go function that spawns goroutines to process items. Sometimes the processing panics. How should I handle this with samber/oops?",
+    "trap": "Model may use a plain defer/recover pattern instead of oops.Recover(), missing the structured error context, stack trace, and error code",
+    "assertions": [
+      {"id": "5.1", "text": "Uses oops.Recover() or the builder's .Recover() method, not a raw defer/recover"},
+      {"id": "5.2", "text": "The Recover wraps the risky operation in a function passed to Recover"},
+      {"id": "5.3", "text": "Adds structured context to the recovery (e.g., .In(), .Code(), .With())"},
+      {"id": "5.4", "text": "Uses a named return value for the error so Recover can set it"},
+      {"id": "5.5", "text": "Includes .Hint() for debugging guidance or .Code() for identification"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "context-propagation-middleware",
+    "description": "Tests knowledge of oops.WithBuilder/oops.FromContext for propagating error context through Go contexts",
+    "prompt": "I want all errors in my Go HTTP service to automatically include the trace ID, request info, and user ID without passing these values through every function. How can I achieve this with samber/oops?",
+    "trap": "Model may suggest passing an oops builder as a function parameter or creating it in every function, instead of using context-based propagation with WithBuilder/FromContext",
+    "assertions": [
+      {"id": "6.1", "text": "Uses oops.WithBuilder() to store the builder in the Go context in middleware"},
+      {"id": "6.2", "text": "Uses oops.FromContext(ctx) in downstream functions to retrieve the pre-configured builder"},
+      {"id": "6.3", "text": "Middleware sets trace ID, request info, and user context on the builder"},
+      {"id": "6.4", "text": "Shows the middleware pattern with http.Handler wrapping"},
+      {"id": "6.5", "text": "Downstream handlers/services can add more context (e.g., .Tags()) on top of the base builder"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "reusable-builder-pattern",
+    "description": "Tests the pattern of creating a reusable builder at the top of a function and reusing it for multiple error paths",
+    "prompt": "I have a Go service function with 4 different error return paths. Each error needs the same user ID, tenant ID, and domain context, but different error-specific details. How should I structure this with samber/oops?",
+    "trap": "Model may duplicate the full builder chain at each error site, instead of creating a shared base builder and extending it per error path",
+    "assertions": [
+      {"id": "7.1", "text": "Creates a single base builder variable at the top of the function with shared context (user, tenant, domain)"},
+      {"id": "7.2", "text": "Each error return path extends the base builder with error-specific attributes using .With() or .Code()"},
+      {"id": "7.3", "text": "The base builder is NOT terminated (no .Errorf/.Wrap call) — it's reused"},
+      {"id": "7.4", "text": "Uses .In() on the shared builder for the domain/feature"},
+      {"id": "7.5", "text": "Uses .User() and/or .Tenant() on the shared builder"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "accessing-oops-error-info",
+    "description": "Tests knowledge of the OopsError type assertion to access structured fields",
+    "prompt": "I receive an error from a lower layer that was created with samber/oops. I need to extract the error code, domain, tags, and context map from it in my error handler middleware. How do I access this information?",
+    "trap": "Model may try to use string parsing or fmt.Sprintf to extract information instead of type-asserting to oops.OopsError",
+    "assertions": [
+      {"id": "8.1", "text": "Type-asserts the error to oops.OopsError"},
+      {"id": "8.2", "text": "Uses .Code() method to get the error code"},
+      {"id": "8.3", "text": "Uses .Domain() method to get the domain"},
+      {"id": "8.4", "text": "Uses .Tags() method to get the tags"},
+      {"id": "8.5", "text": "Uses .Context() method to get the key-value attributes map"},
+      {"id": "8.6", "text": "Uses .Stacktrace() method to get the stack trace"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "user-and-tenant-context",
+    "description": "Tests the .User() and .Tenant() methods with their key-value attribute support",
+    "prompt": "In my multi-tenant Go SaaS application using samber/oops, I need errors to carry both the tenant information (ID, plan type) and user information (ID, email). Show me how to create such an error when a permission check fails.",
+    "trap": "Model may use .With('user_id', id) and .With('tenant_id', id) instead of the dedicated .User() and .Tenant() methods which support additional attributes",
+    "assertions": [
+      {"id": "9.1", "text": "Uses .User(id, key, value) method with the user ID and additional attributes like email"},
+      {"id": "9.2", "text": "Uses .Tenant(id, key, value) method with the tenant ID and additional attributes like plan"},
+      {"id": "9.3", "text": "Does NOT just use .With() for user/tenant info when .User()/.Tenant() are available"},
+      {"id": "9.4", "text": "Includes a .Code() for the permission error"},
+      {"id": "9.5", "text": "Uses .Public() for a user-facing permission denied message"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "oops-assertions",
+    "description": "Tests knowledge of oops.Assert/oops.Assertf for invariant checks wrapped in Recover",
+    "prompt": "I have a Go payment processing function that should never receive a negative amount — that would indicate a bug in the calling code. How should I handle this invariant with samber/oops? The function processes payments and interacts with external services.",
+    "trap": "Model may use a standard if/return error pattern or panic() directly, instead of oops assertions wrapped in Recover for structured panic-to-error conversion",
+    "assertions": [
+      {"id": "10.1", "text": "Uses oops.Assertf or oops.Assert to check the invariant (amount > 0)"},
+      {"id": "10.2", "text": "Wraps the assertion in an oops.Recover() call to convert the panic to a structured error"},
+      {"id": "10.3", "text": "Uses a named error return value so Recover can set it"},
+      {"id": "10.4", "text": "Notes that assertions should be rare in Go and used only for truly impossible/bug states"},
+      {"id": "10.5", "text": "Adds structured context (.In(), .Code(), etc.) to the Recover builder"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "oops-configuration",
+    "description": "oops global config variables (StackTraceMaxDepth, Local, SourceFragmentsHidden) must be set at init time; model should not suggest post-processing or custom wrappers",
+    "prompt": "I'm using samber/oops in my Go application. Three problems:\n1. Stack traces are 50+ frames deep — too noisy for our logging system\n2. Error timestamps show in UTC but our ops team wants US Eastern time\n3. Source code fragments in error output leak internal code to our error tracking SaaS — we want to disable them\n\nA teammate suggests: 'Write a wrapper around oops.Wrapf that post-processes the OopsError to trim the stack and remove fragments.' Is that the right approach? How should these actually be configured?",
+    "trap": "The teammate's wrapper suggestion seems reasonable — it encapsulates the behavior. But oops provides direct global configuration variables for all three needs. The model should know these specific variable names: oops.StackTraceMaxDepth, oops.Local, oops.SourceFragmentsHidden. Without the skill docs, the model will likely guess wrong names or accept the wrapper approach.",
+    "assertions": [
+      {"id": "11.1", "text": "Rejects the wrapper approach — oops has built-in global configuration for all three requirements; a wrapper adds complexity for no benefit"},
+      {"id": "11.2", "text": "Uses oops.StackTraceMaxDepth (the exact variable name) to control stack trace depth — not a method call or wrapper"},
+      {"id": "11.3", "text": "Uses oops.Local with time.LoadLocation('America/New_York') for timezone — not post-processing timestamps"},
+      {"id": "11.4", "text": "Uses oops.SourceFragmentsHidden = true to disable source code fragments in error output"}
+    ]
+  }
+]

@@ -1,0 +1,172 @@
+[
+  {
+    "id": 1,
+    "name": "pipeline-ordering",
+    "description": "Tests whether the model places sampling first in the pipeline (before formatting)",
+    "prompt": "Set up a slog pipeline in Go using samber/slog libraries with PII scrubbing (mask email fields), error routing to Sentry, and log sampling at 10%. Show the complete handler composition using slog-multi, slog-sampling, and slog-formatter.",
+    "trap": "Without the skill, the model places sampling last (after formatting) or in the middle, wasting CPU on records that get dropped",
+    "assertions": [
+      {"id": "1.1", "text": "Sampling is the outermost/first handler in the pipeline (applied before formatting)"},
+      {"id": "1.2", "text": "Uses slog-sampling library (slogsampling) for sampling, not custom code"},
+      {"id": "1.3", "text": "Uses slog-formatter for PII scrubbing (PIIFormatter or FormatByKey)"},
+      {"id": "1.4", "text": "Uses slogmulti.Router or Fanout for routing to Sentry"},
+      {"id": "1.5", "text": "Explains or demonstrates why sampling should be first (avoid wasted CPU on dropped records)"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "router-firstmatch-vs-router-all-matches",
+    "description": "Tests whether the model distinguishes Router (all matching) from Router+FirstMatch (first match only)",
+    "prompt": "I have a slog-multi Router with two rules: (1) ERROR and above → PagerDuty, (2) WARN and above → Slack. My problem: ERROR logs are going to BOTH PagerDuty AND Slack. I only want errors in PagerDuty, not duplicated in Slack. How do I fix this with slog-multi?",
+    "trap": "Without the skill, the model adds a LevelIs(slog.LevelWarn) predicate to the Slack handler thinking that fixes it — but WARN and above includes ERROR, so errors still reach Slack. The correct fix is Router().Add(...).FirstMatch() so routing stops at the first matching handler.",
+    "assertions": [
+      {"id": "2.1", "text": "Identifies that the default Router sends to ALL matching handlers (both Slack and PagerDuty match for ERROR)"},
+      {"id": "2.2", "text": "Recommends using .FirstMatch() on the Router to stop at the first matching handler"},
+      {"id": "2.3", "text": "Does NOT suggest just changing Slack's predicate to LevelIs(slog.LevelWarn) as the complete fix (errors still match WARN-and-above)"},
+      {"id": "2.4", "text": "Shows the correct Router().Add(pagerduty, LevelIs(ERROR)).Add(slack, LevelIs(WARN)).FirstMatch().Handler() pattern"},
+      {"id": "2.5", "text": "Explains the semantic difference: Router routes to ALL matches, FirstMatch routes to FIRST match only"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "missing-close-batch",
+    "description": "Tests whether the model remembers to call Close() on batch handlers",
+    "prompt": "Set up slog to send logs to Datadog using samber/slog-datadog in a Go HTTP server with graceful shutdown. Show the complete main() function.",
+    "trap": "Without the skill, the model forgets to close the handler on shutdown, causing buffered logs to be lost",
+    "assertions": [
+      {"id": "3.1", "text": "Calls handler.Stop(ctx) or defer handler.Stop(ctx) for the Datadog handler (not Close)"},
+      {"id": "3.2", "text": "Uses Option{}.NewDatadogHandler() constructor pattern"},
+      {"id": "3.3", "text": "Close happens during graceful shutdown (signal handling or defer in main)"},
+      {"id": "3.4", "text": "Mentions or demonstrates that Datadog handler batches logs (data loss risk without Close)"},
+      {"id": "3.5", "text": "Import path is github.com/samber/slog-datadog/v2 or later"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "sampling-matcher-grouping",
+    "description": "Tests whether the model understands slog-sampling Matchers for deduplication grouping",
+    "prompt": "I've set up ThresholdSamplingOption in my Go service: log the first 10 per 5s, then sample at 10%. It works, but I notice that 'user not found' (DEBUG) and 'cache miss' (DEBUG) are being counted together in the same bucket. After 10 total DEBUG logs from both messages, both get sampled. I want each distinct log message to have its own counter of 10. How do I fix this with samber/slog-sampling?",
+    "trap": "Without the skill, the model either rebuilds sampling from scratch or suggests separate logger instances per message. The correct fix is to set the Matcher to MatchByLevelAndMessage() (or MatchByMessage()) so each unique message gets its own deduplication bucket instead of all records sharing one bucket.",
+    "assertions": [
+      {"id": "4.1", "text": "Identifies that the default Matcher groups all records into one bucket (regardless of message)"},
+      {"id": "4.2", "text": "Recommends setting the Matcher field on ThresholdSamplingOption to MatchByLevelAndMessage() or MatchByMessage()"},
+      {"id": "4.3", "text": "Explains that each unique message will then have its own independent threshold counter"},
+      {"id": "4.4", "text": "Does NOT suggest creating separate logger instances per message type as the solution"},
+      {"id": "4.5", "text": "Does NOT suggest rewriting custom sampling logic outside of slog-sampling"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "router-warn-level-gap",
+    "description": "Tests whether the model identifies that WARN records are silently dropped in a Router with only ERROR and INFO predicates",
+    "prompt": "I have this slog-multi Router setup. My ERROR logs reach Sentry, my INFO logs reach Loki, but my WARN logs are silently disappearing — they don't reach either handler. My global slog level is set to Debug so filtering isn't the issue. What's wrong?\n\n```go\nlogger := slog.New(\n    slogmulti.Router().\n        Add(sentryHandler, slogmulti.LevelIs(slog.LevelError)).\n        Add(lokiHandler, slogmulti.LevelIs(slog.LevelInfo)).\n        Handler(),\n)\n```",
+    "trap": "Without the skill, the model suspects Loki configuration, slog level filters, or assumes LevelIs(Info) includes Warn. The skill teaches that Router predicates are exact — LevelIs(Info) matches ONLY Info, not Warn or above. WARN records match no predicate and are silently dropped. Fix: add a catch-all handler or use a predicate that covers Warn.",
+    "assertions": [
+      {"id": "5.1", "text": "Correctly identifies that LevelIs(slog.LevelInfo) matches ONLY Info level, not Warn"},
+      {"id": "5.2", "text": "Explains that Router silently drops records that match no predicate"},
+      {"id": "5.3", "text": "Does NOT suggest the global slog level or Loki configuration as the root cause"},
+      {"id": "5.4", "text": "Proposes adding a catch-all handler (no predicate) or a LevelIs(slog.LevelWarn) rule to capture WARN records"},
+      {"id": "5.5", "text": "Correctly explains that Router predicates are exact-level matches, not 'level and above'"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "http-middleware-error-level-differentiation",
+    "description": "Tests whether the model uses slog-gin Config to log 4xx and 5xx at different levels instead of uniform INFO",
+    "prompt": "I've added sloggin.New(logger) to my Gin server for request logging. My log aggregation tool shows that 404s and 500s both appear as INFO level, making it hard to alert on server errors. How do I make 4xx client errors log at WARN and 5xx server errors log at ERROR, while keeping normal requests at INFO, using samber/slog-gin?",
+    "trap": "Without the skill, the model wraps sloggin in a custom middleware or post-processes log records to change the level. The skill teaches that slog-gin's Config struct has ClientErrorLevel and ServerErrorLevel fields that handle this natively — no custom middleware needed.",
+    "assertions": [
+      {"id": "6.1", "text": "Replaces sloggin.New() with sloggin.NewWithConfig() to pass a Config struct"},
+      {"id": "6.2", "text": "Sets ClientErrorLevel: slog.LevelWarn in the Config for 4xx responses"},
+      {"id": "6.3", "text": "Sets ServerErrorLevel: slog.LevelError in the Config for 5xx responses"},
+      {"id": "6.4", "text": "Sets DefaultLevel: slog.LevelInfo in the Config for 2xx/3xx responses"},
+      {"id": "6.5", "text": "Does NOT implement a custom Gin middleware or post-processing logic to change log levels"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "pipe-middleware-chain",
+    "description": "Tests whether the model uses Pipe middleware instead of custom Handler wrapper",
+    "prompt": "I need to inject a trace_id from OpenTelemetry context and scrub email addresses from all log records before they reach any handler. I'm using samber/slog-multi. Show me how to set this up as reusable middleware.",
+    "trap": "Without the skill, the model creates a custom slog.Handler wrapper struct instead of using slogmulti.Pipe with inline middleware",
+    "assertions": [
+      {"id": "7.1", "text": "Uses slogmulti.Pipe() for middleware chaining"},
+      {"id": "7.2", "text": "Creates middleware for trace_id injection (inline middleware or AttrFromContext)"},
+      {"id": "7.3", "text": "Creates middleware or formatter for email/PII scrubbing"},
+      {"id": "7.4", "text": "Pipe wraps the final sink handler(s)"},
+      {"id": "7.5", "text": "Does NOT implement a custom slog.Handler struct with Enabled/Handle/WithAttrs/WithGroup methods"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "failover-handler",
+    "description": "Tests whether the model uses Failover instead of custom retry logic",
+    "prompt": "My slog pipeline sends logs to Loki over the network, but Loki has occasional outages lasting 1-5 minutes. I want to automatically fall back to local file logging when Loki is unavailable, then resume Loki when it's back. Show the setup using samber/slog-multi.",
+    "trap": "Without the skill, the model builds custom retry/fallback logic with goroutines and channels instead of using slog-multi's Failover handler",
+    "assertions": [
+      {"id": "8.1", "text": "Uses slogmulti.Failover() handler"},
+      {"id": "8.2", "text": "Loki handler is the primary (first) handler in the Failover chain"},
+      {"id": "8.3", "text": "File/local handler is the fallback (second) handler"},
+      {"id": "8.4", "text": "Does NOT implement custom retry/fallback logic with goroutines or channels"},
+      {"id": "8.5", "text": "Uses slog-loki library for the Loki handler (not a custom HTTP client)"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "pool-vs-fanout-latency",
+    "description": "Tests whether the model recommends Pool over Fanout and correctly describes Pool's latency model",
+    "prompt": "I'm replacing slogmulti.Fanout with slogmulti.Pool to reduce log-call latency. I have 4 handlers with these p99 write times: stdout (1ms), Loki (20ms), Datadog (30ms), Sentry (15ms). My current Fanout p99 latency per log call is ~66ms. What will Pool's p99 latency be, and are there any risks I should know about with Pool that don't exist with Fanout?",
+    "trap": "Without the skill, the model says Pool will have ~0ms latency (wrongly treating it as fire-and-forget) or cannot identify the risks. The skill teaches: Pool latency = max of all handlers (30ms, not 66ms); risk = Pool may silently swallow handler errors that Fanout would surface synchronously.",
+    "assertions": [
+      {"id": "9.1", "text": "Correctly states Pool p99 latency will be ~30ms (the slowest handler, Datadog) not the sum"},
+      {"id": "9.2", "text": "Explains that Pool dispatches concurrently so latency = max(handler latencies), not sum"},
+      {"id": "9.3", "text": "Identifies at least one risk of Pool vs Fanout (e.g. handler errors may not surface synchronously, or error handling differs)"},
+      {"id": "9.4", "text": "Shows correct Pool syntax: slogmulti.Pool()(handlers...) with the double call"},
+      {"id": "9.5", "text": "Does NOT claim Pool is fully asynchronous/fire-and-forget with zero latency impact"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "formatter-pii-scrubbing",
+    "description": "Tests whether the model uses slog-formatter as Pipe middleware for cross-cutting PII scrubbing",
+    "prompt": "I need to ensure no email addresses or IP addresses appear in any log output from my Go service. We use slog with slog-multi routing to 3 different handlers (stdout, Loki, Sentry). Show me how to add PII protection that applies to ALL handlers in one place.",
+    "trap": "Without the skill, the model adds per-handler filtering or regex on output instead of using slog-formatter as a Pipe middleware wrapping all downstream handlers",
+    "assertions": [
+      {"id": "10.1", "text": "Uses slog-formatter library (slogformatter package)"},
+      {"id": "10.2", "text": "Uses PIIFormatter and/or IPAddressFormatter from slog-formatter"},
+      {"id": "10.3", "text": "Applies formatter as a Pipe middleware wrapping all downstream handlers (not per-handler)"},
+      {"id": "10.4", "text": "Formatter is applied once in the pipeline, before the Router/Fanout"},
+      {"id": "10.5", "text": "Does NOT implement custom regex-based filtering or per-handler PII logic"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "backend-option-pattern",
+    "description": "Tests whether the model uses correct Option{} constructor pattern for backend handlers",
+    "prompt": "Set up slog to send error-level logs to Sentry and all logs to Grafana Loki using samber/slog-sentry and samber/slog-loki. Show the complete setup with correct imports and handler creation.",
+    "trap": "Without the skill, the model uses incorrect constructor patterns (e.g., New() function, slogsentry.New(), or positional args) instead of the Option{}.NewXxxHandler() pattern",
+    "assertions": [
+      {"id": "11.1", "text": "Uses slogsentry.Option{}.NewSentryHandler() constructor pattern"},
+      {"id": "11.2", "text": "Uses slogloki.Option{}.NewLokiHandler() constructor pattern"},
+      {"id": "11.3", "text": "Uses slogmulti.Router() for level-based routing (errors to Sentry, all to Loki)"},
+      {"id": "11.4", "text": "Import paths use versioned modules (github.com/samber/slog-sentry/v2, github.com/samber/slog-loki/v3)"},
+      {"id": "11.5", "text": "Calls lokiClient.Stop() or defer lokiClient.Stop() for graceful shutdown (flush buffered logs)"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "attrfromcontext-without-middleware",
+    "description": "Tests whether the model identifies that AttrFromContext needs HTTP middleware to populate context",
+    "prompt": "I'm using slog-multi's Pipe with AttrFromContext to add request_id to all log records in my Go HTTP server. But the request_id is always empty in the logs. I'm NOT using any HTTP logging middleware (no slog-gin or slog-chi). Here's my handler setup:\n\n```go\nhandler := slogsentry.Option{\n    Level: slog.LevelError,\n    AttrFromContext: []func(ctx context.Context) []slog.Attr{\n        func(ctx context.Context) []slog.Attr {\n            if reqID := ctx.Value(\"request_id\"); reqID != nil {\n                return []slog.Attr{slog.String(\"request_id\", reqID.(string))}\n            }\n            return nil\n        },\n    },\n}.NewSentryHandler()\n```\n\nWhat's wrong and how do I fix it?",
+    "trap": "Without the skill, the model debugs context.Value key types or suggests adding context.WithValue manually in every handler, instead of identifying the missing HTTP middleware that injects attributes",
+    "assertions": [
+      {"id": "12.1", "text": "Identifies that no HTTP middleware is populating the request_id into context"},
+      {"id": "12.2", "text": "Recommends adding slog-gin/echo/fiber/chi middleware (or manual context injection middleware)"},
+      {"id": "12.3", "text": "Explains that the HTTP middleware is what injects request attributes into context"},
+      {"id": "12.4", "text": "Does NOT suggest only changing the context key type as the primary fix"},
+      {"id": "12.5", "text": "Shows the connection between HTTP middleware and AttrFromContext"},
+      {"id": "12.6", "text": "Mentions WithRequestID config option or equivalent for the middleware"},
+      {"id": "12.7", "text": "Does NOT blame slog-multi or slog-sentry configuration as the root cause"}
+    ]
+  }
+]

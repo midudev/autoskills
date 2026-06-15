@@ -1,0 +1,168 @@
+{
+  "skill_name": "golang-graphql",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a gqlgen project with a User type and a Post type. Users have many posts. Write the Go resolver for User.posts. We fetch posts from a PostgreSQL database. The project is set up with a standard gqlgen layout.",
+      "expected_output": "A resolver that uses a per-request DataLoader (not direct DB calls) to batch-fetch posts by user IDs. Must NOT query the database directly inside the resolver. Must NOT use a global DataLoader. Should use context to access the per-request loader.",
+      "assertions": [
+        "Uses a DataLoader or batch loader to fetch posts, not a direct db.Query/QueryContext call inside the resolver method",
+        "Accesses the DataLoader from context (not a package-level or global variable)",
+        "The resolver function signature uses obj *model.User as a parameter to access the parent user's ID",
+        "Does not query the database directly inside the Posts resolver body",
+        "Mentions that the DataLoader must be injected per-request via HTTP middleware",
+        "DataLoader middleware creates a new loader instance per request, not a shared global"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We have a graph-gophers/graphql-go project. I need to add a resolver that returns the total comment count for a post. The field is declared as `commentCount: Int!` in the SDL. Write the Go resolver method.",
+      "expected_output": "Resolver method using int32 (not int) as the return type for the Int! scalar field. Must use int32, since graph-gophers requires this specific type.",
+      "assertions": [
+        "Returns int32 (not int, int64, or uint) for the Int! scalar field",
+        "Method signature matches the SDL field name (case-insensitive: CommentCount or commentCount)",
+        "Does not return plain Go int — which causes a type mismatch at parse time with graph-gophers"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Set up a production-ready gqlgen HTTP handler. The app will be deployed publicly. We need to make sure it's safe to expose.",
+      "expected_output": "Handler setup that gates introspection (disabled or ENV-checked in production) and adds a query complexity limit. Must not leave introspection unconditionally enabled.",
+      "assertions": [
+        "Introspection is gated — either disabled in production or guarded by an environment variable check",
+        "A complexity limit is set using extension.FixedComplexityLimit or equivalent",
+        "Does NOT call srv.Use(extension.Introspection{}) unconditionally without an env guard",
+        "Uses handler.New or handler.NewDefaultServer from github.com/99designs/gqlgen/graphql/handler",
+        "Mentions MaxDepth or complexity limiting as a protection against deeply nested queries"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Implement a messageAdded subscription resolver in gqlgen. Messages are published via an in-memory pub/sub system. The resolver should stream new messages to subscribers in a given room.",
+      "expected_output": "Subscription resolver that closes the channel on context cancellation (defer close(ch) + ctx.Done() in a select). Must handle client disconnect to avoid goroutine leaks.",
+      "assertions": [
+        "Uses defer close(ch) to close the output channel when done",
+        "Uses a select statement with ctx.Done() to detect client disconnection",
+        "Returns a receive-only channel (<-chan *model.Message or similar)",
+        "Does not use a plain for-range loop without ctx.Done() check — this would cause a goroutine leak on disconnect",
+        "The goroutine terminates when ctx is cancelled"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "I'm using gqlgen and want to customize the User type to reuse my existing domain.User struct instead of having gqlgen generate a new one. The domain struct has an Email field. How do I configure this?",
+      "expected_output": "Uses autobind or models.<T>.model in gqlgen.yml to map the GraphQL User type to domain.User. Must NOT instruct editing models_gen.go directly.",
+      "assertions": [
+        "Uses gqlgen.yml configuration (autobind or models.<T>.model) to bind the existing struct",
+        "Does NOT suggest editing models_gen.go or generated.go directly",
+        "Shows the correct gqlgen.yml syntax for either autobind or models.<T>.model",
+        "Mentions that generated files are overwritten on next go generate"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "In a graph-gophers/graphql-go resolver, I need to return a user profile that includes a nullable bio field. The SDL has: bio: String. Write the Go struct field or return type for bio.",
+      "expected_output": "Uses *string (pointer to string) for the nullable String field. Non-pointer string would imply non-null in graph-gophers.",
+      "assertions": [
+        "Uses *string (pointer) for the nullable bio field, not plain string",
+        "Explains that non-pointer = non-null and pointer = nullable in graph-gophers type mapping",
+        "Does not use sql.NullString or other DB-specific nullable types for the GraphQL resolver layer"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "My gqlgen resolver calls a database function that can return sql.ErrNoRows or other database errors. Write the resolver for GetUser(id: ID!): User! that handles these cases correctly for clients.",
+      "expected_output": "Resolver wraps or transforms errors before returning them. Uses ErrorPresenter or gqlerror.Error with extensions code. Must NOT return raw sql.ErrNoRows to the client.",
+      "assertions": [
+        "Does NOT return raw sql.ErrNoRows or other internal errors directly to the client",
+        "Translates sql.ErrNoRows to a GraphQL error with a meaningful message or extension code (e.g. NOT_FOUND)",
+        "Uses gqlerror.Error or gqlerror.Errorf to format the client error",
+        "Mentions the ErrorPresenter as the right place to centralize error sanitization",
+        "Wraps internal errors so they don't expose SQL messages to API consumers"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Design a GraphQL mutation for creating a user where the email is always required but the bio is optional. The mutation should handle validation errors gracefully without returning HTTP errors.",
+      "expected_output": "Uses a mutation envelope payload type with a user field and an errors field. Email is String! (non-null) in input; bio is String (nullable). Errors are returned in the payload, not as GraphQL top-level errors.",
+      "assertions": [
+        "Input type has email: String! (non-null) for required email",
+        "Input type has bio: String (nullable, no !) for optional bio",
+        "Mutation returns a payload envelope type with both user and errors fields",
+        "Validation errors are returned inside the payload errors field, not as GraphQL top-level errors",
+        "The payload errors field uses a non-null list type like [UserError!]! or similar",
+        "Does NOT use HTTP 400/422 errors for validation — uses the GraphQL payload pattern"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Write a gqlgen subscription resolver for order status updates. Use an in-memory pub/sub broker. The resolver should subscribe to a topic named after the order ID and stream status events.",
+      "expected_output": "Resolver subscribes to the pub/sub topic ONCE before launching the goroutine, not inside the goroutine loop. The channel is closed when the context is cancelled.",
+      "assertions": [
+        "Calls the pub/sub Subscribe (or equivalent) method BEFORE the go func() call, not inside the goroutine",
+        "Does NOT call Subscribe() inside the for-select loop body (which would create a new subscription per iteration)",
+        "Uses defer close(ch) to signal iteration end",
+        "Uses select with ctx.Done() to handle client disconnect",
+        "The subscription/topic handle is captured in a variable before the goroutine starts"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "In a graph-gophers/graphql-go project, add a search query: `search(query: String!, first: Int, after: ID): [User!]!`. The first and after arguments are optional pagination parameters. Write the Go args struct for this resolver.",
+      "expected_output": "Uses *int32 (not *int or int32) for the nullable Int argument 'first', and graphql.ID (or *graphql.ID) for the after argument. Nullable args use pointer types.",
+      "assertions": [
+        "Uses *int32 (pointer to int32) for the optional 'first: Int' argument — NOT *int or int32",
+        "Uses graphql.ID or *graphql.ID for the 'after: ID' argument",
+        "Optional arguments are represented as pointers to allow nil (absent) values",
+        "Does NOT use plain int or *int for an Int field in graph-gophers"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Write a dataloadgen batch function for a gqlgen project that fetches all posts for a list of user IDs. Each user can have zero or more posts.",
+      "expected_output": "Batch function returns [][]*domain.Post (a slice of post slices, one per user ID), not []*domain.Post. The outer slice length must match the input IDs length.",
+      "assertions": [
+        "Batch function return type is [][]*domain.Post (2D slice) or equivalent — NOT []*domain.Post",
+        "The outer slice has exactly one element per input user ID (same length as the ids parameter)",
+        "Handles users with zero posts by including an empty slice (not nil or missing entry)",
+        "Does NOT return a flat []*domain.Post that collapses all posts into one slice"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "Add OpenTelemetry tracing to a graph-gophers/graphql-go server. Show the import statement and the ParseSchema call with the tracer configured.",
+      "expected_output": "Uses github.com/graph-gophers/graphql-go/trace/otel import and otel.DefaultTracer() — not an external otelgraphql package. Passed as graphql.Tracer() option.",
+      "assertions": [
+        "Imports github.com/graph-gophers/graphql-go/trace/otel (the bundled tracer package)",
+        "Uses otel.DefaultTracer() to construct the tracer — NOT otelgraphql.DefaultTracer() or similar hallucinated package",
+        "Passes the tracer as graphql.Tracer(otel.DefaultTracer()) option to MustParseSchema or ParseSchema",
+        "Does NOT import an external third-party otelgraphql package that does not exist in graph-gophers"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "We're building a federated GraphQL system with gqlgen. The User service owns the User type and must be resolvable by its id field from other services. What configuration and code changes are needed?",
+      "expected_output": "Configures federation.version: 2 in gqlgen.yml, adds @key(fields: 'id') to the User schema type, and implements a FindUserByID entity resolver. Mentions Apollo Router or Cosmo as the gateway.",
+      "assertions": [
+        "Adds federation block with version: 2 to gqlgen.yml",
+        "Adds @key(fields: \"id\") directive to the User type in the SDL schema",
+        "Implements or mentions the FindUserByID entity resolver (generated by gqlgen's federation support)",
+        "Imports or links the Apollo Federation v2 spec URL in the schema extend block",
+        "Does NOT describe a manual federation approach without gqlgen.yml config"
+      ],
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,521 @@
+[
+  {
+    "id": 1,
+    "name": "reproduce-before-fix-failing-test-first",
+    "description": "Tests Golden Rule #2: model must write a failing test before proposing any fix, not jump to code changes",
+    "prompt": "My Go HTTP handler returns 500 for some requests but I can't figure out which ones. The handler parses a JSON body with `json.NewDecoder(r.Body).Decode(&req)` and then calls `processOrder(req)`. Some users report getting 500 errors. Can you fix this?",
+    "trap": "Model jumps directly to adding nil checks or error handling in the handler code without first writing a test that reproduces the failure",
+    "assertions": [
+      {"id": "1.1", "text": "Writes a failing test (or proposes writing one) BEFORE suggesting any code fix"},
+      {"id": "1.2", "text": "Test covers multiple input variations to identify which inputs trigger the 500"},
+      {"id": "1.3", "text": "Does NOT propose a fix without first understanding/reproducing the root cause"},
+      {"id": "1.4", "text": "Asks clarifying questions about the error (logs, request bodies, frequency) or proposes to gather evidence"},
+      {"id": "1.5", "text": "Mentions running the test to confirm it reproduces the issue before fixing"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "one-hypothesis-at-a-time",
+    "description": "Tests Golden Rule #4: change one thing and measure, not multiple simultaneous changes",
+    "prompt": "My Go web service is slow and sometimes returns errors. I think it might be the database queries, or maybe the JSON marshaling, or possibly goroutine contention. Can you fix all three at once to save time? Add connection pooling, switch to a faster JSON library, and add mutexes around shared state.",
+    "trap": "Model applies all three fixes simultaneously as requested, violating the one-hypothesis-at-a-time rule",
+    "assertions": [
+      {"id": "2.1", "text": "Refuses or strongly advises against making all three changes simultaneously"},
+      {"id": "2.2", "text": "Recommends measuring/profiling first to identify which problem is actually causing the symptoms"},
+      {"id": "2.3", "text": "Suggests testing one hypothesis at a time with measurement between changes"},
+      {"id": "2.4", "text": "Mentions pprof, benchmarks, or race detector as diagnostic tools to identify the real bottleneck"},
+      {"id": "2.5", "text": "Explains why multiple simultaneous changes are harmful (can't tell what worked, may introduce new bugs)"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "root-cause-not-symptom-fix",
+    "description": "Tests Golden Rule #5 and Step 8: fix at the source where bad data originates, not where the panic occurs",
+    "prompt": "My Go HTTP server panics with `nil pointer dereference` in the handler when accessing `s.db.Query(...)`. I added a nil check `if s.db == nil { return }` but now the handler silently returns empty responses. How do I fix this properly?",
+    "trap": "Model suggests improving the nil check (better error message, logging) rather than tracing to the root cause — why is s.db nil in the first place",
+    "assertions": [
+      {"id": "3.1", "text": "Identifies that the nil check in the handler is a symptom fix, not the root cause"},
+      {"id": "3.2", "text": "Traces backward to the constructor/initialization code to find why db is nil"},
+      {"id": "3.3", "text": "Suggests validating db != nil in the constructor (e.g., NewServer) and failing fast there"},
+      {"id": "3.4", "text": "Does NOT suggest improving the nil check in the handler as the primary fix"},
+      {"id": "3.5", "text": "Explains that fixing at the symptom location masks the real bug"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "interface-nil-gotcha",
+    "description": "Tests the interface nil gotcha from common-go-bugs: typed nil in interface is not nil",
+    "prompt": "I have this Go code and the error branch always executes even though no error occurred. Debug this:\n\n```go\ntype ValidationError struct{ Field string }\nfunc (e *ValidationError) Error() string { return e.Field + \" invalid\" }\n\nfunc validate(s string) error {\n    var verr *ValidationError\n    if s == \"\" {\n        verr = &ValidationError{Field: \"name\"}\n    }\n    return verr\n}\n\nfunc main() {\n    if err := validate(\"hello\"); err != nil {\n        fmt.Println(\"error:\", err) // This always prints!\n    }\n}\n```",
+    "trap": "Model suggests adding a nil check on verr before returning, or restructuring the if/else, without explaining the interface nil gotcha",
+    "assertions": [
+      {"id": "4.1", "text": "Identifies the interface nil gotcha: a typed nil *ValidationError wrapped in an error interface is NOT a nil interface"},
+      {"id": "4.2", "text": "Explains that the interface has a non-nil type descriptor even when the pointer value is nil"},
+      {"id": "4.3", "text": "Recommends returning nil explicitly (return nil) instead of returning the typed nil variable"},
+      {"id": "4.4", "text": "Does NOT suggest adding an if verr == nil check before return as the primary fix — the correct fix is to return nil explicitly when there's no error"},
+      {"id": "4.5", "text": "Shows or describes the correct fix: check verr != nil before return, and return nil in the else branch"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "variable-shadowing-err",
+    "description": "Tests the variable shadowing with := from common-go-bugs: inner err shadows outer err",
+    "prompt": "My Go function always returns nil error even when someFunc() fails. I verified that someFunc() does return errors in certain cases. What's wrong?\n\n```go\nfunc processData() error {\n    var err error\n    if needsProcessing {\n        result, err := someFunc()\n        if err != nil {\n            return err\n        }\n        use(result)\n    }\n    return err\n}\n```",
+    "trap": "Model focuses on the early return path working correctly and misses that the outer err is always nil because := created a new variable",
+    "assertions": [
+      {"id": "5.1", "text": "Identifies that := inside the if block creates a NEW err variable that shadows the outer one"},
+      {"id": "5.2", "text": "Explains that the outer err remains nil because the inner := never assigned to it"},
+      {"id": "5.3", "text": "Recommends using = (assignment) instead of := to assign to the outer err variable"},
+      {"id": "5.4", "text": "Shows the fix: declare result separately (var result ResultType) and use result, err = someFunc()"},
+      {"id": "5.5", "text": "Mentions the golang.org/x/tools shadow analyzer as a detection tool, without relying on the obsolete go vet shadow flag"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "defer-in-loop-resource-leak",
+    "description": "Tests the defer-in-loop gotcha from common-go-bugs: deferred calls pile up until function returns",
+    "prompt": "My Go program runs out of file descriptors when processing a large directory of files. Here's the code:\n\n```go\nfunc processFiles(paths []string) error {\n    for _, p := range paths {\n        f, err := os.Open(p)\n        if err != nil {\n            return err\n        }\n        defer f.Close()\n        data, err := io.ReadAll(f)\n        if err != nil {\n            return err\n        }\n        process(data)\n    }\n    return nil\n}\n```\nIt works for small directories but crashes with 'too many open files' for large ones.",
+    "trap": "Model suggests increasing the file descriptor limit (ulimit) instead of fixing the defer-in-loop bug",
+    "assertions": [
+      {"id": "6.1", "text": "Identifies that defer f.Close() inside a for loop keeps all files open until the function returns"},
+      {"id": "6.2", "text": "Recommends wrapping the loop body in an anonymous function (closure) so defer runs each iteration"},
+      {"id": "6.3", "text": "Does NOT suggest increasing ulimit or file descriptor limits as the primary solution"},
+      {"id": "6.4", "text": "Shows the correct pattern with func() { f, err := os.Open(...); defer f.Close(); ... }()"},
+      {"id": "6.5", "text": "Alternatively suggests extracting the loop body into a named function"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "break-in-select-inside-for-loop",
+    "description": "Tests the break-in-select gotcha: bare break only exits select, not the enclosing for loop",
+    "prompt": "My Go program's message consumer loop never terminates. When I send 'quit' on the channel, the loop keeps running. What's wrong?\n\n```go\nfor {\n    select {\n    case msg := <-ch:\n        if msg == \"quit\" {\n            log.Println(\"shutting down\")\n            break\n        }\n        handleMessage(msg)\n    case <-ctx.Done():\n        break\n    }\n}\n```",
+    "trap": "Model suggests the channel isn't receiving 'quit' or there's a timing issue, rather than identifying the break-in-select gotcha",
+    "assertions": [
+      {"id": "7.1", "text": "Identifies that break inside a select only exits the select statement, not the for loop"},
+      {"id": "7.2", "text": "Recommends using a labeled break (e.g., break loop) with a label on the for statement"},
+      {"id": "7.3", "text": "Shows the correct pattern with a label like 'loop:' on the for statement and 'break loop' inside select"},
+      {"id": "7.4", "text": "Also fixes the ctx.Done() case which has the same break issue"},
+      {"id": "7.5", "text": "Alternatively mentions return as a solution if the function should exit entirely"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "concurrent-map-fatal-not-panic",
+    "description": "Tests knowledge that concurrent map access is a fatal error that cannot be recovered, unlike most panics",
+    "prompt": "My Go web server occasionally crashes despite having a recover() middleware that catches panics. The error message says 'concurrent map read and map write'. I thought recover() catches all panics — why isn't it working? How should I protect against this?",
+    "trap": "Model suggests the recover middleware is misconfigured or needs to be higher in the middleware chain, rather than explaining that concurrent map access is fatal and unrecoverable",
+    "assertions": [
+      {"id": "8.1", "text": "Explains that concurrent map read/write is a FATAL error that cannot be caught by recover()"},
+      {"id": "8.2", "text": "Distinguishes this from regular panics — the Go runtime kills the process immediately"},
+      {"id": "8.3", "text": "Recommends protecting the map with sync.RWMutex or using sync.Map"},
+      {"id": "8.4", "text": "Recommends using go test -race to find the race condition"},
+      {"id": "8.5", "text": "Does NOT suggest fixing the recover middleware as the solution"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "waitgroup-add-inside-goroutine",
+    "description": "Tests the WaitGroup.Add placement gotcha: Add inside goroutine races with Wait",
+    "prompt": "My Go test passes most of the time but occasionally fails with 'expected 10 results, got 7' (or some other number less than 10). The code launches goroutines to process items in parallel:\n\n```go\nvar wg sync.WaitGroup\nresults := make([]int, 0, 10)\nvar mu sync.Mutex\nfor i := 0; i < 10; i++ {\n    go func(n int) {\n        wg.Add(1)\n        defer wg.Done()\n        val := process(n)\n        mu.Lock()\n        results = append(results, val)\n        mu.Unlock()\n    }(i)\n}\nwg.Wait()\n```",
+    "trap": "Model focuses on the mutex/slice synchronization and misses that wg.Add(1) is inside the goroutine, racing with wg.Wait()",
+    "assertions": [
+      {"id": "9.1", "text": "Identifies that wg.Add(1) is called inside the goroutine instead of before it"},
+      {"id": "9.2", "text": "Explains that wg.Wait() may return before all goroutines have called wg.Add(1)"},
+      {"id": "9.3", "text": "Recommends moving wg.Add(1) before the go func() call"},
+      {"id": "9.4", "text": "Notes this is a race condition that passes most of the time but fails intermittently"},
+      {"id": "9.5", "text": "Does NOT focus primarily on the mutex/slice synchronization as the root cause"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "missing-return-after-http-error",
+    "description": "Tests the missing return after http.Error() bug from common-go-bugs",
+    "prompt": "My Go API endpoint has a security vulnerability — unauthorized users can sometimes access protected resources. The handler checks authorization and sends a 403 Forbidden response, but the protected action still executes. Here's the code:\n\n```go\nfunc handleDelete(w http.ResponseWriter, r *http.Request) {\n    if !isAuthorized(r) {\n        http.Error(w, \"Forbidden\", http.StatusForbidden)\n    }\n    if err := deleteResource(r.Context(), r.URL.Query().Get(\"id\")); err != nil {\n        http.Error(w, err.Error(), 500)\n    }\n    w.WriteHeader(http.StatusNoContent)\n}\n```",
+    "trap": "Model suggests the isAuthorized function is buggy rather than noticing the missing return after http.Error()",
+    "assertions": [
+      {"id": "10.1", "text": "Identifies the missing return statement after http.Error(w, 'Forbidden', http.StatusForbidden)"},
+      {"id": "10.2", "text": "Explains that http.Error() does NOT stop handler execution — it only writes to the ResponseWriter"},
+      {"id": "10.3", "text": "Adds return statements after each http.Error() call"},
+      {"id": "10.4", "text": "Does NOT primarily blame the isAuthorized function"},
+      {"id": "10.5", "text": "Mentions this is a common Go bug pattern and a security concern"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "json-numbers-float64-interface",
+    "description": "Tests JSON unmarshaling gotcha: numbers into interface{} become float64, not int",
+    "prompt": "My Go code panics when processing JSON API responses. The JSON looks like `{\"user_id\": 1234567890123456789}`. I unmarshal into `map[string]interface{}` and then type-assert the user_id to int64:\n\n```go\nvar result map[string]interface{}\njson.Unmarshal(data, &result)\nuserID := result[\"user_id\"].(int64)\n```\nWhy does this panic?",
+    "trap": "Model suggests the JSON is malformed or the field name doesn't match, rather than explaining the float64 type gotcha",
+    "assertions": [
+      {"id": "11.1", "text": "Explains that JSON numbers unmarshaled into interface{} become float64, not int or int64"},
+      {"id": "11.2", "text": "Notes that large integers (> 2^53) silently lose precision when stored as float64"},
+      {"id": "11.3", "text": "Recommends using a typed struct with int64 field as the preferred solution"},
+      {"id": "11.4", "text": "Alternatively mentions json.NewDecoder with UseNumber() and json.Number for when interface{} is required"},
+      {"id": "11.5", "text": "Explains the type assertion panics because the actual type is float64, not int64"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "strings-trim-vs-trimprefix",
+    "description": "Tests the strings.Trim character-set gotcha from common-go-bugs",
+    "prompt": "My Go function strips the 'application/' prefix from MIME types but gives wrong results for some types. `strings.Trim(\"application/json\", \"application/\")` returns 'js' instead of 'json'. Is this a Go bug?",
+    "trap": "Model suggests it's a Go bug or suggests a regex-based workaround instead of explaining Trim treats the second argument as a character set",
+    "assertions": [
+      {"id": "12.1", "text": "Explains that strings.Trim treats its second argument as a SET of characters to strip, not as a substring"},
+      {"id": "12.2", "text": "Shows why 'json' becomes 'js' — the characters j, o, n are in the set {a,p,l,i,c,t,o,n,/}"},
+      {"id": "12.3", "text": "Recommends strings.TrimPrefix for removing a substring prefix"},
+      {"id": "12.4", "text": "Mentions strings.TrimSuffix for removing suffixes"},
+      {"id": "12.5", "text": "Confirms this is NOT a Go bug — it's working as documented"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "closed-channel-busy-loop-in-select",
+    "description": "Tests the closed channel in select causing busy loop from common-go-bugs",
+    "prompt": "After running for a few hours, my Go worker's CPU usage jumps to 100% even when there's no work. The worker reads from a channel in a select. Sometimes the upstream producer closes the channel when it's done. Here's the worker:\n\n```go\nfunc worker(ch <-chan Job, done <-chan struct{}) {\n    for {\n        select {\n        case job := <-ch:\n            process(job)\n        case <-done:\n            return\n        }\n    }\n}\n```",
+    "trap": "Model suggests adding a time.Sleep in a default case or reducing GOMAXPROCS, rather than identifying that a closed channel fires continuously in select",
+    "assertions": [
+      {"id": "13.1", "text": "Identifies that a closed channel always returns immediately (zero value) in a select case"},
+      {"id": "13.2", "text": "Explains this causes the select case to fire continuously — a busy loop burning CPU"},
+      {"id": "13.3", "text": "Recommends using the comma-ok idiom (job, ok := <-ch) and nil-ing the channel when closed (ch = nil)"},
+      {"id": "13.4", "text": "Explains that a nil channel blocks forever in select, effectively disabling that case"},
+      {"id": "13.5", "text": "Does NOT suggest adding a default case with time.Sleep as the fix"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "select-default-spin-loop",
+    "description": "Tests the select-with-default busy-wait pattern from common-go-bugs",
+    "prompt": "I need non-blocking channel reads in my Go message processor. I have a for loop with a select that checks a channel and a default case. The code works but uses 100% CPU even when idle. How do I fix this without blocking?\n\n```go\nfor {\n    select {\n    case msg := <-incoming:\n        handleMsg(msg)\n    default:\n        // check other conditions\n        if shouldStop() {\n            return\n        }\n    }\n}\n```",
+    "trap": "Model keeps the default case and just adds more logic to it, rather than restructuring to remove the busy-wait",
+    "assertions": [
+      {"id": "14.1", "text": "Identifies that select with default inside a for loop is a busy-wait spin loop"},
+      {"id": "14.2", "text": "Explains that default runs immediately when no channel is ready, creating a tight loop"},
+      {"id": "14.3", "text": "Recommends removing the default case and using a second channel or context for the stop signal"},
+      {"id": "14.4", "text": "Alternatively suggests adding a time.Sleep or ticker in the default to yield CPU if non-blocking is truly required"},
+      {"id": "14.5", "text": "Shows a solution using a ctx.Done() or stop channel in a second select case"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "enum-zero-value-iota-ambiguity",
+    "description": "Tests the iota zero value ambiguity from common-go-bugs",
+    "prompt": "I have a Go enum for user roles using iota. Some users are getting Admin privileges by default when they register, even though I didn't set their role. The zero value of Role seems to be Admin. How should I fix this?\n\n```go\ntype Role int\nconst (\n    Admin   Role = iota  // 0\n    Editor               // 1\n    Viewer               // 2\n)\n\ntype User struct {\n    Name string\n    Role Role\n}\n```",
+    "trap": "Model suggests setting new users' Role field to Viewer explicitly in the constructor, rather than fixing the enum design",
+    "assertions": [
+      {"id": "15.1", "text": "Identifies that iota starting at 0 makes the zero value (default for uninitialized fields) equal to Admin"},
+      {"id": "15.2", "text": "Recommends reserving 0 for an Unknown/Unspecified sentinel value"},
+      {"id": "15.3", "text": "Shows the pattern: RoleUnknown Role = iota, then Admin, Editor, Viewer"},
+      {"id": "15.4", "text": "Explains this applies to any enum — zero value should be the 'unset' state, not a valid value"},
+      {"id": "15.5", "text": "Does NOT primarily suggest fixing it in the constructor or registration logic"}
+    ]
+  },
+  {
+    "id": 16,
+    "name": "recover-only-same-goroutine",
+    "description": "Tests the recover() goroutine boundary from common-go-bugs",
+    "prompt": "My Go server has a panic recovery middleware but child goroutines still crash the entire process. I have:\n\n```go\nfunc handler(w http.ResponseWriter, r *http.Request) {\n    defer func() {\n        if r := recover(); r != nil {\n            http.Error(w, \"Internal Error\", 500)\n        }\n    }()\n    go processAsync(r.Context(), extractData(r))\n    w.WriteHeader(http.StatusAccepted)\n}\n```\nWhen processAsync panics, the whole server crashes instead of just returning 500.",
+    "trap": "Model suggests wrapping the recover middleware differently or using a global recover, not understanding that recover only works within the same goroutine",
+    "assertions": [
+      {"id": "16.1", "text": "Explains that recover() can ONLY catch panics in the same goroutine where it is deferred"},
+      {"id": "16.2", "text": "States that a panic in a child goroutine will crash the entire program regardless of parent recovery"},
+      {"id": "16.3", "text": "Recommends adding defer/recover inside the child goroutine (processAsync or its wrapper)"},
+      {"id": "16.4", "text": "Shows the pattern: go func() { defer func() { if r := recover()... }(); processAsync(...) }()"},
+      {"id": "16.5", "text": "Does NOT suggest reconfiguring the parent middleware as the solution"}
+    ]
+  },
+  {
+    "id": 17,
+    "name": "os-exit-skips-defers",
+    "description": "Tests os.Exit / log.Fatal skipping deferred functions from common-go-bugs",
+    "prompt": "My Go CLI tool creates temp files and defers their cleanup, but sometimes temp files are left behind. The code structure is:\n\n```go\nfunc main() {\n    tmpFile, _ := os.CreateTemp(\"\", \"data-*\")\n    defer os.Remove(tmpFile.Name())\n    defer tmpFile.Close()\n\n    if err := processData(tmpFile); err != nil {\n        log.Fatalf(\"processing failed: %v\", err)\n    }\n    // ... use results\n}\n```",
+    "trap": "Model suggests the error path doesn't clean up properly but misses that log.Fatal calls os.Exit which skips ALL deferred functions",
+    "assertions": [
+      {"id": "17.1", "text": "Identifies that log.Fatal (or log.Fatalf) calls os.Exit(1) internally"},
+      {"id": "17.2", "text": "Explains that os.Exit skips all deferred functions — cleanup never runs"},
+      {"id": "17.3", "text": "Recommends restructuring to avoid log.Fatal — use a run() function pattern or return errors"},
+      {"id": "17.4", "text": "Shows the pattern: move logic into a run() error function, call os.Exit in main only after run returns"},
+      {"id": "17.5", "text": "Does NOT suggest explicitly calling os.Remove before log.Fatal as the primary fix"}
+    ]
+  },
+  {
+    "id": 18,
+    "name": "time-equal-not-double-equals",
+    "description": "Tests the time.Time == vs .Equal() gotcha from common-go-bugs",
+    "prompt": "My Go test comparing time values fails intermittently. I store a time.Time in the database and read it back, then compare with ==. The test passes when I use a fixed time but fails when I use time.Now():\n\n```go\nt1 := time.Now()\nsaveToDatabase(t1)\nt2 := loadFromDatabase()\nassert.True(t, t1 == t2) // fails!\n```\nThe times represent the same instant. Why does == fail?",
+    "trap": "Model suggests the database truncates nanoseconds or timezone differences, not the monotonic clock component",
+    "assertions": [
+      {"id": "18.1", "text": "Identifies that time.Now() includes a monotonic clock reading that database serialization strips"},
+      {"id": "18.2", "text": "Explains that == compares all fields including the monotonic component, so it can fail for equal instants"},
+      {"id": "18.3", "text": "Recommends using .Equal() which ignores the monotonic clock"},
+      {"id": "18.4", "text": "Alternatively mentions t.Round(0) to strip the monotonic reading before comparison or storage"},
+      {"id": "18.5", "text": "Does NOT primarily blame database precision or timezone differences"}
+    ]
+  },
+  {
+    "id": 19,
+    "name": "sql-rows-must-be-closed",
+    "description": "Tests the sql.Rows close requirement and connection leak from common-go-bugs",
+    "prompt": "My Go service starts failing with 'too many connections' after running for a few hours under load. Database queries start timing out. The code:\n\n```go\nfunc getActiveUsers(db *sql.DB) ([]User, error) {\n    rows, err := db.Query(\"SELECT id, name FROM users WHERE active = true\")\n    if err != nil {\n        return nil, err\n    }\n    var users []User\n    for rows.Next() {\n        var u User\n        rows.Scan(&u.ID, &u.Name)\n        users = append(users, u)\n    }\n    return users, nil\n}\n```",
+    "trap": "Model suggests increasing the connection pool size or adding connection timeout, rather than finding the missing rows.Close()",
+    "assertions": [
+      {"id": "19.1", "text": "Identifies the missing defer rows.Close() after the error check"},
+      {"id": "19.2", "text": "Explains that unclosed sql.Rows holds the database connection until garbage collection"},
+      {"id": "19.3", "text": "Adds defer rows.Close() immediately after the err check"},
+      {"id": "19.4", "text": "Also notes the missing rows.Err() check after the loop"},
+      {"id": "19.5", "text": "Does NOT primarily suggest increasing connection pool size"}
+    ]
+  },
+  {
+    "id": 20,
+    "name": "copying-sync-types-value-receiver",
+    "description": "Tests the sync type copying bug from common-go-bugs",
+    "prompt": "My Go concurrent counter gives wrong results. Multiple goroutines call Increment() but the final count is always 0 or some small number, never the expected total. The race detector doesn't fire. What's wrong?\n\n```go\ntype Counter struct {\n    mu    sync.Mutex\n    count int\n}\n\nfunc (c Counter) Increment() {\n    c.mu.Lock()\n    c.count++\n    c.mu.Unlock()\n}\n\nfunc (c Counter) Count() int {\n    c.mu.Lock()\n    defer c.mu.Unlock()\n    return c.count\n}\n```",
+    "trap": "Model suggests the mutex isn't working or suggests using atomic instead, without identifying the value receiver as the root cause",
+    "assertions": [
+      {"id": "20.1", "text": "Identifies that value receivers (c Counter) copy the entire struct including the Mutex on every call"},
+      {"id": "20.2", "text": "Explains that each call operates on a copy — increments are lost and the mutex is duplicated"},
+      {"id": "20.3", "text": "Recommends changing to pointer receivers (c *Counter)"},
+      {"id": "20.4", "text": "Notes that go vet can detect copied sync types"},
+      {"id": "20.5", "text": "Explains this applies to ALL sync types (Mutex, RWMutex, WaitGroup, Once, etc.)"}
+    ]
+  },
+  {
+    "id": 21,
+    "name": "pprof-production-security",
+    "description": "Tests the pprof security requirement: never expose unauthenticated in production",
+    "prompt": "I need to add CPU and memory profiling to my Go production web service. I'll just add `import _ \"net/http/pprof\"` and expose it on the main HTTP port. What's the simplest way to set this up?",
+    "trap": "Model provides the simple blank-import pattern without security warnings, exposing pprof publicly",
+    "assertions": [
+      {"id": "21.1", "text": "Warns that pprof endpoints MUST be protected — never exposed publicly without authentication"},
+      {"id": "21.2", "text": "Recommends basic auth or similar authentication on pprof endpoints"},
+      {"id": "21.3", "text": "Suggests running pprof on a separate port (not the main HTTP port) or localhost only"},
+      {"id": "21.4", "text": "Recommends toggling pprof via an environment variable (e.g., PPROF_ENABLED)"},
+      {"id": "21.5", "text": "Explains the risk: pprof leaks goroutine stacks, memory contents, and can be used for DoS"}
+    ]
+  },
+  {
+    "id": 22,
+    "name": "godebug-gc-tracing-interpretation",
+    "description": "Tests GODEBUG gctrace interpretation from diagnostic-tools reference",
+    "prompt": "My Go service is experiencing periodic latency spikes. I enabled GC tracing with GODEBUG=gctrace=1 and see this output:\n```\ngc 456 @120.5s 18%: 2.1+45+1.2 ms clock, 16+12/45/8 ms cpu, 1024->900->500 MB\n```\nWhat does this tell me and is there a problem?",
+    "trap": "Model focuses only on the heap sizes and misses the 18% GC CPU overhead as the key signal",
+    "assertions": [
+      {"id": "22.1", "text": "Identifies that 18% GC CPU overhead is significantly high (threshold is >10%)"},
+      {"id": "22.2", "text": "Explains the heap size breakdown as heap at GC start, heap at GC end, and live heap"},
+      {"id": "22.3", "text": "Identifies the large pause times (45ms) as a likely cause of the latency spikes"},
+      {"id": "22.4", "text": "Suggests the application is over-allocating and recommends investigating allocation patterns"},
+      {"id": "22.5", "text": "Recommends using pprof heap/alloc profiling to find hot allocation sites"}
+    ]
+  },
+  {
+    "id": 23,
+    "name": "research-codebase-not-just-diff",
+    "description": "Tests Golden Rule #6: trace callers and check upstream validation before flagging a bug",
+    "prompt": "During code review, I found this Go function. It looks like it has a bug — it doesn't validate that `id` is positive before using it as a slice index:\n\n```go\nfunc getItem(items []Item, id int) Item {\n    return items[id]\n}\n```\nShould I flag this as a bug?",
+    "trap": "Model immediately flags it as a bug and suggests adding bounds checking, without considering that callers might already validate",
+    "assertions": [
+      {"id": "23.1", "text": "Recommends checking the callers first before flagging the bug"},
+      {"id": "23.2", "text": "Suggests using Grep or similar to find all call sites of getItem"},
+      {"id": "23.3", "text": "Notes that upstream code may validate the id (e.g., parsing from uint, bounds checking, positive-only input)"},
+      {"id": "23.4", "text": "Advises that if callers validate, the severity is reduced but may still warrant a defensive check"},
+      {"id": "23.5", "text": "Mentions adding an inline comment documenting the assumption if upstream guarantees exist"}
+    ]
+  },
+  {
+    "id": 24,
+    "name": "flaky-test-diagnosis-methodology",
+    "description": "Tests flaky test debugging methodology from testing-debug reference",
+    "prompt": "One of our Go tests fails about 1 in 20 runs in CI but I can never reproduce it locally. The test creates a temp file, writes data, reads it back, and compares. How do I debug this?",
+    "trap": "Model suggests adding retry logic or skipping the test in CI, rather than systematic flaky test diagnosis",
+    "assertions": [
+      {"id": "24.1", "text": "Recommends running with -count=100 to reproduce locally"},
+      {"id": "24.2", "text": "Suggests using -shuffle=on to check for test order dependence"},
+      {"id": "24.3", "text": "Mentions running with -race to check for data races"},
+      {"id": "24.4", "text": "Suggests using t.TempDir() instead of shared temp directories to avoid file system pollution"},
+      {"id": "24.5", "text": "Considers shared mutable state between tests as a potential cause"},
+      {"id": "24.6", "text": "Does NOT suggest retry logic or skipping the test as a solution"}
+    ]
+  },
+  {
+    "id": 25,
+    "name": "defense-in-depth-after-fix",
+    "description": "Tests Step 10 of methodology: multi-layer defense after fixing a bug",
+    "prompt": "I fixed a bug where user-submitted file paths could traverse outside the upload directory using ../. The fix adds filepath.Clean and a strings.HasPrefix check. Is this fix complete?",
+    "trap": "Model says the fix looks good without recognizing that Clean+HasPrefix is not robust confinement and without considering defense-in-depth — os.Root, safer lexical fallback, logging, and test coverage",
+    "assertions": [
+      {"id": "25.1", "text": "States that filepath.Clean plus strings.HasPrefix is not robust confinement"},
+      {"id": "25.2", "text": "Recommends adding a test that specifically verifies the path traversal is blocked"},
+      {"id": "25.3", "text": "Suggests adding logging or metrics to detect future traversal attempts (observability)"},
+      {"id": "25.4", "text": "Considers multiple validation layers — not just one check"},
+      {"id": "25.5", "text": "Recommends os.Root for Go 1.24+ or a filepath.IsLocal/filepath.Rel fallback for older targets"}
+    ]
+  },
+  {
+    "id": 26,
+    "name": "escalation-protocol-three-failed-attempts",
+    "description": "Tests the escalation protocol: after 3 failed fix attempts, step back and question architecture",
+    "prompt": "I've tried fixing this Go data processing bug 4 times now. Each fix reveals a new problem — first the data was truncated, then the order was wrong, then duplicates appeared, now there's a memory leak. The code processes events from a Kafka topic and aggregates them in a map. What should I try next?",
+    "trap": "Model suggests a 5th specific fix (more memory management, deduplication logic, etc.) instead of stepping back to question the architecture",
+    "assertions": [
+      {"id": "26.1", "text": "Recognizes the pattern of cascading failures as a red flag — each fix reveals a new problem"},
+      {"id": "26.2", "text": "Recommends stepping back to question the overall design/architecture rather than trying another fix"},
+      {"id": "26.3", "text": "Suggests re-reading the code from scratch with fresh eyes"},
+      {"id": "26.4", "text": "Considers whether the current abstraction is fundamentally sound"},
+      {"id": "26.5", "text": "Does NOT immediately suggest a 5th specific patch to the existing code"}
+    ]
+  },
+  {
+    "id": 27,
+    "name": "git-bisect-for-regression",
+    "description": "Tests the methodology step 1: using git bisect to find breaking commit for regressions",
+    "prompt": "A feature that was working last week is now broken in our Go service. I'm not sure which commit broke it. There have been about 50 commits since it last worked. How should I find what changed?",
+    "trap": "Model suggests reading through all 50 commit diffs manually or running tests on HEAD",
+    "assertions": [
+      {"id": "27.1", "text": "Recommends git bisect to binary-search for the breaking commit"},
+      {"id": "27.2", "text": "Shows the git bisect start / git bisect bad / git bisect good workflow"},
+      {"id": "27.3", "text": "Mentions that bisect can be automated with a test command (git bisect run go test -run TestBroken ./...)"},
+      {"id": "27.4", "text": "Notes this narrows 50 commits to ~6 steps (log2(50))"},
+      {"id": "27.5", "text": "Does NOT suggest manually reading all 50 commit diffs"}
+    ]
+  },
+  {
+    "id": 28,
+    "name": "check-external-dependencies-first",
+    "description": "Tests Step 4 of methodology: verify external components before assuming code bug",
+    "prompt": "My Go service started returning 'connection refused' errors for API calls to a third-party payment service. This worked fine yesterday. Nothing in our code changed (I checked git log). Where should I look?",
+    "trap": "Model starts investigating Go HTTP client code or TLS configuration instead of checking the external service first",
+    "assertions": [
+      {"id": "28.1", "text": "Suggests checking the external payment service health/status first (curl, health endpoint)"},
+      {"id": "28.2", "text": "Recommends checking DNS resolution (dig or nslookup)"},
+      {"id": "28.3", "text": "Suggests checking network connectivity (nc, telnet, or similar to the port)"},
+      {"id": "28.4", "text": "Considers environment-specific causes: expired credentials, DNS changes, firewall rules, certificate rotation"},
+      {"id": "28.5", "text": "Does NOT start by investigating Go code since nothing changed in the codebase"}
+    ]
+  },
+  {
+    "id": 29,
+    "name": "observability-tools-before-code-dive",
+    "description": "Tests Step 5 of methodology: check observability data before diving into code",
+    "prompt": "Our Go microservice started returning 500 errors about 2 hours ago. I want to start reading the code to find the bug. Where should I start looking in the codebase?",
+    "trap": "Model jumps straight into reading handler code or error paths instead of suggesting checking observability tools first",
+    "assertions": [
+      {"id": "29.1", "text": "Recommends checking monitoring/observability tools BEFORE diving into code"},
+      {"id": "29.2", "text": "Asks what monitoring tools are available (Prometheus, Datadog, Sentry, ELK, etc.)"},
+      {"id": "29.3", "text": "Suggests checking error rate metrics, latency dashboards, or log aggregation"},
+      {"id": "29.4", "text": "Mentions specific things to look for: what changed 2 hours ago (deploy, config change, traffic spike)"},
+      {"id": "29.5", "text": "Does NOT immediately start reading source code files"}
+    ]
+  },
+  {
+    "id": 30,
+    "name": "integer-conversion-silent-truncation",
+    "description": "Tests integer conversion truncation from common-go-bugs",
+    "prompt": "My Go code converts user-provided int64 values to int32 for a legacy protocol. It works for most values but produces wrong results for large numbers. The conversion is `int32(bigValue)`. Is there a Go function to convert safely?",
+    "trap": "Model suggests casting with a simple function or using math.MinInt32/MaxInt32 incorrectly",
+    "assertions": [
+      {"id": "30.1", "text": "Explains that Go integer conversions silently truncate without any error or warning"},
+      {"id": "30.2", "text": "Shows bounds checking before conversion: compare against math.MinInt32 and math.MaxInt32"},
+      {"id": "30.3", "text": "Returns an error when the value overflows instead of silently truncating"},
+      {"id": "30.4", "text": "Notes there is no built-in safe conversion function — you must check bounds manually"},
+      {"id": "30.5", "text": "Mentions this is especially dangerous for external/user-provided data"}
+    ]
+  },
+  {
+    "id": 31,
+    "name": "init-ordering-fragile",
+    "description": "Tests the init() ordering fragility from common-go-bugs",
+    "prompt": "My Go program panics during startup with a nil pointer. I have an init() function that opens a database connection using a config value from another init() in a different file. It works in development but fails in CI. Could the init order be different?",
+    "trap": "Model suggests ensuring the config init file is imported first or adding a side-effect import, rather than recommending explicit initialization",
+    "assertions": [
+      {"id": "31.1", "text": "Confirms that init() ordering across files depends on filename alphabetical order and can change when files are added"},
+      {"id": "31.2", "text": "Explains this makes init() dependencies fragile and hard to debug"},
+      {"id": "31.3", "text": "Recommends replacing init() with explicit initialization in main()"},
+      {"id": "31.4", "text": "Shows the pattern: cfg := loadConfig(); db := setupDatabase(cfg); startServer(db)"},
+      {"id": "31.5", "text": "States init() should only be used for truly self-contained setup (registering drivers, codecs)"}
+    ]
+  },
+  {
+    "id": 32,
+    "name": "goroutine-leak-detection-methodology",
+    "description": "Tests goroutine leak diagnosis from concurrency-debug reference",
+    "prompt": "My Go service's memory usage grows slowly over days. CPU is normal. There's no obvious memory leak in heap profiling. What else could cause the slow growth?",
+    "trap": "Model focuses only on heap analysis and misses goroutine leaks as a major cause of slow memory growth",
+    "assertions": [
+      {"id": "32.1", "text": "Suggests checking goroutine count (runtime.NumGoroutine or pprof goroutine profile)"},
+      {"id": "32.2", "text": "Explains that goroutine leaks cause slow memory growth without appearing in heap profiles"},
+      {"id": "32.3", "text": "Recommends using the pprof goroutine endpoint with ?debug=2 for human-readable stack dumps"},
+      {"id": "32.4", "text": "Lists common causes: unclosed channels, missing context cancellation, forgotten response body close"},
+      {"id": "32.5", "text": "Suggests goleak for detection in tests"}
+    ]
+  },
+  {
+    "id": 33,
+    "name": "production-capture-before-restart",
+    "description": "Tests the production debugging checklist: capture profiles BEFORE restarting",
+    "prompt": "Our Go production service is consuming 4GB of memory and responding slowly. We need to fix this urgently. Should I restart the service first to restore normal operation?",
+    "trap": "Model agrees to restart first to restore service, losing all diagnostic information",
+    "assertions": [
+      {"id": "33.1", "text": "Recommends capturing profiles (heap, goroutine, CPU) BEFORE restarting"},
+      {"id": "33.2", "text": "Explains that restarting destroys the evidence needed to diagnose the root cause"},
+      {"id": "33.3", "text": "Lists specific profiles to capture: heap, goroutine dump (?debug=2), CPU (30s), mutex"},
+      {"id": "33.4", "text": "Also suggests capturing system metrics (file descriptors, socket state, process info)"},
+      {"id": "33.5", "text": "Only after capturing all evidence should the service be restarted if needed"}
+    ]
+  },
+  {
+    "id": 34,
+    "name": "lock-contention-diagnosis",
+    "description": "Tests lock contention diagnosis from performance-debug reference",
+    "prompt": "My Go web server shows high CPU usage but low throughput. Adding more cores doesn't help — performance stays flat. The profiler shows most time in runtime.semacquire. What's going on?",
+    "trap": "Model suggests the workload is CPU-bound and recommends algorithmic optimization, rather than identifying lock contention",
+    "assertions": [
+      {"id": "34.1", "text": "Identifies runtime.semacquire as a signal of lock contention, not CPU computation"},
+      {"id": "34.2", "text": "Recommends enabling mutex profiling with runtime.SetMutexProfileFraction(1)"},
+      {"id": "34.3", "text": "Recommends enabling block profiling with runtime.SetBlockProfileRate(1)"},
+      {"id": "34.4", "text": "Suggests using pprof mutex and block profiles to find the contended locks"},
+      {"id": "34.5", "text": "Lists solutions: reduce critical section, sharding, RWMutex, atomic operations"}
+    ]
+  },
+  {
+    "id": 35,
+    "name": "race-detector-not-reasoning",
+    "description": "Tests Golden Rule #3: never reason about concurrency — use the race detector",
+    "prompt": "I'm reviewing Go code that has goroutines sharing a struct. I don't see any obvious race conditions — the goroutines seem to access different fields. Is this safe?\n\n```go\ntype Stats struct {\n    RequestCount int64\n    ErrorCount   int64\n    LastUpdated  time.Time\n}\n\nfunc (s *Stats) RecordRequest() {\n    s.RequestCount++\n}\n\nfunc (s *Stats) RecordError() {\n    s.ErrorCount++\n}\n```",
+    "trap": "Model reasons through the code and concludes it looks safe because different goroutines access different fields",
+    "assertions": [
+      {"id": "35.1", "text": "Does NOT conclude safety based on code reasoning alone"},
+      {"id": "35.2", "text": "Recommends running go test -race to verify — never trust visual inspection for concurrency"},
+      {"id": "35.3", "text": "Identifies that ++ is not atomic — RequestCount++ and ErrorCount++ are read-modify-write operations"},
+      {"id": "35.4", "text": "Recommends using atomic.Int64 or sync.Mutex to protect the fields"},
+      {"id": "35.5", "text": "Notes that even different fields on the same struct can race if accessed from different goroutines without synchronization"}
+    ]
+  },
+  {
+    "id": 36,
+    "name": "filepath-join-path-traversal",
+    "description": "Tests the filepath.Join path traversal from common-go-bugs",
+    "prompt": "I'm building a Go file server. I use filepath.Join to safely combine the base directory with the user-requested path. Is this implementation secure?\n\n```go\nfunc serveFile(w http.ResponseWriter, r *http.Request) {\n    path := filepath.Join(\"/srv/files\", r.URL.Path)\n    http.ServeFile(w, r, path)\n}\n```",
+    "trap": "Model says filepath.Join handles path cleaning and the code is safe",
+    "assertions": [
+      {"id": "36.1", "text": "Identifies that filepath.Join does NOT prevent path traversal"},
+      {"id": "36.2", "text": "Shows that input like '../../etc/passwd' resolves to '/etc/passwd' after Join"},
+      {"id": "36.3", "text": "Recommends os.Root for Go 1.24+ user-controlled filesystem access"},
+      {"id": "36.4", "text": "For older Go targets, shows a fallback using filepath.IsLocal plus filepath.Rel with separator-aware checks"},
+      {"id": "36.5", "text": "Does NOT present filepath.Clean plus strings.HasPrefix as a complete traversal defense"}
+    ]
+  },
+  {
+    "id": 37,
+    "name": "time-after-in-loop-allocation-churn",
+    "description": "Tests the repeated time.After in loop allocation-churn pattern from code-review-flags and concurrency-debug",
+    "prompt": "My Go worker processes messages from a channel with a timeout. Memory usage grows over time even though messages are processed correctly. Here's the code:\n\n```go\nfor {\n    select {\n    case msg := <-incoming:\n        process(msg)\n    case <-time.After(30 * time.Second):\n        log.Println(\"idle timeout\")\n        return\n    }\n}\n```",
+    "trap": "Model suggests the message processing is leaking memory, without identifying repeated time.After allocation churn and reset semantics as the likely issue",
+    "assertions": [
+      {"id": "37.1", "text": "Identifies that time.After creates a new timer on every loop iteration"},
+      {"id": "37.2", "text": "Explains this causes allocation churn and was a leak-like pattern on older Go versions before Go 1.23 timer GC improvements"},
+      {"id": "37.3", "text": "Recommends using time.NewTimer with Reset() or time.NewTicker instead"},
+      {"id": "37.4", "text": "Shows the correct pattern with a reusable timer and defer timer.Stop()"},
+      {"id": "37.5", "text": "Does NOT suggest heap profiling as the first diagnostic step for this known pattern"}
+    ]
+  }
+]

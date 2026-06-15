@@ -1,0 +1,67 @@
+# {project-name}
+
+> {One-line description of the project}
+
+## Overview
+
+{2-3 sentences explaining what this project does, what problem it solves, and who it's for.}
+
+## Quick Start
+
+```bash
+go get github.com/{owner}/{repo}
+```
+
+```go
+package main
+
+import "github.com/{owner}/{repo}"
+
+func main() {
+    // Minimal working example
+}
+```
+
+## Key Concepts
+
+- **{Concept 1}**: {Brief explanation}
+- **{Concept 2}**: {Brief explanation}
+- **{Concept 3}**: {Brief explanation}
+
+## API Reference
+
+### Core Functions
+
+- `FuncName(params) returns` - {What it does and when to use it}
+- `AnotherFunc(params) returns` - {What it does and when to use it}
+
+### Core Types
+
+- `TypeName` - {What it represents}
+- `AnotherType` - {What it represents}
+
+## Common Patterns
+
+### {Pattern 1 Name}
+
+```go
+// Example code showing this pattern
+```
+
+### {Pattern 2 Name}
+
+```go
+// Example code showing this pattern
+```
+
+## Error Handling
+
+- `ErrName` - {When this error occurs and how to handle it}
+- `ErrAnother` - {When this error occurs and how to handle it}
+
+## References
+
+- Documentation: {URL}
+- Repository: https://github.com/{owner}/{repo}
+- Go Reference: https://pkg.go.dev/github.com/{owner}/{repo}
+- Issues: https://github.com/{owner}/{repo}/issues

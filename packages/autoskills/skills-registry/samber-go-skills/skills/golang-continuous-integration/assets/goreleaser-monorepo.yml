@@ -1,0 +1,30 @@
+version: 2
+
+builds:
+  - id: api
+    main: ./cmd/api
+    binary: api
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: worker
+    main: ./cmd/worker
+    binary: worker
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"

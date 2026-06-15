@@ -1,0 +1,40 @@
+name: Update golang-modernize skill
+on:
+  schedule:
+    - cron: '0 10 2 * *'  # 2nd of every month at 10am UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-modernize:
+    if: github.repository_owner == 'samber'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You maintain the golang-modernize skill at skills/golang-modernize/SKILL.md in this repository.
+
+            Your job is to check if this skill needs updating:
+
+            1. Check https://go.dev/dl/ for the latest Go version. If a new Go version has been released that is not yet covered in the skill, research its changelog and add a new section with modernization opportunities.
+            2. Check https://github.com/golangci/golangci-lint/releases for new golangci-lint releases. If new modernize analyzers have been added, update the analyzer table.
+            3. Check if any suggestions in the skill have become too old to be relevant (e.g., patterns from 3+ years ago that should be considered baseline by now). Suggest removing them or moving them to a "baseline" note.
+            4. Check for any significant Go ecosystem news (new standard library packages, deprecated APIs, security advisories) that should be reflected in the skill.
+            5. Update the README.md if needed.
+
+            If there are changes to make, open a PR with a clear description of what was updated and why. If there are different categories of changes, open separate PRs.
+
+            If everything is already up to date, do nothing.
+          claude_args: |
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash,WebFetch,WebSearch,mcp__github__get_file_contents,mcp__github__search_code,mcp__github__list_releases,mcp__github__get_latest_release,mcp__github__list_tags,mcp__github__create_pull_request,mcp__github__create_branch,mcp__github__push_files"

@@ -1,0 +1,183 @@
+{
+  "skill_name": "golang-modernize",
+  "evals": [
+    {
+      "id": 1,
+      "name": "version-constraint-1.21",
+      "prompt": "Review this Go code for modernization opportunities. The project targets Go 1.21.\n\n```go\n// go.mod\nmodule example.com/myapp\ngo 1.21\n\n// main.go\npackage main\n\nimport (\n    \"fmt\"\n    \"math/rand\"\n    \"sort\"\n    \"sync\"\n    \"time\"\n)\n\nfunc minInt(a, b int) int {\n    if a < b { return a }\n    return b\n}\n\nfunc maxInt(a, b int) int {\n    if a > b { return a }\n    return b\n}\n\nfunc processItems(items []string) {\n    sort.Strings(items)\n    found := false\n    for _, v := range items {\n        if v == \"target\" { found = true; break }\n    }\n    _ = found\n}\n\nfunc processN(n int) {\n    for i := 0; i < n; i++ {\n        fmt.Println(i)\n    }\n}\n\nfunc startWorkers(items []int) {\n    for _, v := range items {\n        v := v // shadow copy for closure\n        go func() { fmt.Println(v) }()\n    }\n}\n\nvar (\n    once   sync.Once\n    client *int\n)\nfunc getClient() *int {\n    once.Do(func() {\n        c := 42\n        client = &c\n    })\n    return client\n}\n\nfunc main() {\n    rand.Seed(time.Now().UnixNano())\n    n := rand.Intn(100)\n    fmt.Println(minInt(n, 50), maxInt(n, 10))\n    processItems([]string{\"a\", \"b\", \"c\"})\n    processN(10)\n    startWorkers([]int{1, 2, 3})\n}\n```\n\nSuggest all modernization improvements available for this Go version.",
+      "trap": "The project targets Go 1.21. Features like range-over-int (1.22), loop variable fix (1.22), cmp.Or (1.22), and math/rand/v2 (1.22) are NOT available. The model must only suggest 1.21-compatible changes AND must avoid false positives by staying within version constraints.",
+      "assertions": [
+        { "id": "1.1", "text": "Suggests min/max builtins to replace minInt/maxInt (available in Go 1.21)" },
+        { "id": "1.2", "text": "Suggests slices.Sort or slices.Contains (available in Go 1.21)" },
+        { "id": "1.3", "text": "Suggests sync.OnceValue to replace manual sync.Once pattern (available in Go 1.21)" },
+        { "id": "1.4", "text": "Does NOT suggest range-over-int for processN (requires Go 1.22+)" },
+        { "id": "1.5", "text": "Does NOT suggest removing loop variable shadow copy v := v in startWorkers (requires Go 1.22+)" },
+        { "id": "1.6", "text": "Does NOT suggest math/rand/v2 migration (requires Go 1.22+)" },
+        { "id": "1.7", "text": "Does NOT suggest cmp.Or (requires Go 1.22+)" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "rand-v2-api-renames",
+      "prompt": "Migrate this Go code from math/rand to math/rand/v2. The project targets Go 1.22.\n\n```go\npackage game\n\nimport (\n    \"crypto/rand\"\n    \"math/big\"\n    mathrand \"math/rand\"\n    \"time\"\n)\n\nvar rng *mathrand.Rand\n\nfunc init() {\n    mathrand.Seed(time.Now().UnixNano())\n    rng = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))\n}\n\nfunc RollDice() int {\n    return mathrand.Intn(6) + 1\n}\n\nfunc GenerateID() int64 {\n    return mathrand.Int63n(1000000)\n}\n\nfunc ShuffleCards(cards []string) {\n    mathrand.Shuffle(len(cards), func(i, j int) {\n        cards[i], cards[j] = cards[j], cards[i]\n    })\n}\n\nfunc RandomFloat() float64 {\n    return mathrand.Float64()\n}\n\nfunc RandomBytes(n int) []byte {\n    buf := make([]byte, n)\n    mathrand.Read(buf)\n    return buf\n}\n\nfunc CryptoRandom() int {\n    n, _ := rand.Int(rand.Reader, big.NewInt(100))\n    return int(n.Int64())\n}\n```\n\nProvide the complete migrated code.",
+      "trap": "math/rand/v2 renames functions: Intn->IntN, Int63n->Int64N. Read is removed entirely. Seed is unnecessary. Without the skill, the model may keep old function names.",
+      "assertions": [
+        { "id": "2.1", "text": "Renames Intn to IntN (capital N)" },
+        { "id": "2.2", "text": "Renames Int63n to Int64N (not Int63N or Int64n)" },
+        { "id": "2.3", "text": "Removes all rand.Seed calls (automatic seeding in v2)" },
+        { "id": "2.4", "text": "Replaces rand.Read with crypto/rand usage for random bytes" },
+        { "id": "2.5", "text": "Import changes to math/rand/v2" },
+        { "id": "2.6", "text": "Does NOT keep any old-style function names (no rand.Intn or rand.Int63n in output)" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "safety-over-cosmetic",
+      "prompt": "Modernize this Go 1.24 HTTP file server code. Suggest all improvements.\n\n```go\npackage fileserver\n\nimport (\n    \"fmt\"\n    \"io\"\n    \"net/http\"\n    \"os\"\n    \"path/filepath\"\n)\n\ntype FileServer struct {\n    baseDir string\n}\n\nfunc NewFileServer(baseDir string) *FileServer {\n    return &FileServer{baseDir: baseDir}\n}\n\nfunc (fs *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {\n    userPath := r.URL.Query().Get(\"path\")\n    if userPath == \"\" {\n        http.Error(w, \"missing path parameter\", http.StatusBadRequest)\n        return\n    }\n\n    fullPath := filepath.Join(fs.baseDir, filepath.Clean(userPath))\n\n    f, err := os.Open(fullPath)\n    if err != nil {\n        http.Error(w, \"file not found\", http.StatusNotFound)\n        return\n    }\n    defer f.Close()\n\n    w.Header().Set(\"Content-Type\", \"application/octet-stream\")\n    io.Copy(w, f)\n}\n\nfunc process(data interface{}) interface{} {\n    return data\n}\n\nfunc minVal(a, b int) int {\n    if a < b { return a }\n    return b\n}\n\nfunc formatAddr(host string, port int) string {\n    return fmt.Sprintf(\"%s:%d\", host, port)\n}\n```\n\nThe project targets Go 1.24. List improvements in priority order.",
+      "trap": "The code has a path traversal vulnerability (filepath.Join + filepath.Clean is insufficient). Without the skill, the model may prioritize cosmetic changes (interface{}->any, min builtin) over the security-critical os.Root fix.",
+      "assertions": [
+        { "id": "3.1", "text": "Suggests os.Root/os.OpenRoot for user-supplied file paths" },
+        { "id": "3.2", "text": "Mentions path traversal risk, directory escape, or CWE-22" },
+        { "id": "3.3", "text": "Prioritizes the safety fix (os.Root) over cosmetic changes" },
+        { "id": "3.4", "text": "Also suggests interface{} -> any" },
+        { "id": "3.5", "text": "Also suggests min builtin or net.JoinHostPort" },
+        { "id": "3.6", "text": "Does NOT only address cosmetic issues without mentioning the security issue" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "omitzero-vs-omitempty",
+      "prompt": "Review these JSON struct tags for correctness in our Go 1.24 API. Users report that zero-value time fields and false booleans are unexpectedly included or omitted in JSON responses.\n\n```go\npackage api\n\nimport \"time\"\n\ntype Event struct {\n    ID        string    `json:\"id\"`\n    Name      string    `json:\"name\"`\n    StartAt   time.Time `json:\"start_at,omitempty\"`\n    EndAt     time.Time `json:\"end_at,omitempty\"`\n    Cancelled bool      `json:\"cancelled,omitempty\"`\n    Archived  bool      `json:\"archived,omitempty\"`\n    Notes     string    `json:\"notes,omitempty\"`\n    Priority  int       `json:\"priority,omitempty\"`\n}\n\ntype UserSettings struct {\n    UserID           string    `json:\"user_id\"`\n    DarkMode         bool      `json:\"dark_mode,omitempty\"`\n    EmailNotifs      bool      `json:\"email_notifs,omitempty\"`\n    LastLogin        time.Time `json:\"last_login,omitempty\"`\n    AccountCreated   time.Time `json:\"account_created,omitempty\"`\n    Bio              string    `json:\"bio,omitempty\"`\n}\n```\n\nExplain the issue and provide the corrected code.",
+      "trap": "omitempty doesn't work correctly for time.Time (zero time is a non-empty struct) and treats false as empty for bool. Go 1.24 introduced omitzero which handles both correctly. Without the skill, the model may not know about omitzero.",
+      "assertions": [
+        { "id": "4.1", "text": "Identifies that omitempty doesn't omit zero time.Time (it's a non-empty struct)" },
+        { "id": "4.2", "text": "Suggests omitzero for time.Time fields (StartAt, EndAt, LastLogin, AccountCreated)" },
+        { "id": "4.3", "text": "Identifies that omitempty treats false as empty for bool fields" },
+        { "id": "4.4", "text": "Addresses bool issue correctly (removes tag or uses omitzero)" },
+        { "id": "4.5", "text": "Correctly notes omitzero requires Go 1.24+" },
+        { "id": "4.6", "text": "Does NOT suggest omitzero for string or int fields where omitempty works correctly" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "benchmark-b-loop",
+      "prompt": "Modernize these benchmarks for our Go 1.24 project.\n\n```go\npackage encoding\n\nimport (\n    \"encoding/json\"\n    \"testing\"\n)\n\ntype Payload struct {\n    ID    int    `json:\"id\"`\n    Name  string `json:\"name\"`\n    Value float64 `json:\"value\"`\n}\n\nfunc BenchmarkMarshal(b *testing.B) {\n    p := Payload{ID: 1, Name: \"test\", Value: 3.14}\n    for i := 0; i < b.N; i++ {\n        json.Marshal(p)\n    }\n}\n\nfunc BenchmarkUnmarshal(b *testing.B) {\n    data := []byte(`{\"id\":1,\"name\":\"test\",\"value\":3.14}`)\n    var p Payload\n    for n := 0; n < b.N; n++ {\n        json.Unmarshal(data, &p)\n    }\n}\n\nfunc BenchmarkRoundTrip(b *testing.B) {\n    p := Payload{ID: 1, Name: \"test\", Value: 3.14}\n    for i := 0; i < b.N; i++ {\n        data, _ := json.Marshal(p)\n        var p2 Payload\n        json.Unmarshal(data, &p2)\n    }\n}\n```\n\nProvide the modernized benchmark code.",
+      "trap": "Go 1.24 introduced b.Loop() which replaces the manual for i := 0; i < b.N; i++ pattern. Without the skill, the model likely doesn't know about b.Loop().",
+      "assertions": [
+        { "id": "5.1", "text": "Replaces for i := 0; i < b.N; i++ with for b.Loop() in BenchmarkMarshal" },
+        { "id": "5.2", "text": "Replaces for n := 0; n < b.N; n++ with for b.Loop() in BenchmarkUnmarshal" },
+        { "id": "5.3", "text": "Replaces the b.N loop in BenchmarkRoundTrip too" },
+        { "id": "5.4", "text": "Does NOT keep any b.N iteration pattern in the output" },
+        { "id": "5.5", "text": "Preserves benchmark function names and logic" }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "automaxprocs-removal",
+      "prompt": "We just upgraded to Go 1.25. Review our main.go for modernization opportunities.\n\n```go\n// go.mod\nmodule example.com/worker\ngo 1.25\n\nrequire (\n    go.uber.org/automaxprocs v1.5.3\n    go.uber.org/zap v1.27.0\n)\n\n// main.go\npackage main\n\nimport (\n    \"fmt\"\n    \"sync\"\n\n    _ \"go.uber.org/automaxprocs\"\n)\n\nfunc main() {\n    var wg sync.WaitGroup\n    items := []string{\"a\", \"b\", \"c\", \"d\", \"e\"}\n\n    for _, item := range items {\n        wg.Add(1)\n        go func() {\n            defer wg.Done()\n            process(item)\n        }()\n    }\n    wg.Wait()\n}\n\nfunc process(item string) {\n    fmt.Println(\"processing\", item)\n}\n```\n\nSuggest all modernization improvements.",
+      "trap": "Go 1.25 has built-in container-aware GOMAXPROCS, making uber-go/automaxprocs unnecessary. The model must know this Go 1.25 addition — without the skill it will likely treat automaxprocs as still needed and only suggest sync.WaitGroup.Go.",
+      "assertions": [
+        { "id": "6.1", "text": "Suggests removing go.uber.org/automaxprocs import and dependency" },
+        { "id": "6.2", "text": "Explains that Go 1.25 has built-in container-aware GOMAXPROCS (or cgroup CPU limits awareness)" },
+        { "id": "6.3", "text": "Suggests sync.WaitGroup.Go to replace Add/go func/Done pattern" },
+        { "id": "6.4", "text": "Does NOT suggest keeping the automaxprocs dependency as still necessary" },
+        { "id": "6.5", "text": "Suggests running go mod tidy to remove the dependency from go.sum" }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "cmp-or-chained-defaults",
+      "prompt": "Clean up this configuration loading code. We're on Go 1.22. The nested if/else chains for default values are hard to read.\n\n```go\npackage config\n\nimport \"os\"\n\ntype Config struct {\n    Host     string\n    Port     string\n    LogLevel string\n    Region   string\n    Mode     string\n}\n\nfunc LoadConfig() Config {\n    host := os.Getenv(\"HOST\")\n    if host == \"\" {\n        host = os.Getenv(\"HOSTNAME\")\n    }\n    if host == \"\" {\n        host = os.Getenv(\"SERVICE_HOST\")\n    }\n    if host == \"\" {\n        host = \"localhost\"\n    }\n\n    port := os.Getenv(\"PORT\")\n    if port == \"\" {\n        port = os.Getenv(\"HTTP_PORT\")\n    }\n    if port == \"\" {\n        port = \"8080\"\n    }\n\n    logLevel := os.Getenv(\"LOG_LEVEL\")\n    if logLevel == \"\" {\n        logLevel = os.Getenv(\"LOGLEVEL\")\n    }\n    if logLevel == \"\" {\n        logLevel = \"info\"\n    }\n\n    region := os.Getenv(\"AWS_REGION\")\n    if region == \"\" {\n        region = os.Getenv(\"REGION\")\n    }\n    if region == \"\" {\n        region = \"us-east-1\"\n    }\n\n    mode := os.Getenv(\"APP_MODE\")\n    if mode == \"\" {\n        mode = \"production\"\n    }\n\n    return Config{\n        Host:     host,\n        Port:     port,\n        LogLevel: logLevel,\n        Region:   region,\n        Mode:     mode,\n    }\n}\n```\n\nProvide the cleaned-up code.",
+      "trap": "Go 1.22 introduced cmp.Or(a, b, c...) which returns the first non-zero value. It collapses multi-step default chains to single lines. Without the skill, the model will likely keep the if/else chains or use a custom helper function.",
+      "assertions": [
+        { "id": "7.1", "text": "Uses cmp.Or for at least one default value chain" },
+        { "id": "7.2", "text": "Collapses the 3-step host default to a single cmp.Or call" },
+        { "id": "7.3", "text": "Import includes the cmp package" },
+        { "id": "7.4", "text": "All multi-step defaults converted to cmp.Or (host, port, logLevel, region)" },
+        { "id": "7.5", "text": "Result is functionally equivalent (same fallback order)" },
+        { "id": "7.6", "text": "Does NOT introduce a custom helper function for defaults" }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "addcleanup-vs-setfinalizer",
+      "prompt": "Review this resource management code for Go 1.24 best practices.\n\n```go\npackage pool\n\nimport (\n    \"database/sql\"\n    \"fmt\"\n    \"runtime\"\n)\n\ntype ManagedConn struct {\n    db   *sql.DB\n    name string\n    dsn  string\n}\n\nfunc NewManagedConn(dsn, name string) (*ManagedConn, error) {\n    db, err := sql.Open(\"postgres\", dsn)\n    if err != nil {\n        return nil, fmt.Errorf(\"opening db: %w\", err)\n    }\n    mc := &ManagedConn{db: db, name: name, dsn: dsn}\n    runtime.SetFinalizer(mc, func(c *ManagedConn) {\n        c.db.Close()\n    })\n    return mc, nil\n}\n\ntype TempFile struct {\n    path string\n    fd   int\n}\n\nfunc NewTempFile(path string, fd int) *TempFile {\n    tf := &TempFile{path: path, fd: fd}\n    runtime.SetFinalizer(tf, func(f *TempFile) {\n        syscallClose(f.fd)\n        osRemove(f.path)\n    })\n    return tf\n}\n\nfunc syscallClose(fd int) {}\nfunc osRemove(path string) {}\n```\n\nModernize the cleanup pattern. Explain why the current approach has problems.",
+      "trap": "New Go code should consider runtime.AddCleanup instead of runtime.SetFinalizer because it is less error-prone. The key API difference: AddCleanup takes the resource as a separate argument (not the whole object). Without the skill the model is unlikely to know AddCleanup exists or that SetFinalizer's cycle restriction is a major problem.",
+      "assertions": [
+        { "id": "8.1", "text": "Replaces runtime.SetFinalizer with runtime.AddCleanup" },
+        { "id": "8.2", "text": "AddCleanup cleanup function receives the resource (db/*sql.DB or fd/int) as a separate argument, NOT the whole wrapper struct" },
+        { "id": "8.3", "text": "Explains that SetFinalizer prevents GC when the object holds a reference to itself or another object with a finalizer (cycle restriction)" },
+        { "id": "8.4", "text": "Does NOT pass ManagedConn or TempFile directly as the resource to AddCleanup" },
+        { "id": "8.5", "text": "Correctly attributes runtime.AddCleanup to Go 1.24 (or notes it is the modern replacement)" }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "http-mux-migration",
+      "prompt": "We want to remove our gorilla/mux dependency. Migrate this REST API router to stdlib. We're on Go 1.22.\n\n```go\npackage api\n\nimport (\n    \"encoding/json\"\n    \"net/http\"\n\n    \"github.com/gorilla/mux\"\n)\n\nfunc SetupRouter() *mux.Router {\n    r := mux.NewRouter()\n    r.HandleFunc(\"/api/users\", listUsers).Methods(\"GET\")\n    r.HandleFunc(\"/api/users\", createUser).Methods(\"POST\")\n    r.HandleFunc(\"/api/users/{id}\", getUser).Methods(\"GET\")\n    r.HandleFunc(\"/api/users/{id}\", updateUser).Methods(\"PUT\")\n    r.HandleFunc(\"/api/users/{id}\", deleteUser).Methods(\"DELETE\")\n    r.HandleFunc(\"/api/health\", healthCheck).Methods(\"GET\")\n    return r\n}\n\nfunc getUser(w http.ResponseWriter, r *http.Request) {\n    vars := mux.Vars(r)\n    id := vars[\"id\"]\n    json.NewEncoder(w).Encode(map[string]string{\"id\": id})\n}\n\nfunc listUsers(w http.ResponseWriter, r *http.Request)  { json.NewEncoder(w).Encode([]string{\"user1\", \"user2\"}) }\nfunc createUser(w http.ResponseWriter, r *http.Request)  { w.WriteHeader(http.StatusCreated) }\nfunc updateUser(w http.ResponseWriter, r *http.Request)  { w.WriteHeader(http.StatusOK) }\nfunc deleteUser(w http.ResponseWriter, r *http.Request)  { w.WriteHeader(http.StatusNoContent) }\nfunc healthCheck(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }\n```\n\nProvide the complete migrated code.",
+      "trap": "Go 1.22 added method+path pattern routing to net/http. The exact syntax is 'METHOD /path/{param}' as the pattern string. mux.Vars(r) becomes r.PathValue('id'). Without the skill, the model might not use the correct syntax or might suggest a different third-party router.",
+      "assertions": [
+        { "id": "9.1", "text": "Uses http.NewServeMux() instead of mux.NewRouter()" },
+        { "id": "9.2", "text": "Uses method prefix in patterns like 'GET /api/users/{id}'" },
+        { "id": "9.3", "text": "Uses r.PathValue(\"id\") instead of mux.Vars(r)" },
+        { "id": "9.4", "text": "All 6 routes migrated with correct method prefixes (GET, POST, PUT, DELETE)" },
+        { "id": "9.5", "text": "No gorilla/mux import remains" },
+        { "id": "9.6", "text": "Return type changes from *mux.Router to *http.ServeMux" }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "synctest-flaky-fix",
+      "prompt": "This concurrent test is flaky in CI — it passes locally but fails ~20% of the time in GitHub Actions. Fix it properly. We're on Go 1.25.\n\n```go\npackage pubsub\n\nimport (\n    \"sync\"\n    \"testing\"\n    \"time\"\n)\n\ntype Broker struct {\n    mu   sync.RWMutex\n    subs map[string][]chan string\n}\n\nfunc NewBroker() *Broker {\n    return &Broker{subs: make(map[string][]chan string)}\n}\n\nfunc (b *Broker) Subscribe(topic string) <-chan string {\n    b.mu.Lock()\n    defer b.mu.Unlock()\n    ch := make(chan string, 10)\n    b.subs[topic] = append(b.subs[topic], ch)\n    return ch\n}\n\nfunc (b *Broker) Publish(topic, msg string) {\n    b.mu.RLock()\n    defer b.mu.RUnlock()\n    for _, ch := range b.subs[topic] {\n        ch <- msg\n    }\n}\n\nfunc TestBrokerPubSub(t *testing.T) {\n    b := NewBroker()\n    ch1 := b.Subscribe(\"events\")\n    ch2 := b.Subscribe(\"events\")\n\n    go b.Publish(\"events\", \"hello\")\n\n    time.Sleep(50 * time.Millisecond) // flaky!\n\n    got1 := <-ch1\n    got2 := <-ch2\n\n    if got1 != \"hello\" {\n        t.Errorf(\"ch1: got %q, want %q\", got1, \"hello\")\n    }\n    if got2 != \"hello\" {\n        t.Errorf(\"ch2: got %q, want %q\", got2, \"hello\")\n    }\n}\n\nfunc TestBrokerMultiTopic(t *testing.T) {\n    b := NewBroker()\n    events := b.Subscribe(\"events\")\n    logs := b.Subscribe(\"logs\")\n\n    go func() {\n        b.Publish(\"events\", \"event1\")\n        b.Publish(\"logs\", \"log1\")\n    }()\n\n    time.Sleep(100 * time.Millisecond) // flaky!\n\n    if got := <-events; got != \"event1\" {\n        t.Errorf(\"events: got %q, want %q\", got, \"event1\")\n    }\n    if got := <-logs; got != \"log1\" {\n        t.Errorf(\"logs: got %q, want %q\", got, \"log1\")\n    }\n}\n```\n\nFix the flakiness without increasing sleep durations.",
+      "trap": "Go 1.25 introduced testing/synctest.Test which provides deterministic concurrent testing with synctest.Wait(). The natural fix is to increase sleep, use channels for sync, or add retries. The skill teaches synctest.Test as the modern solution. Note: synctest.Run was the old Go 1.24 experimental API — use synctest.Test in Go 1.25+.",
+      "assertions": [
+        { "id": "10.1", "text": "Uses synctest.Test (NOT the old Go 1.24 experimental synctest.Run API)" },
+        { "id": "10.2", "text": "Uses synctest.Wait() for goroutine synchronization" },
+        { "id": "10.3", "text": "Removes all time.Sleep calls" },
+        { "id": "10.4", "text": "No flaky timing dependencies remain" },
+        { "id": "10.5", "text": "Correctly imports testing/synctest" },
+        { "id": "10.6", "text": "Both tests converted (TestBrokerPubSub and TestBrokerMultiTopic)" }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "waitgroup-go-loopvar",
+      "prompt": "Modernize this concurrent processing code. We're on Go 1.25.\n\n```go\npackage worker\n\nimport (\n    \"context\"\n    \"fmt\"\n    \"sync\"\n    \"testing\"\n)\n\nfunc ProcessAll(items []string) error {\n    var wg sync.WaitGroup\n    errCh := make(chan error, len(items))\n\n    for _, item := range items {\n        item := item // shadow copy for closure safety\n        wg.Add(1)\n        go func() {\n            defer wg.Done()\n            if err := process(item); err != nil {\n                errCh <- err\n            }\n        }()\n    }\n\n    wg.Wait()\n    close(errCh)\n\n    for err := range errCh {\n        return err\n    }\n    return nil\n}\n\nfunc RunBatch(tasks []func()) {\n    var wg sync.WaitGroup\n    for _, task := range tasks {\n        task := task\n        wg.Add(1)\n        go func() {\n            defer wg.Done()\n            task()\n        }()\n    }\n    wg.Wait()\n}\n\nfunc TestProcess(t *testing.T) {\n    ctx := context.Background()\n    result, err := processWithContext(ctx, \"test\")\n    if err != nil {\n        t.Fatal(err)\n    }\n    fmt.Println(result)\n}\n\nfunc process(item string) error { return nil }\nfunc processWithContext(ctx context.Context, s string) (string, error) { return s, nil }\n```\n\nProvide the fully modernized code.",
+      "trap": "Go 1.25 introduced sync.WaitGroup.Go. Go 1.22+ fixed loop variable semantics (v := v copies are unnecessary). Go 1.24+ has t.Context(). Without the skill, the model may not know WaitGroup.Go exists and may keep the shadow copies.",
+      "assertions": [
+        { "id": "11.1", "text": "Replaces Add/go func/Done pattern with wg.Go(func() { ... })" },
+        { "id": "11.2", "text": "Removes wg.Add(1) calls" },
+        { "id": "11.3", "text": "Removes defer wg.Done() calls" },
+        { "id": "11.4", "text": "Removes item := item loop variable shadow copies" },
+        { "id": "11.5", "text": "Explains Go 1.22+ loop variable semantics make copies unnecessary" },
+        { "id": "11.6", "text": "Replaces context.Background() with t.Context() in test" },
+        { "id": "11.7", "text": "Preserves WaitGroup.Wait() call" }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "timer-gc-greenteagc",
+      "prompt": "We upgraded to Go 1.26. Review this code for things we can clean up.\n\n```go\n// go.mod\nmodule example.com/scheduler\ngo 1.26\n\n// scheduler.go\npackage scheduler\n\nimport (\n    \"os\"\n    \"runtime/debug\"\n    \"time\"\n)\n\nfunc init() {\n    // Tune GC for lower latency\n    debug.SetGCPercent(50)\n    debug.SetMemoryLimit(2 << 30) // 2GB\n    os.Setenv(\"GOGC\", \"50\")\n}\n\nfunc RunAfter(d time.Duration, fn func()) {\n    timer := time.NewTimer(d)\n    defer timer.Stop() // prevent timer leak\n    <-timer.C\n    fn()\n}\n\nfunc PeriodicTask(interval time.Duration, fn func()) chan struct{} {\n    done := make(chan struct{})\n    go func() {\n        ticker := time.NewTicker(interval)\n        defer ticker.Stop() // prevent ticker leak\n        for {\n            select {\n            case <-ticker.C:\n                fn()\n            case <-done:\n                return\n            }\n        }\n    }()\n    return done\n}\n\nfunc Debounce(d time.Duration, fn func()) func() {\n    var timer *time.Timer\n    return func() {\n        if timer != nil {\n            timer.Stop()\n        }\n        timer = time.AfterFunc(d, fn)\n    }\n}\n\nfunc Timeout(d time.Duration) <-chan time.Time {\n    timer := time.NewTimer(d)\n    defer timer.Stop()\n    return timer.C\n}\n```\n\nSuggest all modernization opportunities.",
+      "trap": "Go 1.23+ timers/tickers are GC'd without Stop(). The Stop() in PeriodicTask is still needed for correctness. Go 1.26's Green Tea GC (10-40% overhead reduction) may make manual tuning unnecessary. go fix ./... is available in Go 1.26.",
+      "assertions": [
+        { "id": "12.1", "text": "Identifies that some defer timer.Stop() calls are unnecessary with Go 1.23+" },
+        { "id": "12.2", "text": "Explains the timer/ticker GC behavior change (collected without Stop)" },
+        { "id": "12.3", "text": "Suggests reviewing GC tuning (SetGCPercent/SetMemoryLimit) due to Green Tea GC" },
+        { "id": "12.4", "text": "Mentions Green Tea GC's 10-40% overhead reduction" },
+        { "id": "12.5", "text": "Does NOT suggest removing Stop() from PeriodicTask ticker (needed for correctness)" },
+        { "id": "12.6", "text": "Suggests go fix ./... for automated modernization (Go 1.26)" },
+        { "id": "12.7", "text": "Correctly distinguishes between Stop for GC (removable) and Stop for correctness (keep)" }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "go126-errors-astype-enhanced-new",
+      "prompt": "Modernize this Go 1.26 error handling and pointer helper code.\n\n```go\npackage service\n\nimport (\n    \"errors\"\n    \"fmt\"\n    \"net\"\n    \"os\"\n    \"time\"\n)\n\nfunc ptr[T any](v T) *T { return &v }\n\ntype ServiceConfig struct {\n    Timeout  *time.Duration\n    Retries  *int\n    Verbose  *bool\n}\n\nfunc DefaultConfig() ServiceConfig {\n    return ServiceConfig{\n        Timeout: ptr(30 * time.Second),\n        Retries: ptr(3),\n        Verbose: ptr(false),\n    }\n}\n\nfunc HandleError(err error) string {\n    var pathErr *os.PathError\n    if errors.As(err, &pathErr) {\n        return fmt.Sprintf(\"path error: %s\", pathErr.Path)\n    }\n\n    var netErr *net.OpError\n    if errors.As(err, &netErr) {\n        return fmt.Sprintf(\"net error: %s %s\", netErr.Op, netErr.Net)\n    }\n\n    var dnsErr *net.DNSError\n    if errors.As(err, &dnsErr) {\n        return fmt.Sprintf(\"dns error: %s\", dnsErr.Name)\n    }\n\n    return err.Error()\n}\n```\n\nApply all Go 1.26 modernizations. Provide the updated code.",
+      "trap": "Go 1.26 introduced errors.AsType[T]() which replaces the verbose var+errors.As pattern with a single-line if. Go 1.26 also enhanced new() to accept an initial value, replacing the ptr[T] helper. Without the skill, the model likely won't know either feature exists.",
+      "assertions": [
+        { "id": "13.1", "text": "Uses errors.AsType[*os.PathError](err) or similar generic form instead of var+errors.As" },
+        { "id": "13.2", "text": "Replaces the ptr[T] helper function with new() that accepts an initial value (e.g., new(30 * time.Second))" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+[
+  {
+    "id": 1,
+    "name": "constructor-injection-not-globals",
+    "description": "Tests that dependencies are injected via constructors, not global variables or init()",
+    "prompt": "I have a UserService that needs a database connection and a logger. What's the best way to set this up in Go? I was thinking of using a package-level var for the database.",
+    "trap": "Without the skill, the model may accept the global variable approach or use init() for setup. The skill explicitly forbids globals and init() for service setup.",
+    "assertions": [
+      {"id": "1.1", "text": "Uses constructor injection (NewUserService taking dependencies as parameters)"},
+      {"id": "1.2", "text": "Explicitly advises against package-level variables for service dependencies"},
+      {"id": "1.3", "text": "Explains why globals are problematic (untestable, hidden dependencies, or coupling)"},
+      {"id": "1.4", "text": "Does NOT use init() for service initialization"},
+      {"id": "1.5", "text": "Returns a concrete struct pointer from the constructor, not an interface"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "interface-defined-at-consumer",
+    "description": "Tests that interfaces are defined where consumed, not where implemented",
+    "prompt": "I'm building a Go service that uses a UserStore. Should I define the UserStore interface in the same package as the PostgreSQL implementation or somewhere else? Show me the correct pattern.",
+    "trap": "Without the skill, the model often defines the interface in the implementation package (next to the struct). The skill requires interfaces to be defined at the consumption site.",
+    "assertions": [
+      {"id": "2.1", "text": "Defines the interface in the consuming package (e.g. service package), not the implementation package"},
+      {"id": "2.2", "text": "Explains the principle: accept interfaces, return structs"},
+      {"id": "2.3", "text": "The implementation package returns a concrete struct pointer"},
+      {"id": "2.4", "text": "The consumer depends on its own locally-defined interface"},
+      {"id": "2.5", "text": "Does NOT have the implementation package import the consumer's interface"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "container-not-passed-as-dependency",
+    "description": "Tests that the DI container is never passed as a dependency (service locator anti-pattern)",
+    "prompt": "I'm using samber/do for DI in my Go project. My UserService needs a Database and a Mailer. Should I pass the do.Injector to UserService so it can look up what it needs?",
+    "trap": "Without the skill, the model may accept passing the injector/container as a dependency. The skill explicitly forbids this as the service locator anti-pattern.",
+    "assertions": [
+      {"id": "3.1", "text": "Advises against passing the injector/container as a dependency"},
+      {"id": "3.2", "text": "Identifies this as the service locator anti-pattern"},
+      {"id": "3.3", "text": "Shows that the Injector should only exist at the composition root (main or app startup)"},
+      {"id": "3.4", "text": "Shows UserService receiving Database and Mailer directly as constructor parameters"},
+      {"id": "3.5", "text": "Shows the provider function using do.MustInvoke inside the provider, not inside UserService methods"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "manual-di-for-small-projects",
+    "description": "Tests that small projects use manual DI, not a library",
+    "prompt": "I'm building a small Go REST API with about 5 services: config, database, user repository, user service, and HTTP handler. What DI approach should I use?",
+    "trap": "Without the skill, the model may recommend a DI library like Wire or Fx for any project. The skill says small projects (< 10 services) should use manual constructor injection.",
+    "assertions": [
+      {"id": "4.1", "text": "Recommends manual constructor injection for a project with only 5 services"},
+      {"id": "4.2", "text": "Does NOT recommend a DI library as the primary approach"},
+      {"id": "4.3", "text": "Shows wiring in main() with explicit constructor calls in dependency order"},
+      {"id": "4.4", "text": "Initializes infrastructure first, then repositories, then services, then transport"},
+      {"id": "4.5", "text": "Mentions that a DI library becomes worthwhile at 10-20+ services"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "di-library-selection-judgment",
+    "description": "Tests correct DI library recommendation based on project characteristics",
+    "prompt": "I'm building a large Go microservice with 40+ services, complex lifecycle management (health checks, graceful shutdown), and I want compile-time type safety. My team is comfortable with Go generics. Which DI library should I use?",
+    "trap": "Without the skill, the model may recommend uber-go/fx (most popular) or google/wire. The skill's decision table shows samber/do matches all these criteria: any size, compile-time generics, built-in lifecycle, health checks, shutdown.",
+    "assertions": [
+      {"id": "5.1", "text": "Recommends samber/do as a strong fit given the criteria (generics, lifecycle, compile-time safety)"},
+      {"id": "5.2", "text": "Explains why uber-go/fx is a valid alternative but uses reflection (runtime errors, not compile-time)"},
+      {"id": "5.3", "text": "Explains why google/wire lacks built-in lifecycle management (no health checks, no shutdown)"},
+      {"id": "5.4", "text": "Mentions that samber/do requires Go 1.18+ for generics"},
+      {"id": "5.5", "text": "Discusses at least 3 DI library options from the decision table"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "wire-build-constraint-and-codegen",
+    "description": "Tests proper google/wire setup with wireinject build constraint",
+    "prompt": "Set up google/wire for a Go application with Config, Database, UserStore, and UserService. Show the wire.go file and explain what happens when I run wire.",
+    "trap": "Without the skill, the model may forget the //go:build wireinject build constraint or not explain that wire.Build generates plain Go constructors.",
+    "assertions": [
+      {"id": "6.1", "text": "Includes //go:build wireinject build constraint in the wire.go file"},
+      {"id": "6.2", "text": "Uses wire.Build with all provider functions listed"},
+      {"id": "6.3", "text": "Shows wire.Bind for binding interface to implementation"},
+      {"id": "6.4", "text": "Explains that wire generates wire_gen.go with plain constructor calls"},
+      {"id": "6.5", "text": "Mentions that wire_gen.go must not be edited manually"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "fx-lifecycle-hooks-pattern",
+    "description": "Tests proper uber-go/fx lifecycle hook usage for startup/shutdown",
+    "prompt": "Set up a database connection using uber-go/fx that connects on startup and cleanly closes on shutdown.",
+    "trap": "Without the skill, the model may open and close the connection manually instead of using fx.Lifecycle hooks. The skill requires OnStart/OnStop hooks.",
+    "assertions": [
+      {"id": "7.1", "text": "Uses fx.Lifecycle parameter in the provider function"},
+      {"id": "7.2", "text": "Registers OnStart hook for establishing the database connection"},
+      {"id": "7.3", "text": "Registers OnStop hook for closing the database connection"},
+      {"id": "7.4", "text": "Uses lc.Append(fx.Hook{...}) pattern"},
+      {"id": "7.5", "text": "OnStart and OnStop take context.Context as parameter"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "testing-with-di-mock-injection",
+    "description": "Tests that DI enables testing by injecting mocks at the interface boundary",
+    "prompt": "Write a test for a UserService that depends on a UserStore interface. The test should verify that GetUser returns the correct user when found and an error when not found. Don't use any DI library.",
+    "trap": "Without the skill, the model may test with a real database or skip the mock pattern. The skill requires mocking at the interface boundary.",
+    "assertions": [
+      {"id": "8.1", "text": "Creates a mock implementation of the UserStore interface"},
+      {"id": "8.2", "text": "Injects the mock into UserService via the constructor (NewUserService)"},
+      {"id": "8.3", "text": "Tests both the success path (user found) and the error path (not found)"},
+      {"id": "8.4", "text": "Does NOT use a real database connection in the test"},
+      {"id": "8.5", "text": "The mock is defined in the test file, not as a package-level or global variable"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "shallow-dependency-graph",
+    "description": "Tests that deep dependency chains are flagged as a design problem",
+    "prompt": "My Go application has this dependency chain: Config -> Database -> UserRepo -> UserService -> NotificationService -> OrderService -> PaymentService -> APIHandler. Is this a good architecture?",
+    "trap": "Without the skill, the model may accept this deep chain as normal layered architecture. The skill says deep chains signal design problems and recommends flattening.",
+    "assertions": [
+      {"id": "9.1", "text": "Identifies the deep dependency chain as a design problem"},
+      {"id": "9.2", "text": "Recommends flattening the dependency graph"},
+      {"id": "9.3", "text": "Suggests that most services should depend on repositories and config directly, not transitively through other services"},
+      {"id": "9.4", "text": "Explains the negative consequences of deep chains (fragility, hard to test, or hard to maintain)"},
+      {"id": "9.5", "text": "Proposes a concrete restructuring where OrderService and PaymentService don't depend on each other transitively"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "one-container-per-app-not-per-request",
+    "description": "Tests that a DI container is created once per application, not per request",
+    "prompt": "I'm building a Go HTTP API with samber/do. In each HTTP handler, I'm creating a new do.New() injector, providing all services, then invoking the one I need. This way each request gets fresh services. Is this correct?",
+    "trap": "Without the skill, the model may accept the per-request container pattern as reasonable isolation. The skill explicitly forbids creating a new container per request.",
+    "assertions": [
+      {"id": "10.1", "text": "Identifies creating a new container per request as a mistake"},
+      {"id": "10.2", "text": "Recommends one container per application created at startup"},
+      {"id": "10.3", "text": "Explains the performance or correctness problem with per-request containers (recreating singletons, no connection reuse)"},
+      {"id": "10.4", "text": "Suggests using scopes for request-level isolation if needed"},
+      {"id": "10.5", "text": "Shows the container being created once in main() and services injected into handlers"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "lazy-vs-eager-initialization",
+    "description": "Tests knowledge of lazy initialization preference and singleton vs transient distinction",
+    "prompt": "When using a DI container in Go, should all my services be created at application startup? I have a database pool, a cache client, and some request processing services.",
+    "trap": "Without the skill, the model may recommend eager initialization for everything. The skill prefers lazy initialization and distinguishes singletons for stateful services from transients for stateless ones.",
+    "assertions": [
+      {"id": "11.1", "text": "Recommends lazy initialization (services created on first use, not all at startup)"},
+      {"id": "11.2", "text": "Recommends singletons for stateful services like database connections and cache clients"},
+      {"id": "11.3", "text": "Recommends transients (or factories) for stateless request processing services"},
+      {"id": "11.4", "text": "Explains why lazy loading is beneficial (unused services are never created, faster startup)"},
+      {"id": "11.5", "text": "Notes which DI libraries support lazy loading (samber/do, fx) vs which don't (wire is all eager)"}
+    ]
+  }
+]

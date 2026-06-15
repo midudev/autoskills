@@ -1,0 +1,142 @@
+[
+  {
+    "id": 1,
+    "name": "context-background-in-handler",
+    "description": "Tests whether the model propagates r.Context() instead of creating context.Background() inside an HTTP handler",
+    "prompt": "Write a Go HTTP handler for GET /orders/:id that fetches an order from a database and calls an external payment service to get payment status. Both operations should be cancellable if the client disconnects. Use database/sql and net/http.",
+    "trap": "Model might create context.Background() inside the handler instead of using r.Context(), breaking cancellation chain",
+    "assertions": [
+      {"id": "1.1", "text": "Uses r.Context() to obtain the request context, NOT context.Background() inside the handler"},
+      {"id": "1.2", "text": "Passes the same context (or a derived child) to the database query (QueryRowContext or similar *Context variant)"},
+      {"id": "1.3", "text": "Passes the same context to the external HTTP call via http.NewRequestWithContext"},
+      {"id": "1.4", "text": "Does NOT use http.NewRequest (without context) for the external service call"},
+      {"id": "1.5", "text": "Checks ctx.Err() or handles context cancellation when the client disconnects"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "cancel-leak-timeout",
+    "description": "Tests whether the model defers cancel() immediately after WithTimeout to prevent resource leaks",
+    "prompt": "Write a Go function that retries an HTTP request up to 3 times with a 5-second timeout per attempt. Each attempt should have its own independent timeout. Return the response body as []byte or the last error.",
+    "trap": "Model might forget to defer cancel() after WithTimeout, or create a single timeout for all retries instead of per-attempt",
+    "assertions": [
+      {"id": "2.1", "text": "Creates a new context.WithTimeout for each retry attempt (not one timeout for all retries)"},
+      {"id": "2.2", "text": "Calls defer cancel() (or cancel() before next iteration) for every WithTimeout call"},
+      {"id": "2.3", "text": "Does NOT discard the cancel function with _ (e.g., ctx, _ = context.WithTimeout(...))"},
+      {"id": "2.4", "text": "Uses http.NewRequestWithContext to attach the per-attempt timeout context"},
+      {"id": "2.5", "text": "Accepts a parent context parameter and derives timeouts from it"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "context-value-key-type",
+    "description": "Tests whether the model uses unexported key types for context values instead of string keys",
+    "prompt": "Write Go middleware that extracts a tenant ID from the X-Tenant-ID header and makes it available to downstream handlers. Also write a helper function to retrieve the tenant ID from the context. Other packages in the codebase will import and use this helper.",
+    "trap": "Model might use a plain string key like context.WithValue(ctx, \"tenant_id\", ...) which causes namespace collisions across packages",
+    "assertions": [
+      {"id": "3.1", "text": "Uses an unexported type for the context key (e.g., type contextKey string or type tenantKey struct{})"},
+      {"id": "3.2", "text": "Does NOT use a plain string as the context key (e.g., context.WithValue(ctx, \"tenant_id\", ...))"},
+      {"id": "3.3", "text": "Provides a typed getter function (e.g., TenantIDFromContext) that returns the value with proper type assertion"},
+      {"id": "3.4", "text": "Provides a setter function or the middleware injects the value using the unexported key"},
+      {"id": "3.5", "text": "The getter handles the case where the value is missing from the context (returns zero value + bool or error)"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "context-in-struct-trap",
+    "description": "Tests whether the model avoids storing context.Context in a struct field",
+    "prompt": "Design a Go Worker struct that processes jobs from a channel. The worker should support graceful shutdown — when told to stop, it finishes the current job and exits. Write NewWorker, Start, and Stop methods.",
+    "trap": "Model might store ctx context.Context as a struct field for shutdown signaling instead of passing it through function parameters",
+    "assertions": [
+      {"id": "4.1", "text": "Does NOT store context.Context as a field in the Worker struct"},
+      {"id": "4.2", "text": "Passes context as a parameter to Start() or Run() method (e.g., Start(ctx context.Context))"},
+      {"id": "4.3", "text": "Uses context cancellation or a done channel for graceful shutdown signaling"},
+      {"id": "4.4", "text": "Listens to ctx.Done() in a select statement to detect shutdown"},
+      {"id": "4.5", "text": "ctx is the first parameter where it appears, named ctx context.Context"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "without-cancel-background-work",
+    "description": "Tests whether the model uses context.WithoutCancel for background work that must outlive the request",
+    "prompt": "Write a Go HTTP handler that processes a payment. After successfully charging the customer, it must send an audit log event to an external audit service asynchronously. The audit log MUST complete even if the client disconnects immediately after receiving the 200 response. The audit log needs the trace_id from the request context for correlation. Target Go 1.21+.",
+    "trap": "Model might use context.Background() (losing trace_id) or pass r.Context() directly to the goroutine (cancelled when handler returns)",
+    "assertions": [
+      {"id": "5.1", "text": "Uses context.WithoutCancel to create a context for the audit goroutine"},
+      {"id": "5.2", "text": "Does NOT pass r.Context() directly to the background audit goroutine (it gets cancelled when the handler returns)"},
+      {"id": "5.3", "text": "Does NOT use context.Background() for the audit goroutine (that would lose trace_id and other values)"},
+      {"id": "5.4", "text": "The audit goroutine preserves request-scoped values (trace_id) from the original context"},
+      {"id": "5.5", "text": "Launches the audit as a separate goroutine (go keyword) so the handler can return immediately"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "nested-timeout-shorter-wins",
+    "description": "Tests understanding that nested timeouts always use the shorter deadline",
+    "prompt": "Write a Go service method that calls two downstream services sequentially. The overall operation has a 10-second timeout. The first call (to a fast cache) should have a 2-second timeout. The second call (to a slow database) should have an 8-second timeout. If the cache is slow, the database should still get its full 8 seconds. Implement this timeout hierarchy.",
+    "trap": "Model might naively nest WithTimeout(parentCtx, 8s) under a parent that already has 10s-minus-elapsed, not realizing that if the first call takes 2 seconds the parent only has 8s left — or worse, create child with longer timeout than parent remaining",
+    "assertions": [
+      {"id": "6.1", "text": "Creates the overall 10-second timeout from the parent context"},
+      {"id": "6.2", "text": "Creates the cache timeout as a child of the overall context (so the 2s cache timeout is bounded by the 10s overall)"},
+      {"id": "6.3", "text": "Acknowledges or handles that the database timeout is bounded by whatever time remains on the parent (not a fresh 8 seconds independent of the parent)"},
+      {"id": "6.4", "text": "Defers cancel() for every WithTimeout call"},
+      {"id": "6.5", "text": "Does NOT create independent context.Background() timeouts that bypass the overall deadline"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "context-todo-vs-background",
+    "description": "Tests correct usage of context.TODO() vs context.Background()",
+    "prompt": "I'm refactoring a Go codebase to add context support. Many functions don't accept context yet. Write a migration plan showing how to incrementally add context.Context to this call chain: main() -> runServer() -> handleRequest() -> processOrder() -> saveToDatabase(). Some functions already accept context, others don't yet. Show intermediate steps with code.",
+    "trap": "Model might use context.Background() everywhere as a placeholder. Skill teaches context.TODO() is the correct placeholder when a function needs a context but doesn't have one yet",
+    "assertions": [
+      {"id": "7.1", "text": "Uses context.TODO() (not context.Background()) as the temporary placeholder in functions not yet fully migrated"},
+      {"id": "7.2", "text": "Uses context.Background() only at the true top level (main function or test setup)"},
+      {"id": "7.3", "text": "Shows a migration path where context.TODO() is gradually replaced as callers are updated"},
+      {"id": "7.4", "text": "Context is always the first parameter, named ctx context.Context"},
+      {"id": "7.5", "text": "Does NOT pass nil as a context value at any point in the migration"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "db-context-variants",
+    "description": "db.BeginTx (not db.Begin) is required for cancellable transactions; context must flow to every db call including transaction start",
+    "prompt": "Review this Go repository method and identify all context-related issues:\n\n```go\nfunc (r *UserRepository) TransferCredits(ctx context.Context, fromID, toID string, amount int) error {\n    tx, err := r.db.Begin()\n    if err != nil {\n        return fmt.Errorf(\"begin tx: %w\", err)\n    }\n    defer tx.Rollback()\n\n    _, err = tx.ExecContext(ctx, \"UPDATE users SET credits = credits - $1 WHERE id = $2\", amount, fromID)\n    if err != nil {\n        return fmt.Errorf(\"debit: %w\", err)\n    }\n\n    _, err = tx.ExecContext(ctx, \"UPDATE users SET credits = credits + $1 WHERE id = $2\", amount, toID)\n    if err != nil {\n        return fmt.Errorf(\"credit: %w\", err)\n    }\n\n    return tx.Commit()\n}\n```\n\nWhat is wrong with how context is used? Fix it.",
+    "trap": "The model sees ExecContext being used and may think context usage is correct. The bug: db.Begin() starts the transaction without a context — if ctx is already cancelled when Begin() is called, the transaction still starts. Also, tx.Commit() should be tx.CommitContext(ctx) if available, but the main issue is db.BeginTx(ctx, nil) instead of db.Begin().",
+    "assertions": [
+      {"id": "8.1", "text": "Identifies db.Begin() as the bug — it starts a transaction ignoring the context; if ctx is cancelled before Begin() returns, the transaction still starts"},
+      {"id": "8.2", "text": "Replaces db.Begin() with db.BeginTx(ctx, nil) — BeginTx respects context cancellation and won't start a transaction if ctx is already done"},
+      {"id": "8.3", "text": "Keeps ExecContext calls passing ctx — these are already correct"},
+      {"id": "8.4", "text": "Does not add a redundant ctx check before Begin() as the fix — the correct fix is BeginTx, not a manual ctx.Err() guard"},
+      {"id": "8.5", "text": "Each method accepts ctx context.Context as its first parameter and it flows through all DB operations"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "context-values-abuse",
+    "description": "Tests that the model does not abuse context values for function parameters",
+    "prompt": "Write a Go service that processes orders. The service needs: a database connection, a logger, a user ID (from auth), a trace ID (from middleware), and the order details. Design the ProcessOrder function signature and show how to pass all these dependencies.",
+    "trap": "Model might stuff the database connection, logger, or order details into context values instead of passing them as explicit parameters or struct fields",
+    "assertions": [
+      {"id": "9.1", "text": "Database connection is passed as a struct field or explicit parameter, NOT via context value"},
+      {"id": "9.2", "text": "Logger is passed as a struct field or explicit parameter, NOT via context value"},
+      {"id": "9.3", "text": "Order details are passed as an explicit function parameter, NOT via context value"},
+      {"id": "9.4", "text": "User ID and/or trace ID are stored in context values (these are request-scoped metadata)"},
+      {"id": "9.5", "text": "Distinguishes between infrastructure dependencies (explicit) and request-scoped metadata (context values)"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "afterfunc-cleanup",
+    "description": "Tests awareness of context.AfterFunc for cleanup callbacks (Go 1.21+)",
+    "prompt": "Write a Go function that opens a temporary file for processing and must clean it up when the request context is cancelled. The file should be deleted asynchronously when the context is done, without blocking the main processing flow. The main function should continue processing immediately after registering the cleanup. Target Go 1.21+.",
+    "trap": "Model might use a goroutine with <-ctx.Done() manually or use defer (which doesn't handle context cancellation). Skill teaches context.AfterFunc for non-blocking cleanup callbacks",
+    "assertions": [
+      {"id": "10.1", "text": "Uses context.AfterFunc to register the cleanup callback"},
+      {"id": "10.2", "text": "Does NOT block the main flow waiting for context cancellation (no <-ctx.Done() in the main goroutine for cleanup purposes)"},
+      {"id": "10.3", "text": "The cleanup function removes the temporary file"},
+      {"id": "10.4", "text": "Captures the stop function returned by AfterFunc for potential cancellation of the callback"},
+      {"id": "10.5", "text": "Also includes a defer-based cleanup as a safety net (AfterFunc + defer for belt-and-suspenders)"}
+    ]
+  }
+]

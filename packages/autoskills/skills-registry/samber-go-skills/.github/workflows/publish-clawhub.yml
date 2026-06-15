@@ -1,0 +1,23 @@
+# name: Publish skills to ClawHub
+
+# on:
+#   push:
+#     branches: [main]
+#     paths: ['skills/**']
+#   workflow_dispatch: {}
+
+# jobs:
+#   publish:
+#     if: github.repository_owner == 'samber'
+#     runs-on: ubicloud-standard-2
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: '22'
+
+#       - name: Publish all skills
+#         run: ./clawhub-publish.sh
+#         env:
+#           CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}

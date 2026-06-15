@@ -1,0 +1,444 @@
+[
+  {
+    "id": 1,
+    "name": "rune-vs-run-error-propagation",
+    "description": "Tests use of RunE instead of Run for error propagation",
+    "prompt": "I'm writing a cobra subcommand in Go that calls an external API. If the API returns an error, the command should exit non-zero. Should I use Run or RunE?",
+    "trap": "Without the skill, the model may say both work, suggest using Run with os.Exit(1), or not explain why Run is problematic. The correct answer is always RunE — it propagates the error through cobra's error handling chain.",
+    "assertions": [
+      { "id": "1.1", "text": "Recommends RunE, not Run" },
+      {
+        "id": "1.2",
+        "text": "Explains that Run cannot return an error — you'd need os.Exit or panic"
+      },
+      {
+        "id": "1.3",
+        "text": "Shows RunE returning the error from the handler"
+      },
+      { "id": "1.4", "text": "Does NOT suggest using os.Exit inside RunE" },
+      {
+        "id": "1.5",
+        "text": "Mentions that returning error from RunE causes cobra to exit non-zero"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "args-validator-not-manual-check",
+    "description": "Tests use of cobra Args validators instead of manual len(args) checks in RunE",
+    "prompt": "I'm writing a Go CLI with cobra. My 'delete' command requires exactly one positional argument (the resource name). How should I validate this?",
+    "trap": "Without the skill, the model writes len(args) != 1 check inside RunE. The correct approach is Args: cobra.ExactArgs(1) on the command definition, which validates before RunE runs and gives a standard error message.",
+    "assertions": [
+      {
+        "id": "2.1",
+        "text": "Sets Args: cobra.ExactArgs(1) on the command struct"
+      },
+      { "id": "2.2", "text": "Does NOT write len(args) check inside RunE" },
+      {
+        "id": "2.3",
+        "text": "Mentions that cobra prints a standard error message when validation fails"
+      },
+      {
+        "id": "2.4",
+        "text": "RunE body accesses args[0] directly without re-validating length"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "outOrStdout-not-os-stdout",
+    "description": "Tests use of cmd.OutOrStdout() instead of os.Stdout for testable output",
+    "prompt": "I'm writing a cobra command in Go that prints a table of results to the terminal. How should I write to stdout from inside RunE?",
+    "trap": "Without the skill, the model uses fmt.Println or os.Stdout directly. The correct approach is fmt.Fprintln(cmd.OutOrStdout(), ...) which can be redirected to a buffer in tests.",
+    "assertions": [
+      { "id": "3.1", "text": "Uses cmd.OutOrStdout() as the io.Writer target" },
+      { "id": "3.2", "text": "Does NOT use os.Stdout directly" },
+      {
+        "id": "3.3",
+        "text": "Does NOT use fmt.Println (which hardcodes os.Stdout)"
+      },
+      {
+        "id": "3.4",
+        "text": "Mentions testability as the reason — SetOut can redirect the writer in tests"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "persistent-prerunE-hook-chain",
+    "description": "Tests PersistentPreRunE on root for global config init and the child override trap",
+    "prompt": "In my Go CLI with cobra, I want to initialize viper config before any subcommand runs. I also have one subcommand that needs its own PersistentPreRunE for extra setup. How do I make sure both run?",
+    "trap": "Without the skill, the model defines PersistentPreRunE on both root and child without noting that the child's hook replaces the parent's — so root's config init never runs for that subcommand.",
+    "assertions": [
+      {
+        "id": "4.1",
+        "text": "Explains that a child's PersistentPreRunE replaces (not chains) the parent's"
+      },
+      {
+        "id": "4.2",
+        "text": "Shows explicitly calling the parent's PersistentPreRunE from inside the child's hook"
+      },
+      { "id": "4.3", "text": "Does NOT claim both hooks run automatically" },
+      {
+        "id": "4.4",
+        "text": "Uses PersistentPreRunE (the *E variant) not PersistentPreRun"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "silence-usage-and-errors",
+    "description": "Tests SilenceUsage and SilenceErrors on root command",
+    "prompt": "When my Go cobra CLI returns an error from RunE, the terminal shows the full usage/help text followed by the error. I only want to see the error message, not the usage. How do I fix this?",
+    "trap": "Without the skill, the model may suggest overriding SetUsageTemplate or wrapping the error. The correct fix is SilenceUsage: true on the root command.",
+    "assertions": [
+      {
+        "id": "5.1",
+        "text": "Sets SilenceUsage: true on the root cobra.Command"
+      },
+      {
+        "id": "5.2",
+        "text": "Optionally mentions SilenceErrors: true (for custom error formatting)"
+      },
+      {
+        "id": "5.3",
+        "text": "Does NOT suggest removing or wrapping the error in RunE"
+      },
+      {
+        "id": "5.4",
+        "text": "Explains that SilenceUsage only suppresses usage on error, not on --help"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "command-group-registration-order",
+    "description": "Tests that AddGroup must be called before AddCommand that references it",
+    "prompt": "I want to group my cobra subcommands in the help output under labels like 'Core Commands:' and 'Management Commands:'. How do I set this up?",
+    "trap": "Without the skill, the model calls AddCommand first and AddGroup after, which doesn't work — groups must be registered before the commands that reference them.",
+    "assertions": [
+      {
+        "id": "6.1",
+        "text": "Calls AddGroup before AddCommand for commands that use that group"
+      },
+      {
+        "id": "6.2",
+        "text": "Sets GroupID on the subcommand matching the Group's ID field"
+      },
+      { "id": "6.3", "text": "Shows cobra.Group{ID: ..., Title: ...} struct" },
+      {
+        "id": "6.4",
+        "text": "Does NOT call AddCommand before AddGroup for the same group"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "valid-args-function-dynamic-completion",
+    "description": "Tests ValidArgsFunction for dynamic shell completion instead of static ValidArgs",
+    "prompt": "My Go cobra 'get pod' command should complete pod names dynamically by querying the API server. ValidArgs only accepts a static list. How do I provide dynamic completions?",
+    "trap": "Without the skill, the model tries to populate ValidArgs at startup (querying the API at init time) or doesn't know about ValidArgsFunction.",
+    "assertions": [
+      {
+        "id": "7.1",
+        "text": "Uses ValidArgsFunction (not ValidArgs) for dynamic completions"
+      },
+      {
+        "id": "7.2",
+        "text": "Function signature returns ([]string, cobra.ShellCompDirective)"
+      },
+      {
+        "id": "7.3",
+        "text": "Returns cobra.ShellCompDirectiveNoFileComp to prevent file fallback"
+      },
+      {
+        "id": "7.4",
+        "text": "Does NOT query the API at init() or in ValidArgs (static list)"
+      },
+      {
+        "id": "7.5",
+        "text": "Handles errors by returning cobra.ShellCompDirectiveError"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "register-flag-completion-func",
+    "description": "Tests RegisterFlagCompletionFunc for flag value completion",
+    "prompt": "My Go cobra command has an --output flag that accepts 'json', 'yaml', or 'table'. How do I make the shell complete valid values when the user types --output <TAB>?",
+    "trap": "Without the skill, the model does not know about RegisterFlagCompletionFunc and instead documents the valid values only in the flag description string.",
+    "assertions": [
+      {
+        "id": "8.1",
+        "text": "Calls cmd.RegisterFlagCompletionFunc(\"output\", func(...) ...)"
+      },
+      {
+        "id": "8.2",
+        "text": "The completion function returns []string{\"json\", \"yaml\", \"table\"} (or similar)"
+      },
+      { "id": "8.3", "text": "Returns cobra.ShellCompDirectiveNoFileComp" },
+      {
+        "id": "8.4",
+        "text": "Does NOT rely only on the flag usage string for user guidance"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "test-isolation-fresh-root",
+    "description": "Tests that a fresh command tree must be created per test to avoid flag state leakage",
+    "prompt": "I'm writing tests for my Go cobra CLI. My first test runs 'myapp serve --port 9090' and passes. My second test runs 'myapp serve' without --port and expects the default 8080, but gets 9090. What's wrong and how do I fix it?",
+    "trap": "Without the skill, the model may suggest resetting the flag value manually or calling ResetFlags(). The correct fix is to create a fresh command tree per test.",
+    "assertions": [
+      {
+        "id": "9.1",
+        "text": "Identifies the root cause as reusing the same cobra.Command instance across tests"
+      },
+      {
+        "id": "9.2",
+        "text": "Recommends building a new command tree per test (constructor function)"
+      },
+      {
+        "id": "9.3",
+        "text": "Shows a newRootCmd() or similar factory function pattern"
+      },
+      {
+        "id": "9.4",
+        "text": "Does NOT suggest ResetFlags() as the primary solution"
+      },
+      {
+        "id": "9.5",
+        "text": "Each test calls the factory to get a fresh *cobra.Command"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "match-all-validator-composition",
+    "description": "Tests MatchAll for composing multiple arg validators",
+    "prompt": "My Go cobra 'apply' command needs positional args that are all valid resource names (from a known list) AND there must be at least one. How do I express both constraints?",
+    "trap": "Without the skill, the model writes a custom validator function that manually checks both conditions with if statements. MatchAll composes built-in validators without custom code.",
+    "assertions": [
+      { "id": "10.1", "text": "Uses cobra.MatchAll to compose validators" },
+      {
+        "id": "10.2",
+        "text": "Combines cobra.MinimumNArgs(1) (or ExactArgs) with cobra.OnlyValidArgs"
+      },
+      { "id": "10.3", "text": "Sets ValidArgs with the known resource names" },
+      {
+        "id": "10.4",
+        "text": "Does NOT write a fully manual validator function for the combined check"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "cobra-vs-viper-distinction",
+    "description": "Tests understanding of what cobra does vs what viper does",
+    "prompt": "I'm starting a Go CLI project. I need subcommands, flags, shell completions, AND the ability to read configuration from a YAML file and environment variables. I've heard of cobra and viper. Which library handles which concern?",
+    "trap": "Without the skill, the model may conflate the two or understate how they integrate. The correct answer clearly assigns cobra=command tree/flags/completions and viper=layered config resolution, with BindPFlag as the integration seam.",
+    "assertions": [
+      {
+        "id": "11.1",
+        "text": "Assigns cobra to command tree, flags, arg validation, shell completions"
+      },
+      {
+        "id": "11.2",
+        "text": "Assigns viper to config file, env var, and layered value resolution"
+      },
+      {
+        "id": "11.3",
+        "text": "Identifies BindPFlag (or similar) as the integration seam between them"
+      },
+      {
+        "id": "11.4",
+        "text": "Explains they can be used independently (cobra without viper, or viper without cobra)"
+      },
+      {
+        "id": "11.5",
+        "text": "Does NOT say cobra reads config files or viper defines subcommands"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "cobra-cli-scaffolder",
+    "description": "Tests knowledge of the cobra-cli scaffolding tool",
+    "prompt": "I want to quickly scaffold a new Go CLI project with cobra. Is there a tool that generates the initial files and lets me add subcommands from the command line?",
+    "trap": "Without the skill, the model may say to create files manually or use a generic project generator. The cobra-cli tool is the canonical scaffolder for cobra projects.",
+    "assertions": [
+      {
+        "id": "12.1",
+        "text": "Mentions cobra-cli (github.com/spf13/cobra-cli)"
+      },
+      {
+        "id": "12.2",
+        "text": "Shows 'cobra-cli init <project>' for initialization"
+      },
+      {
+        "id": "12.3",
+        "text": "Shows 'cobra-cli add <command>' for adding subcommands"
+      },
+      {
+        "id": "12.4",
+        "text": "Explains that cobra-cli is separate from cobra itself (different import path)"
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "stringarray-vs-stringslice-commas",
+    "description": "Tests StringArray vs StringSlice when flag values contain commas",
+    "prompt": "My Go cobra CLI has a --label flag that users pass multiple times like --label 'env=prod,region=us'. With my current setup, passing --label 'env=prod,region=us' results in two separate values ['env=prod', 'region=us'] instead of one. What flag type should I use?",
+    "trap": "Without the skill, the model uses StringSlice which splits on commas. StringArray is the correct choice when values may legitimately contain commas.",
+    "assertions": [
+      {
+        "id": "13.1",
+        "text": "Recommends StringArray (or StringArrayVar) instead of StringSlice"
+      },
+      {
+        "id": "13.2",
+        "text": "Explains that StringSlice splits on commas while StringArray does not"
+      },
+      {
+        "id": "13.3",
+        "text": "Does NOT suggest quoting or escaping commas as the fix"
+      },
+      {
+        "id": "13.4",
+        "text": "Shows the correct flag definition using StringArray or StringArrayVar"
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "mutually-exclusive-flags",
+    "description": "Tests MarkFlagsMutuallyExclusive instead of manual RunE checks",
+    "prompt": "My Go cobra command has --json and --yaml flags for output format. Users should only be able to pass one of them. How do I prevent both from being passed at the same time?",
+    "trap": "Without the skill, the model writes an if statement checking both flags inside RunE. The correct approach is MarkFlagsMutuallyExclusive which cobra enforces at parse time before RunE.",
+    "assertions": [
+      {
+        "id": "14.1",
+        "text": "Calls cmd.MarkFlagsMutuallyExclusive(\"json\", \"yaml\")"
+      },
+      {
+        "id": "14.2",
+        "text": "Does NOT write a manual if-both-set check inside RunE"
+      },
+      {
+        "id": "14.3",
+        "text": "Explains cobra enforces this at flag parse time and returns a standard error"
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "required-together-flags",
+    "description": "Tests MarkFlagsRequiredTogether instead of manual RunE checks",
+    "prompt": "My Go cobra command has --tls-cert and --tls-key flags. If a user provides one, they must provide the other. How do I enforce this constraint?",
+    "trap": "Without the skill, the model writes manual validation in RunE checking if one is set without the other. MarkFlagsRequiredTogether enforces this at cobra's parse stage.",
+    "assertions": [
+      {
+        "id": "15.1",
+        "text": "Calls cmd.MarkFlagsRequiredTogether(\"tls-cert\", \"tls-key\")"
+      },
+      {
+        "id": "15.2",
+        "text": "Does NOT write manual if-one-without-the-other checks inside RunE"
+      },
+      {
+        "id": "15.3",
+        "text": "Explains cobra validates this before RunE runs"
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "one-required-flag-group",
+    "description": "Tests MarkFlagsOneRequired instead of manual RunE checks",
+    "prompt": "My Go cobra command accepts input from either --file or --stdin. At least one must be provided. How do I enforce that the user passes at least one of them?",
+    "trap": "Without the skill, the model checks flag presence inside RunE. MarkFlagsOneRequired enforces at parse time with a standard cobra error.",
+    "assertions": [
+      {
+        "id": "16.1",
+        "text": "Calls cmd.MarkFlagsOneRequired(\"file\", \"stdin\")"
+      },
+      {
+        "id": "16.2",
+        "text": "Does NOT write a manual check inside RunE for neither flag being set"
+      },
+      {
+        "id": "16.3",
+        "text": "Explains cobra enforces this before RunE runs"
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "flag-changed-distinguish-explicit-zero",
+    "description": "Tests cmd.Flags().Changed() to distinguish explicit zero from absent flag",
+    "prompt": "My Go cobra command has a --timeout flag defaulting to 30s. Users can pass --timeout 0 to disable timeouts entirely. In RunE, how do I tell whether the user explicitly passed --timeout 0 or simply didn't pass --timeout at all?",
+    "trap": "Without the skill, the model checks if timeout == 0, which conflates the two cases. The correct approach is cmd.Flags().Changed(\"timeout\") which returns true only when the user explicitly provided the flag.",
+    "assertions": [
+      {
+        "id": "17.1",
+        "text": "Uses cmd.Flags().Changed(\"timeout\") to detect explicit user input"
+      },
+      {
+        "id": "17.2",
+        "text": "Does NOT use if timeout == 0 as the sole distinguishing condition"
+      },
+      {
+        "id": "17.3",
+        "text": "Explains Changed() returns true only when the flag was explicitly set by the user"
+      },
+      {
+        "id": "17.4",
+        "text": "Shows the pattern: if Changed → apply value, else → use default behavior"
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "postrunE-success-only-use-defer",
+    "description": "Tests that PostRunE runs only on RunE success and defer is the right cleanup pattern",
+    "prompt": "My Go cobra command opens a database connection early in RunE and I want to close it when the command finishes, whether it succeeds or fails. I added cleanup in PostRunE but noticed it doesn't run when RunE returns an error. What's the right pattern?",
+    "trap": "Without the skill, the model may suggest PersistentPostRunE or not know PostRunE is success-only. The correct pattern is defer inside RunE for guaranteed cleanup regardless of outcome.",
+    "assertions": [
+      {
+        "id": "18.1",
+        "text": "Uses defer inside RunE to guarantee cleanup on both success and failure"
+      },
+      {
+        "id": "18.2",
+        "text": "Explains PostRunE only runs when RunE returns nil (success)"
+      },
+      {
+        "id": "18.3",
+        "text": "Does NOT present PostRunE as a solution for failure cleanup"
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "errOrStderr-not-os-stderr",
+    "description": "Tests cmd.ErrOrStderr() instead of os.Stderr for capturable error output",
+    "prompt": "My Go cobra command writes diagnostic details to stderr using fmt.Fprintf(os.Stderr, ...) before returning an error. This works fine at runtime but my tests can't capture the stderr output. How do I fix this?",
+    "trap": "Without the skill, the model uses os.Stderr directly. The correct approach is cmd.ErrOrStderr() which tests can redirect via rootCmd.SetErr(buf).",
+    "assertions": [
+      {
+        "id": "19.1",
+        "text": "Replaces os.Stderr with cmd.ErrOrStderr() as the write target"
+      },
+      { "id": "19.2", "text": "Does NOT use os.Stderr directly" },
+      {
+        "id": "19.3",
+        "text": "Shows rootCmd.SetErr(buf) in the test to capture stderr output"
+      },
+      {
+        "id": "19.4",
+        "text": "Explains the symmetry with cmd.OutOrStdout() / SetOut for stdout"
+      }
+    ]
+  }
+]

@@ -1,0 +1,311 @@
+[
+  {
+    "id": 1,
+    "name": "option-vs-pointer-for-nullable-db-field",
+    "description": "Tests whether the model uses Option[T] instead of *T for nullable database columns when both SQL scanning and JSON marshaling are needed",
+    "prompt": "I'm adding a REST API to an existing Go service. The User table has a nullable 'phone' column (VARCHAR) and a nullable 'bio' column (TEXT). The same User struct is used both for database row scanning and for JSON API responses. Right now I'm using *string for these fields. I have samber/mo available. Is there a better option and what does the struct look like?",
+    "trap": "Without the skill, the model suggests keeping *string (it works for both DB and JSON), or proposes sql.NullString for DB + a separate DTO struct for JSON. The skill teaches that mo.Option[T] natively implements BOTH sql.Scanner/driver.Valuer AND json.Marshaler/Unmarshaler, eliminating the need for two types or custom serialization code.",
+    "assertions": [
+      {"id": "1.1", "text": "Recommends switching from *string to mo.Option[string] for the nullable fields"},
+      {"id": "1.2", "text": "Explains that Option implements sql.Scanner and driver.Valuer so row.Scan works directly"},
+      {"id": "1.3", "text": "Explains that Option implements json.Marshaler/Unmarshaler so the same struct works for JSON responses"},
+      {"id": "1.4", "text": "Explicitly states that *string requires custom JSON handling to distinguish null vs absent, which Option avoids"},
+      {"id": "1.5", "text": "Does NOT recommend maintaining two separate structs (one for DB, one for JSON) as the solution"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "result-vs-tuple-error-boundary",
+    "description": "Tests whether the model knows when to use Result[T] vs (T, error)",
+    "prompt": "I'm writing a Go function that reads a config file, parses YAML, validates the config, and returns the result. The function is part of a public API package. Should I use samber/mo Result[T] as the return type?",
+    "trap": "Without the skill, the model either always uses Result or always uses (T, error). The correct answer is: use (T, error) at public API boundaries for Go idiom compliance, but use Result internally for chaining.",
+    "assertions": [
+      {"id": "2.1", "text": "Recommends returning (Config, error) at the public API boundary, not Result[Config]"},
+      {"id": "2.2", "text": "Suggests using Result[T] internally for chaining the read-parse-validate pipeline"},
+      {"id": "2.3", "text": "Shows TupleToResult to convert from Go-style to Result at the start of the chain"},
+      {"id": "2.4", "text": "Shows .Get() or extraction at the end to convert back to (T, error) for the public return"},
+      {"id": "2.5", "text": "Explains that Result is for internal composition, not public API signatures"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "either-vs-result-two-valid-types",
+    "description": "Tests whether the model uses Either[L,R] when both outcomes are valid (not errors)",
+    "prompt": "I have a Go function that looks up a user. It can return either a cached user (from Redis, includes cache metadata) or a fresh user (from the database, no cache metadata). Both outcomes are perfectly valid. What type should the return be?",
+    "trap": "Without the skill, the model uses an interface, two separate return values, or Result. Either[CachedUser, FreshUser] is correct because neither outcome is an error.",
+    "assertions": [
+      {"id": "3.1", "text": "Uses mo.Either[CachedUser, FreshUser] or equivalent Either type"},
+      {"id": "3.2", "text": "Does NOT use Result[T] (neither outcome is an error)"},
+      {"id": "3.3", "text": "Explains that Either is for two valid alternatives, Result is for success/failure"},
+      {"id": "3.4", "text": "Shows Left/Right constructors for the two outcomes"},
+      {"id": "3.5", "text": "Shows Match or IsLeft/IsRight to handle both cases"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "sub-package-for-type-changing-map",
+    "description": "Tests whether the model uses sub-package functions when Map needs to change types",
+    "prompt": "I have an mo.Option[int] and I want to convert it to mo.Option[string] using strconv.Itoa. How do I do this with samber/mo?",
+    "trap": "Without the skill, the model tries Option.Map which cannot change types (Map returns Option[T] not Option[R]). The sub-package option.Map is required for type-changing transforms.",
+    "assertions": [
+      {"id": "4.1", "text": "Uses option.Map from the github.com/samber/mo/option sub-package"},
+      {"id": "4.2", "text": "Does NOT try to use the direct .Map method for type-changing transform"},
+      {"id": "4.3", "text": "Imports github.com/samber/mo/option"},
+      {"id": "4.4", "text": "Shows the curried form: option.Map(func(int) string)(opt)"},
+      {"id": "4.5", "text": "Explains that Go methods cannot introduce new type parameters, hence sub-packages"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "do-notation-for-imperative-monadic",
+    "description": "Tests knowledge of mo.Do for imperative-style monadic code",
+    "prompt": "I have several mo.Option and mo.Result values in Go that I need to combine. I want to extract all their values, do some computation, and get a Result back. The FlatMap chaining is getting deeply nested. Is there a simpler way?",
+    "trap": "Without the skill, the model doesn't know about mo.Do which catches MustGet panics and converts them to Result errors, enabling imperative-style monadic code.",
+    "assertions": [
+      {"id": "5.1", "text": "Suggests using mo.Do to wrap imperative-style code"},
+      {"id": "5.2", "text": "Shows MustGet() calls inside the Do block (panics caught by Do)"},
+      {"id": "5.3", "text": "Explains that mo.Do catches panics from MustGet and converts them to Err"},
+      {"id": "5.4", "text": "The result of mo.Do is a Result[T]"},
+      {"id": "5.5", "text": "Shows that this is cleaner than deeply nested FlatMap chains"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "pipe-composition-multi-step",
+    "description": "Tests whether the model uses Pipe functions for multi-step type-changing pipelines",
+    "prompt": "I need to transform an mo.Option[int] through 3 steps in Go: convert to string, then to []byte, then validate and return Option[ValidatedData]. Each step changes the type. Show me how to compose these.",
+    "trap": "Without the skill, the model nests function calls or uses intermediate variables. Pipe3 from the option sub-package provides readable left-to-right flow.",
+    "assertions": [
+      {"id": "6.1", "text": "Uses option.Pipe3 (or equivalent PipeN) from github.com/samber/mo/option"},
+      {"id": "6.2", "text": "Each step uses option.Map or option.FlatMap as a curried function"},
+      {"id": "6.3", "text": "The pipeline reads top-to-bottom or left-to-right, not nested inside-out"},
+      {"id": "6.4", "text": "Imports github.com/samber/mo/option sub-package"},
+      {"id": "6.5", "text": "Uses option.FlatMap for the validation step that may return None"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "future-vs-task-eager-vs-lazy",
+    "description": "Tests whether the model distinguishes Future (eager) from Task (lazy)",
+    "prompt": "I'm building a Go system where I want to define an async computation that should NOT start executing until I explicitly trigger it. Later I'll run it and get the result. Should I use mo.Future or mo.Task?",
+    "trap": "Without the skill, the model uses Future which starts executing immediately on creation. Task is lazy — it only runs when .Run() is called.",
+    "assertions": [
+      {"id": "7.1", "text": "Recommends mo.Task (not Future) because Task is lazy"},
+      {"id": "7.2", "text": "Explains that Future starts executing immediately on construction"},
+      {"id": "7.3", "text": "Explains that Task only executes when .Run() is called"},
+      {"id": "7.4", "text": "Shows that task.Run() returns a *Future[T]"},
+      {"id": "7.5", "text": "Demonstrates the deferred execution pattern with Task"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "tuple-to-result-wrapping-stdlib",
+    "description": "Tests knowledge of TupleToResult for wrapping Go stdlib calls",
+    "prompt": "I want to wrap os.ReadFile and strconv.Atoi calls into samber/mo Result types in Go so I can chain them. What's the most concise way?",
+    "trap": "Without the skill, the model manually calls the function, checks error, and constructs Ok/Err. TupleToResult wraps (T, error) tuples directly.",
+    "assertions": [
+      {"id": "8.1", "text": "Uses mo.TupleToResult(os.ReadFile(path)) to wrap directly"},
+      {"id": "8.2", "text": "Uses mo.TupleToResult(strconv.Atoi(s)) or mo.Try for the second call"},
+      {"id": "8.3", "text": "Does NOT manually check err and construct Ok/Err separately"},
+      {"id": "8.4", "text": "Chains the two results using Map or FlatMap"},
+      {"id": "8.5", "text": "Shows that TupleToResult converts (T, error) to Result[T] in one call"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "when-not-to-use-monads",
+    "description": "Tests whether the model correctly advises against monads for simple cases",
+    "prompt": "I have a simple Go function that opens a file. If it fails, I log the error and return. There are no subsequent operations to chain. Should I use samber/mo Result for this?",
+    "trap": "Without the skill, the model might over-apply monads to trivial cases. Plain if err != nil is clearer for single-step error handling.",
+    "assertions": [
+      {"id": "9.1", "text": "Advises against using Result for this simple one-step case"},
+      {"id": "9.2", "text": "Recommends standard Go if err != nil pattern"},
+      {"id": "9.3", "text": "Explains that Result shines with multi-step chains, not single operations"},
+      {"id": "9.4", "text": "Does NOT wrap everything in Result just because the library is available"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "option-json-serialization-behavior",
+    "description": "Tests knowledge of Option's JSON marshaling behavior",
+    "prompt": "In my Go API response struct, I have a field that should be null in JSON when absent and the actual value when present. I'm currently using *string with json omitempty but it shows null instead of omitting. How should I handle this with samber/mo?",
+    "trap": "Without the skill, the model doesn't know that Option marshals Some(x) to x and None to null, and that Go 1.24+ supports omitzero for full omission.",
+    "assertions": [
+      {"id": "10.1", "text": "Uses mo.Option[string] for the nullable JSON field"},
+      {"id": "10.2", "text": "Explains that Some(x) marshals to the raw value x, None marshals to null"},
+      {"id": "10.3", "text": "Mentions omitzero tag (Go 1.24+) or IsZero for omitting None fields entirely"},
+      {"id": "10.4", "text": "Shows the struct definition with json tag"},
+      {"id": "10.5", "text": "Does NOT require a custom MarshalJSON method — Option handles it natively"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "emptyable-to-option-zero-value",
+    "description": "Tests knowledge of EmptyableToOption for zero-value detection",
+    "prompt": "I'm receiving a Go struct from an external API where empty string means 'not provided'. I want to convert these empty strings to None and non-empty strings to Some. What's the most concise way with samber/mo?",
+    "trap": "Without the skill, the model writes if/else to check for empty string. EmptyableToOption does this automatically for any comparable type.",
+    "assertions": [
+      {"id": "11.1", "text": "Uses mo.EmptyableToOption to convert zero values to None"},
+      {"id": "11.2", "text": "Shows that EmptyableToOption returns None for zero value, Some for non-zero"},
+      {"id": "11.3", "text": "Does NOT write a manual if s == \"\" check when EmptyableToOption exists"},
+      {"id": "11.4", "text": "Mentions that this works for any comparable type (int 0, empty string, etc.)"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "pointer-to-option-nil-handling",
+    "description": "Tests knowledge of PointerToOption for nil pointer conversion",
+    "prompt": "I'm parsing a Go JSON payload where fields are *int (pointer to int, nil when absent). I want to convert these to Option[int] for safer downstream processing. How?",
+    "trap": "Without the skill, the model dereferences the pointer manually with nil check. PointerToOption does this in one call.",
+    "assertions": [
+      {"id": "12.1", "text": "Uses mo.PointerToOption(ptr) to convert *int to Option[int]"},
+      {"id": "12.2", "text": "Explains that nil pointer becomes None, non-nil becomes Some(*ptr)"},
+      {"id": "12.3", "text": "Does NOT manually check if ptr != nil before wrapping"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "result-map-vs-flatmap-choice",
+    "description": "Tests understanding of when to use Map vs FlatMap on Result",
+    "prompt": "I have a mo.Result[string] in Go. I need to chain two operations: (1) convert string to uppercase (infallible), (2) parse the string as an integer (fallible, returns Result[int]). Which methods should I use?",
+    "trap": "Without the skill, the model uses Map for both or FlatMap for both. Map is for infallible transforms, FlatMap is for transforms that return Result.",
+    "assertions": [
+      {"id": "13.1", "text": "Uses MapValue (or Map returning nil error) for the infallible uppercase operation"},
+      {"id": "13.2", "text": "Uses FlatMap for the fallible parse operation that returns Result[int]"},
+      {"id": "13.3", "text": "Does NOT use FlatMap for the simple uppercase transform"},
+      {"id": "13.4", "text": "Shows the chain: result.MapValue(toUpper).FlatMap(parse) or equivalent"},
+      {"id": "13.5", "text": "Explains the distinction: Map wraps the return value, FlatMap takes a function returning Result"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "option-map-bool-semantics",
+    "description": "Tests understanding of Option.Map's (T, bool) return type",
+    "prompt": "I have an mo.Option[int] in Go and I want to keep the value only if it's greater than 10, otherwise turn it into None. How do I do this with Map?",
+    "trap": "Without the skill, the model doesn't realize Option.Map returns (T, bool) where the bool controls Some/None, acting as both map and filter.",
+    "assertions": [
+      {"id": "14.1", "text": "Uses opt.Map(func(v int) (int, bool) { return v, v > 10 })"},
+      {"id": "14.2", "text": "Explains that returning false from Map's callback converts to None"},
+      {"id": "14.3", "text": "Shows the (T, bool) return signature of Map's callback"},
+      {"id": "14.4", "text": "Does NOT use FlatMap with an if/else to accomplish filtering"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "fold-for-uniform-value-extraction",
+    "description": "Tests knowledge of mo.Fold for extracting a value from Option, Result, or Either with two-callback pattern",
+    "prompt": "I have an mo.Result[int] in Go. I want to convert it to a display string: if it's Ok, show the number formatted as 'value: N'; if it's Err, show 'error: <message>'. I'm currently using IsOk/IsError with an if/else. Is there a more declarative way with samber/mo?",
+    "trap": "Without the skill, the model uses if/else with IsOk/IsError and manual extraction. mo.Fold accepts two callbacks — success and failure — and dispatches uniformly. The model often misses Fold entirely or confuses it with Match (which returns the same type as its receiver, requiring type-changing sub-package use).",
+    "assertions": [
+      {"id": "15.1", "text": "Uses mo.Fold to replace the if/else dispatch"},
+      {"id": "15.2", "text": "Passes a success callback (func(int) string) as the first function argument"},
+      {"id": "15.3", "text": "Passes a failure callback (func(error) string) as the second function argument"},
+      {"id": "15.4", "text": "The output type (string) differs from the input type (int) — Fold is used for type-changing extraction"},
+      {"id": "15.5", "text": "Does NOT use IsOk/IsError with separate MustGet/Error calls as the primary approach"}
+    ]
+  },
+  {
+    "id": 16,
+    "name": "io-for-testable-side-effects",
+    "description": "Tests knowledge of IO for deferring and testing side effects",
+    "prompt": "I have a Go function that reads from stdin, formats the input, and writes to stdout. I want to make this testable by separating the side effects from the logic. How can samber/mo help?",
+    "trap": "Without the skill, the model uses interfaces or dependency injection for io.Reader/io.Writer. IO[T] provides a functional approach to defer side effects.",
+    "assertions": [
+      {"id": "16.1", "text": "Uses mo.IO or mo.IOEither to wrap the side-effecting operations"},
+      {"id": "16.2", "text": "Explains that IO is lazy — the side effect only runs when Run() is called"},
+      {"id": "16.3", "text": "Shows that IO1 or IO2 can parameterize the side effect for testing"},
+      {"id": "16.4", "text": "Demonstrates composability of IO operations"}
+    ]
+  },
+  {
+    "id": 17,
+    "name": "result-to-either-conversion",
+    "description": "Tests knowledge of Result.ToEither() conversion",
+    "prompt": "I have a mo.Result[User] in Go and I need to pass it to a function that expects mo.Either[error, User]. How do I convert?",
+    "trap": "Without the skill, the model manually matches on IsOk/IsError and constructs Left/Right. ToEither() does this directly.",
+    "assertions": [
+      {"id": "17.1", "text": "Uses result.ToEither() for direct conversion"},
+      {"id": "17.2", "text": "Explains that Ok becomes Right, Err becomes Left"},
+      {"id": "17.3", "text": "Does NOT manually check IsOk/IsError and construct Either"}
+    ]
+  },
+  {
+    "id": 18,
+    "name": "either3-for-multi-type-union",
+    "description": "Tests knowledge of Either3+ for n-ary type unions",
+    "prompt": "My Go API can return three different response types depending on the request: a UserResponse, an AdminResponse, or a SystemResponse. I want type-safe handling. What should I use?",
+    "trap": "Without the skill, the model uses interface{}/any or defines a common interface. Either3 provides a type-safe discriminated union.",
+    "assertions": [
+      {"id": "18.1", "text": "Uses mo.Either3[UserResponse, AdminResponse, SystemResponse]"},
+      {"id": "18.2", "text": "Shows NewEither3Arg1, NewEither3Arg2, NewEither3Arg3 constructors"},
+      {"id": "18.3", "text": "Shows Match with handlers for all three types"},
+      {"id": "18.4", "text": "Does NOT use interface{}/any which loses type safety"},
+      {"id": "18.5", "text": "Mentions Either4/Either5 for 4-5 type variants"}
+    ]
+  },
+  {
+    "id": 19,
+    "name": "option-vs-zero-value-distinction",
+    "description": "Tests understanding of when Option adds value vs when zero values suffice",
+    "prompt": "In my Go struct, I have a 'count' field (int) and a 'nickname' field (string). For 'count', zero is a valid value meaning 'no items'. For 'nickname', empty string means 'not set'. Should I use Option for both?",
+    "trap": "Without the skill, the model either uses Option for both or neither. Option should be used only for 'nickname' where absence is semantically different from empty.",
+    "assertions": [
+      {"id": "19.1", "text": "Recommends plain int for count (zero is a valid meaningful value)"},
+      {"id": "19.2", "text": "Recommends mo.Option[string] for nickname (absence differs from empty)"},
+      {"id": "19.3", "text": "Explains that Option is for when absence is semantically different from the zero value"},
+      {"id": "19.4", "text": "Does NOT recommend Option[int] for count where 0 is meaningful"}
+    ]
+  },
+  {
+    "id": 20,
+    "name": "map-lookup-to-option",
+    "description": "Tests converting Go map lookups to Option using TupleToOption",
+    "prompt": "I have a Go map[string]User and I want to look up a key and chain transformations on the result if present. How do I bridge the map lookup with samber/mo?",
+    "trap": "Without the skill, the model manually checks the ok bool from map access. TupleToOption wraps the (value, bool) tuple directly.",
+    "assertions": [
+      {"id": "20.1", "text": "Uses mo.TupleToOption with the map lookup: mo.TupleToOption(m[key])"},
+      {"id": "20.2", "text": "Chains Map/FlatMap on the resulting Option"},
+      {"id": "20.3", "text": "Does NOT manually check ok bool and construct Some/None"},
+      {"id": "20.4", "text": "Shows the complete pattern: TupleToOption(m[key]).Map(...)"}
+    ]
+  },
+  {
+    "id": 21,
+    "name": "result-try-catch-panics",
+    "description": "Tests knowledge of mo.Try for wrapping a function that may return an error OR panic, and chaining the result",
+    "prompt": "I'm integrating a third-party Go JSON schema validator that has two failure modes: it returns an error for invalid input, and it panics on malformed schemas. I want to call it, capture both failure modes, and then chain a transformation if validation succeeds — all without writing defer/recover boilerplate. I'm already using samber/mo in my project. Show the code.",
+    "trap": "Without the skill, the model writes a defer/recover wrapper function manually, then handles the error. With the skill, mo.Try captures both (T, error) returns and panics into a Result[T] in one call, enabling direct chaining with Map/FlatMap. The model often misses mo.Try entirely (using a hand-rolled wrapper) or uses it but forgets it also catches panics (thinking it only handles errors).",
+    "assertions": [
+      {"id": "21.1", "text": "Uses mo.Try (not a manual defer/recover) to call the validator"},
+      {"id": "21.2", "text": "Explicitly states that mo.Try catches panics AND returned errors, converting both to Err"},
+      {"id": "21.3", "text": "Shows chaining Map or FlatMap on the Try result for the transformation step"},
+      {"id": "21.4", "text": "The mo.Try callback matches the (T, error) return signature of the wrapped function"}
+    ]
+  },
+  {
+    "id": 22,
+    "name": "state-monad-for-accumulation",
+    "description": "Tests knowledge of State monad for threading state",
+    "prompt": "I'm writing a Go parser that needs to track position as it consumes tokens from an input string. Each parsing step reads from the current position and advances it. How can I model this with samber/mo?",
+    "trap": "Without the skill, the model uses a mutable struct. State[S,A] threads state through pure computations.",
+    "assertions": [
+      {"id": "22.1", "text": "Uses mo.State or mo.NewState to model the stateful computation"},
+      {"id": "22.2", "text": "State type parameters represent the state (position/input) and result (parsed token)"},
+      {"id": "22.3", "text": "Shows Run(initialState) to execute and get (result, newState)"},
+      {"id": "22.4", "text": "The state is threaded through rather than mutated in place"}
+    ]
+  },
+  {
+    "id": 23,
+    "name": "result-map-signature-understanding",
+    "description": "Tests understanding that Result.Map callback returns (T, error) not just T",
+    "prompt": "I want to double an integer inside a mo.Result[int] in Go. Write the Map call.",
+    "trap": "Without the skill, the model writes .Map(func(v int) int { return v * 2 }) which won't compile. Result.Map requires (T, error) return.",
+    "assertions": [
+      {"id": "23.1", "text": "Map callback returns (int, error), e.g., func(v int) (int, error) { return v * 2, nil }"},
+      {"id": "23.2", "text": "Does NOT write func(v int) int which misses the error return"},
+      {"id": "23.3", "text": "Alternatively uses MapValue(func(v int) int { return v * 2 }) for infallible transforms"},
+      {"id": "23.4", "text": "Shows awareness that Map and MapValue have different callback signatures"}
+    ]
+  }
+]

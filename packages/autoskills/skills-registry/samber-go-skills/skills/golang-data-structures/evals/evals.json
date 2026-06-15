@@ -1,0 +1,200 @@
+[
+  {
+    "id": 1,
+    "name": "buffer-for-io",
+    "description": "RenderAndStream must use strings.Builder with Grow pre-allocation, not += or strings.Join",
+    "task": "Write a function `RenderAndStream(w io.Writer, parts []string) error` in package `render`. It assembles all parts into a single output (joining with newlines), then streams the result to the provided io.Writer.\n\nA teammate suggests: 'Just use strings.Join(parts, \"\\n\") — it's one line and idiomatic.' Another says: 'Use bytes.Buffer, it's the standard Go buffer type.' Implement the most efficient approach and explain if either suggestion is correct.",
+    "assertions": [
+      { "id": "1.1", "text": "Uses strings.Builder (not bytes.Buffer) for string assembly — bytes.Buffer stores []byte and converting to string at the end requires a copy; strings.Builder writes directly to a string", "trap": "Model follows teammate's bytes.Buffer suggestion" },
+      { "id": "1.2", "text": "Calls b.Grow(totalSize) before writing parts — pre-allocating avoids repeated reallocation as the builder grows", "trap": "Model omits Grow even though size is known" },
+      { "id": "1.3", "text": "Does not use strings.Join — it allocates a new string; the goal is to write directly to io.Writer without a redundant intermediate string copy", "trap": "Model accepts the strings.Join suggestion" }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "sorted-set",
+    "description": "SortedSet[T] must use cmp.Ordered, not a custom Ordered interface or comparable",
+    "task": "Write a `SortedSet[T]` in package `collections` that maintains elements in sorted order. Support Insert(T), Contains(T) bool, Min() (T, bool), Max() (T, bool), and Len() int. Elements must be orderable. Use binary search for efficiency.\n\nA teammate says: 'Define your own `Ordered` interface with a `Less(T) bool` method — it's more flexible and lets users supply custom comparison logic.' Another says: 'Just use `comparable` as the constraint — it works for any type that can be compared.' Which approach is correct?",
+    "assertions": [
+      { "id": "2.1", "text": "Uses `cmp.Ordered` constraint (from the cmp package), not `comparable` (too loose — no < operator) and not a custom Ordered interface with Less() method", "trap": "Model accepts teammate's custom interface or comparable suggestion" },
+      { "id": "2.2", "text": "Rejects the comparable suggestion — comparable only ensures == and != but not < or >, which are required for sorting", "trap": "Model uses comparable thinking it's sufficient for ordered operations" },
+      { "id": "2.3", "text": "Binary search for Insert/Contains using slices.BinarySearch or sort.SearchInts or equivalent O(log n) approach", "trap": "Model linear-scans" }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "AddCleanup",
+    "description": "String intern with weak.Pointer + runtime.AddCleanup for auto map shrink",
+    "task": "Write a symbol table deduplicator in package `symbols` for Go 1.24+. `func Intern(s string) *string` returns a canonical pointer for equivalent strings. When all external references to the canonical string are dropped, it should be GC'd AND its map entry should be automatically removed (not just become a dead weak pointer — the map must shrink). Thread-safe.",
+    "assertions": [
+      { "id": "3.1", "text": "Uses `weak.Pointer` or `weak.Make`", "trap": "Without skill, model uses runtime.SetFinalizer instead of weak.Pointer" },
+      { "id": "3.2", "text": "Uses `runtime.AddCleanup` (not SetFinalizer)", "trap": "Without skill, model defaults to the more error-prone SetFinalizer pattern" },
+      { "id": "3.3", "text": "Dead map entries automatically removed", "trap": "none — both approaches can achieve this" }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "unsafe.Add-modern",
+    "description": "Read packed binary header using modern unsafe.Add (Go 1.17+)",
+    "task": "Write a function `ReadFields(data []byte) (magic uint32, version uint16, length uint32)` in package `proto` that reads a packed binary header. The header layout is: 4 bytes magic, 2 bytes version, 2 bytes padding, 4 bytes length. Use unsafe pointer arithmetic to access each field at its offset. Target Go 1.17+.",
+    "assertions": [
+      { "id": "4.1", "text": "Uses `unsafe.Add` for pointer arithmetic", "trap": "Without skill, model uses old-style uintptr(base) + offset casting" },
+      { "id": "4.2", "text": "No intermediate `uintptr` variable", "trap": "Model might split pointer arithmetic across statements" },
+      { "id": "4.3", "text": "Bounds check before unsafe access", "trap": "none — baseline safety" }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "full-slice-expr",
+    "description": "SplitIntoChunks with full-slice expression to prevent append aliasing",
+    "task": "Write a function `SplitIntoChunks(data []byte, chunkSize int) [][]byte` in package `chunker`. Split data into chunks of chunkSize bytes (last chunk may be smaller). IMPORTANT: callers will independently append to each returned chunk, so chunks must not share backing arrays — appending to one chunk must never corrupt another.",
+    "assertions": [
+      { "id": "5.1", "text": "Chunks are append-safe (no aliasing)", "trap": "none — both approaches achieve this" },
+      { "id": "5.2", "text": "Uses full-slice expression `[:n:n]`", "trap": "Without skill, model uses make+copy per chunk instead of zero-alloc full-slice" },
+      { "id": "5.3", "text": "Minimal extra allocations (reuses backing array)", "trap": "Without skill, model allocates N fresh arrays instead of reusing original" }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "list-valid-use",
+    "description": "OrderedMap with O(1) middle deletion — valid container/list use case",
+    "task": "Write an `OrderedMap[K comparable, V any]` in package `ordmap` that preserves insertion order AND supports O(1) deletion by key. Methods: Set(key K, value V), Get(key K) (V, bool), Delete(key K), Keys() []K (in insertion order). When a key is deleted from the middle, the insertion order of remaining keys must be preserved without shifting.",
+    "assertions": [
+      { "id": "6.1", "text": "Uses `container/list` from stdlib", "trap": "Without skill, model builds custom generic linked list instead of using stdlib" },
+      { "id": "6.2", "text": "Map stores `*list.Element` for O(1) access", "trap": "none — both approaches use map for lookup" },
+      { "id": "6.3", "text": "Delete is O(1) via element reference", "trap": "none — both approaches achieve O(1) delete" }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "composite-struct-key",
+    "description": "Route cache keyed by (method, path) — struct key vs string encoding",
+    "task": "Write an HTTP route cache in package `router`. The cache maps (method, path) pairs to handler names. Implement Set(method, path, handler string) and Get(method, path string) (string, bool). Millions of lookups per second — optimize for zero-allocation lookups.",
+    "assertions": [
+      { "id": "7.1", "text": "Uses struct or array as map key", "trap": "Without skill, model concatenates strings (method+':'+path) or uses complex encoding" },
+      { "id": "7.2", "text": "Zero allocation on lookup path", "trap": "Without skill, model uses string concatenation (allocates) or complex unsafe tricks" },
+      { "id": "7.3", "text": "Simple, readable key type", "trap": "Without skill, model over-engineers with sync.Map + unsafe stack string hacks" }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "map-memory-diag",
+    "description": "Maps never shrink — the only fix is rebuilding; GC hints and nil-assignment are insufficient",
+    "task": "A Go service processes events. During traffic spikes, `var eventIndex map[string]*Event` grows to 10M entries. After the spike, events expire and are deleted, leaving ~1000 entries. But RSS memory stays at 2GB. The team added `delete(eventIndex, key)` for every expired event — why doesn't memory decrease?\n\nTwo teammates propose fixes:\n- Alice: 'Call `runtime.GC()` after bulk deletes — it will force the GC to reclaim unused map memory.'\n- Bob: 'Set `eventIndex = nil` and then reassign `eventIndex = make(map[string]*Event)` — that releases the old map to the GC.'\n\nAre either of these correct? Write a `Diagnose()` comment and a `Compact()` method on `EventStore` that correctly fixes the issue. Package `events`.",
+    "assertions": [
+      { "id": "8.1", "text": "Correctly diagnoses root cause: Go maps never shrink their bucket array — delete() removes entries but the allocated bucket memory is retained, preventing GC of the backing structure" },
+      { "id": "8.2", "text": "Evaluates Bob's nil-reassign approach: correctly identifies this as valid — setting eventIndex = nil releases the old map to GC, and rebuilding with make creates a fresh small map" },
+      { "id": "8.3", "text": "Evaluates Alice's runtime.GC() approach: correctly identifies this as insufficient alone — GC cannot reclaim a live map's bucket array; the map itself must be rebuilt" },
+      { "id": "8.4", "text": "Compact() creates a fresh map with make and copies surviving entries — rebuilding is the only way to reclaim bucket memory from a Go map" }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "ring-round-robin",
+    "description": "LoadBalancer cycling backends using container/ring",
+    "task": "Write a `LoadBalancer` in package `lb` that distributes requests across backends using round-robin. NewLoadBalancer(backends []string) *LoadBalancer creates the balancer. Next() string returns the next backend in rotation, cycling forever. The balancer must work correctly even after billions of calls (no integer overflow on counter).",
+    "assertions": [
+      { "id": "9.1", "text": "Uses `container/ring` for round-robin", "trap": "Without skill, model uses atomic counter with modulo (also valid but not stdlib)" },
+      { "id": "9.2", "text": "No integer overflow risk", "trap": "none — both ring (no counter) and uint64 modulo (safe wrap) avoid overflow" },
+      { "id": "9.3", "text": "Correct rotation on each call", "trap": "none — baseline correctness" }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "large-struct-ptr",
+    "description": "DocumentStore with 20-field struct — pointer map needed",
+    "task": "Write a `DocumentStore` in package `docs`. Document has 20 fields: ID, Title, Author, Body, Summary, Category, Tags []string, CreatedAt, UpdatedAt, PublishedAt time.Time, ViewCount, LikeCount, CommentCount int, Draft bool, Locale, Slug, MetaTitle, MetaDescription, CanonicalURL, RevisionID string. The store is read-heavy (100:1 read:write). Implement Add(doc Document), Get(id string) (*Document, bool), Update(id string, doc Document).",
+    "assertions": [
+      { "id": "10.1", "text": "Uses pointer map `map[string]*Document`", "trap": "Without skill, model uses value map — copies 500+ byte struct on every read" },
+      { "id": "10.2", "text": "Get returns stored pointer (no copy)", "trap": "Without skill, model copies from value map and takes & of copy" },
+      { "id": "10.3", "text": "Uses `sync.RWMutex` for concurrent reads", "trap": "none — baseline concurrency" }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "small-struct-val",
+    "description": "CoordTracker with 16-byte Coord — value map preferred over pointer",
+    "task": "Write a `CoordTracker` in package `geo`. It tracks millions of active GPS positions. Coord has Lat, Lon float64 (16 bytes total). Implement Update(id string, lat, lon float64), Position(id string) (Coord, bool), Remove(id string). Optimize the internal map for maximum read throughput given the tiny struct size.",
+    "assertions": [
+      { "id": "11.1", "text": "Uses value map `map[string]Coord` (not pointer)", "trap": "Model might over-optimize with pointer map for 'millions' of entries" },
+      { "id": "11.2", "text": "Explains < 128-byte threshold for value vs pointer choice", "trap": "Without skill, model doesn't articulate the size-based tradeoff" },
+      { "id": "11.3", "text": "Proportional complexity for struct size", "trap": "Without skill, model may over-engineer with sharding for a simple case" }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "clip-after-delete",
+    "description": "PurgeInactive with slices.DeleteFunc + Clip to release dead references",
+    "task": "Write a function `PurgeInactive(users []User) []User` in package `cleanup`. User has ID string, Active bool, and Profile []byte (can be several MB). Remove all inactive users. The returned slice must not hold references to any inactive User's Profile data in its excess capacity. Users are typically 90% inactive after a bulk import.",
+    "assertions": [
+      { "id": "12.1", "text": "No dead references in result slice", "trap": "none — both approaches achieve this" },
+      { "id": "12.2", "text": "Uses `slices.DeleteFunc` + `slices.Clip`", "trap": "Without skill, model uses manual loop + make instead of modern slices package" },
+      { "id": "12.3", "text": "Excess capacity released", "trap": "none — both approaches release excess" }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "heap-priority-queue",
+    "description": "Task scheduler using container/heap — tests knowledge of heap.Interface and heap.Fix",
+    "task": "Write a `TaskScheduler` in package `scheduler` that executes tasks in priority order. Each Task has ID string, Priority int (lower = higher priority), and ExecuteAt time.Time. Implement Schedule(task Task), Next() (Task, bool), and UpdatePriority(id string, newPriority int). UpdatePriority must efficiently re-order the task without removing and re-adding it.",
+    "assertions": [
+      { "id": "13.1", "text": "Implements heap.Interface (Len, Less, Swap, Push, Pop) on a custom type", "trap": "Without skill, model might use a sorted slice with re-sort on every insert" },
+      { "id": "13.2", "text": "Uses heap.Fix for UpdatePriority (O(log n)) instead of removing and re-adding", "trap": "Without skill, model removes + re-pushes (O(n + log n)) or re-sorts (O(n log n))" },
+      { "id": "13.3", "text": "Maintains an index map (id -> position in heap) for O(1) lookup before Fix", "trap": "Without skill, model linear-scans the heap to find the task by ID" },
+      { "id": "13.4", "text": "Calls heap.Init before first use", "trap": "Model might forget initialization" },
+      { "id": "13.5", "text": "Next() uses heap.Pop (not direct slice access and removal)", "trap": "Model might read [0] and manually remove" }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "growth-independence",
+    "description": "Tests that code does not depend on specific slice growth factor",
+    "task": "Write a Go function `EstimateAllocations(n int) int` in package `bench` that returns how many times the backing array will be reallocated when appending n elements one-by-one to an initially empty slice. Your implementation must work correctly on Go 1.20, Go 1.21, and any future Go version.",
+    "assertions": [
+      { "id": "14.1", "text": "Does NOT hardcode a growth factor (e.g., assumes doubling or 1.25x) in the calculation", "trap": "Without skill, model assumes doubling below some threshold and 1.25x above" },
+      { "id": "14.2", "text": "Uses an actual append loop to empirically measure allocations, OR explicitly states the growth algorithm may change between versions", "trap": "Model might implement a formula based on current Go runtime behavior" },
+      { "id": "14.3", "text": "Comments or documents that the slice growth algorithm is an implementation detail not guaranteed by the spec", "trap": "Without skill, model presents the growth formula as a reliable contract" },
+      { "id": "14.4", "text": "Does NOT rely on the 256-element threshold as a stable boundary", "trap": "Model might treat the threshold as a spec guarantee" },
+      { "id": "14.5", "text": "Suggests preallocation as the solution to avoid depending on growth behavior", "trap": "Without skill, model tries to predict growth exactly" }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "array-as-map-key",
+    "description": "Tests when to use arrays (comparable, value type) as map keys vs slices",
+    "task": "Write a `PixelCache` in package `imaging` that caches computed color values for pixel coordinates. Coordinates are (x, y) integer pairs. The cache is used in a rendering pipeline processing millions of pixels. Implement Set(x, y int, color uint32) and Get(x, y int) (uint32, bool). Optimize for lookup speed.",
+    "assertions": [
+      { "id": "15.1", "text": "Uses [2]int array or a struct{X,Y int} as the map key (not string encoding or nested maps)", "trap": "Without skill, model might use fmt.Sprintf(\"%d,%d\") or map[int]map[int]uint32" },
+      { "id": "15.2", "text": "Key type is comparable (arrays and all-comparable-field structs satisfy this)", "trap": "Model might try to use a slice as a map key" },
+      { "id": "15.3", "text": "Zero allocation on lookup path (no string formatting)", "trap": "Without skill, model formats a string key per lookup" },
+      { "id": "15.4", "text": "Uses value map (uint32 is 4 bytes — pointer overhead not justified)", "trap": "Model might use *uint32 for no reason" },
+      { "id": "15.5", "text": "Preallocates map if estimated size is available", "trap": "Model might skip preallocation for a hot-path cache" }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "bufio-scanner-limit",
+    "description": "Tests knowledge of bufio.Scanner's 64KB default token limit",
+    "task": "Write a function `ParseLogFile(r io.Reader) ([]LogEntry, error)` in package `logs`. Each log line is a JSON object. Some log entries contain large base64-encoded payloads and can be up to 2MB per line. Parse all lines and return the entries.",
+    "assertions": [
+      { "id": "16.1", "text": "Uses bufio.Scanner for line-by-line reading", "trap": "Without skill, model might use bufio.NewReader + ReadString or ReadBytes" },
+      { "id": "16.2", "text": "Calls scanner.Buffer() to increase the max token size beyond the 64KB default", "trap": "Without skill, model uses default Scanner which silently truncates or errors on lines > 64KB" },
+      { "id": "16.3", "text": "Sets buffer size to at least 2MB to accommodate the large lines", "trap": "Model might use Scanner without adjusting buffer, failing on large lines" },
+      { "id": "16.4", "text": "Checks scanner.Err() after the scan loop", "trap": "Model might ignore scanner errors" },
+      { "id": "16.5", "text": "Unmarshals each line as JSON into LogEntry struct", "trap": "None — baseline correctness" }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "generics-when-not-to-use",
+    "description": "Tests judgment about when generics are NOT appropriate",
+    "task": "Write a Go HTTP response helper package `respond`. It needs: RespondJSON(w, status, data) that marshals any data to JSON, RespondError(w, status, message) that sends an error JSON, and RespondNoContent(w) that sends 204. A teammate suggests making it generic: `Respond[T any](w, status, data T)`. Should you use generics here? Implement the best approach.",
+    "assertions": [
+      { "id": "17.1", "text": "Does NOT make RespondJSON generic with a type parameter (any constraint with json.Marshal makes generics pointless — it's just interface{} with extra syntax)", "trap": "Without skill, model accepts the teammate's generic suggestion" },
+      { "id": "17.2", "text": "Uses `any` or `interface{}` parameter directly for the data argument", "trap": "Model might use generics just because the prompt suggests it" },
+      { "id": "17.3", "text": "Explains WHY generics are not appropriate here (any constraint means no type-specific behavior, json.Marshal already accepts any)", "trap": "Without skill, model adds generics without questioning the value" },
+      { "id": "17.4", "text": "Mentions that generics shine for containers/algorithms where type safety adds value, not for serialization", "trap": "Model might not articulate the distinction" },
+      { "id": "17.5", "text": "Implementation is straightforward without type parameters", "trap": "None — baseline" }
+    ]
+  }
+]

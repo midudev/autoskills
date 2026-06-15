@@ -1,0 +1,156 @@
+[
+  {
+    "id": 1,
+    "name": "lifecycle-not-init",
+    "description": "Tests use of fx.Lifecycle hooks instead of init() or constructor side effects for startup work",
+    "prompt": "In my Go service using uber-go/fx, I have a NewHTTPServer constructor that should listen on a port and serve requests. Where should I call srv.Serve(ln) — inside the constructor, in init(), or somewhere else?",
+    "trap": "Without the skill, the model calls srv.Serve in init() or directly inside the constructor (which would block boot), or writes a goroutine inside the constructor (which fires before lifecycle ordering applies). The right answer is OnStart with a goroutine.",
+    "assertions": [
+      {"id": "1.1", "text": "Injects fx.Lifecycle into NewHTTPServer"},
+      {"id": "1.2", "text": "Calls lc.Append with an fx.Hook (or fx.StartHook/StopHook) — OnStart starts the server, OnStop calls Shutdown"},
+      {"id": "1.3", "text": "OnStart launches srv.Serve inside a goroutine so the hook returns quickly"},
+      {"id": "1.4", "text": "Does NOT call srv.Serve directly inside the constructor"},
+      {"id": "1.5", "text": "Does NOT use init() to start the server"},
+      {"id": "1.6", "text": "OnStop calls srv.Shutdown(ctx) for graceful shutdown"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "annotate-vs-fxout-struct",
+    "description": "Tests fx.Annotate as the modern way to add tags or interface bindings",
+    "prompt": "I have NewPostgresDB returning *PostgresDB in my Go app using uber-go/fx. I want consumers to ask for a Database interface, and I want this DB tagged with name:\"primary\" so I can add a replica later. Show me how.",
+    "trap": "Without the skill, the model writes a separate adapter constructor returning Database, or wraps the result in an fx.Out struct — missing fx.Annotate(NewPostgresDB, fx.As(new(Database)), fx.ResultTags(...)) which does both in one line.",
+    "assertions": [
+      {"id": "2.1", "text": "Uses fx.Annotate around NewPostgresDB"},
+      {"id": "2.2", "text": "Uses fx.As(new(Database)) inside the annotation to bind the interface"},
+      {"id": "2.3", "text": "Uses fx.ResultTags(`name:\"primary\"`) for the named tag"},
+      {"id": "2.4", "text": "Does NOT introduce a separate adapter/wrapper constructor"},
+      {"id": "2.5", "text": "Does NOT rewrite NewPostgresDB to return Database directly (since the original constructor stays untouched)"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "module-organization",
+    "description": "Tests fx.Module for organizing related providers/invokes/decorators",
+    "prompt": "My Go application using uber-go/fx is growing — main.go now has dozens of fx.Provide calls for HTTP, database, metrics, and worker concerns mixed together. How should I reorganize this?",
+    "trap": "Without the skill, the model splits providers across several Go packages but keeps a flat list in main(), missing fx.Module which groups providers, invokes, and decorators under a name and lets decorators be module-scoped.",
+    "assertions": [
+      {"id": "3.1", "text": "Recommends fx.Module to group related options"},
+      {"id": "3.2", "text": "Shows at least 2 separate modules (e.g., HTTPModule, DatabaseModule)"},
+      {"id": "3.3", "text": "main() composes the modules via fx.New(HTTPModule, DatabaseModule, ...)"},
+      {"id": "3.4", "text": "Mentions OR demonstrates that fx.Decorate inside a module is scoped to that module"},
+      {"id": "3.5", "text": "Each module includes its own fx.Provide (and possibly fx.Invoke / fx.Decorate) calls"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "supply-vs-provide",
+    "description": "Tests fx.Supply for pre-built values (config, secrets) instead of fx.Provide with a no-op constructor",
+    "prompt": "In my Go application using uber-go/fx, I parse a *Config from flags and load an API_KEY environment variable in main() before calling fx.New. How should I make these available to the rest of the graph?",
+    "trap": "Without the skill, the model writes fx.Provide(func() *Config { return cfg }) — a redundant constructor that just returns the existing value. fx.Supply does this without the boilerplate.",
+    "assertions": [
+      {"id": "4.1", "text": "Uses fx.Supply(cfg) (or fx.Supply with both values)"},
+      {"id": "4.2", "text": "Does NOT wrap the pre-built values in fx.Provide(func() *Config { return cfg })"},
+      {"id": "4.3", "text": "Mentions or demonstrates that fx.Supply makes pre-built values first-class graph members"},
+      {"id": "4.4", "text": "If both values are supplied as the same type or need a tag, optionally uses fx.Annotate within fx.Supply for tagging"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "fxtest-with-populate",
+    "description": "Tests fxtest.New + fx.Populate for testing instead of raw fx.New + fx.Invoke",
+    "prompt": "I have a *UserService wired in my Go app using uber-go/fx. I want a unit test that pulls *UserService out of the graph (with a fake Database injected) and asserts behavior. Show me the minimal test.",
+    "trap": "Without the skill, the model uses fx.New + fx.Invoke(func(s *UserService) { ... }) — works but doesn't fail the test cleanly and has no Cleanup integration. fxtest.New + fx.Populate is idiomatic.",
+    "assertions": [
+      {"id": "5.1", "text": "Uses fxtest.New(t, ...) instead of fx.New"},
+      {"id": "5.2", "text": "Uses fx.Populate(&svc) to extract the *UserService from the graph"},
+      {"id": "5.3", "text": "Calls app.RequireStart() (or .Start) and app.RequireStop() (e.g., as t.Cleanup or defer)"},
+      {"id": "5.4", "text": "Provides a fake Database (interface) — does NOT use the real DB"},
+      {"id": "5.5", "text": "Does NOT use fx.Invoke as the primary mechanism for extracting the service"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "replace-for-fakes",
+    "description": "Tests fx.Replace inside fxtest to swap a real dependency embedded in a module",
+    "prompt": "My Go app uses uber-go/fx with a ProductionModule that bundles all real wiring. In one integration test, I want to replace the real Database with an erroring fake — without rewriting the module. How?",
+    "trap": "Without the skill, the model rewrites the module (or copies it) to inject the fake — missing fx.Replace which overrides a previously-provided type without touching the module.",
+    "assertions": [
+      {"id": "6.1", "text": "Uses fx.Replace(...) inside fxtest.New (or fx.New) to override the Database"},
+      {"id": "6.2", "text": "Composes ProductionModule alongside fx.Replace (the module is reused unchanged)"},
+      {"id": "6.3", "text": "Uses fx.Annotate inside fx.Replace if needed for fx.As(new(Database)) binding"},
+      {"id": "6.4", "text": "Does NOT modify or duplicate the production module to inject the fake"},
+      {"id": "6.5", "text": "Mentions that fx.Replace is appropriate for tests (not production code)"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "value-groups-handlers",
+    "description": "Tests value groups when many handler constructors must contribute to one slice",
+    "prompt": "In my Go HTTP server using uber-go/fx, I want every NewXxxHandler constructor to register itself with the router automatically — no manual list of handlers in main(). I have NewUserHandler, NewPostHandler, NewHealthHandler. The router consumes []http.Handler. Wire this.",
+    "trap": "Without the skill, the model assembles a slice manually in main() or writes one constructor that builds all handlers — missing the group:\"...\" tag pattern that keeps producers and the consumer decoupled.",
+    "assertions": [
+      {"id": "7.1", "text": "Each handler is registered with fx.Annotate(... fx.ResultTags(`group:\"routes\"`)) (or via an fx.Out struct with a group tag)"},
+      {"id": "7.2", "text": "The router (or server) consumes a fx.In with []http.Handler tagged group:\"routes\""},
+      {"id": "7.3", "text": "Optionally uses fx.As(new(http.Handler)) inside the annotation if the constructor returns a concrete type"},
+      {"id": "7.4", "text": "Does NOT manually maintain a slice of handlers in main()"},
+      {"id": "7.5", "text": "Does not assert ordering of the resulting slice (or explicitly notes order is unspecified)"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "logger-fxevent-zap",
+    "description": "Tests fx.WithLogger + fxevent.ZapLogger to route fx events through the app's structured logger",
+    "prompt": "My Go service using uber-go/fx logs everything through *zap.Logger. The default fx output goes to stderr in a different format and is noisy in production. How do I route fx's own events (provide/invoke/start/stop) through my zap logger?",
+    "trap": "Without the skill, the model suggests overriding os.Stderr or grepping logs — missing fx.WithLogger which lets you provide an fxevent.Logger backed by zap.",
+    "assertions": [
+      {"id": "8.1", "text": "Uses fx.WithLogger(...) as an fx.New option"},
+      {"id": "8.2", "text": "The provided fxevent.Logger is &fxevent.ZapLogger{Logger: log}"},
+      {"id": "8.3", "text": "The logger inside fx.WithLogger receives the *zap.Logger as a parameter (so fx wires it from the graph)"},
+      {"id": "8.4", "text": "Does NOT redirect stderr or modify global log output"},
+      {"id": "8.5", "text": "May mention fx.NopLogger as an option to silence fx events"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "manual-lifecycle-cli",
+    "description": "Tests app.Start / app.Done / app.Stop for embedding fx in a larger program",
+    "prompt": "I'm building a Go CLI tool that has an interactive sub-command and a serve sub-command. I want the serve sub-command to spin up an fx graph, start it, wait for SIGINT, and shut down — but I don't want fx hijacking the entire process via app.Run() (because the CLI may resume to other work after). How do I drive fx manually?",
+    "trap": "Without the skill, the model calls app.Run() and then can't return to the CLI — missing manual Start/Done/Stop, which is exactly what the user is asking for.",
+    "assertions": [
+      {"id": "9.1", "text": "Uses app.Start(ctx) explicitly with a context (often timeout-bounded)"},
+      {"id": "9.2", "text": "Waits on app.Done() (or a select including parent context cancellation) instead of calling app.Run()"},
+      {"id": "9.3", "text": "Uses app.Stop(ctx) explicitly with a context"},
+      {"id": "9.4", "text": "Does NOT recommend app.Run() as the primary mechanism for this scenario"},
+      {"id": "9.5", "text": "Mentions that app.Err() can validate wiring without starting"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "onstart-non-blocking",
+    "description": "Tests that long-running OnStart work is launched in a goroutine, not run synchronously",
+    "prompt": "In my Go app using uber-go/fx, the OnStart hook for a worker calls a method that runs forever (consuming jobs from a queue until the app stops). Show me the OnStart implementation.",
+    "trap": "Without the skill, the model calls the long-running method synchronously inside OnStart — which hangs startup. The right pattern is to spawn a goroutine and return nil quickly.",
+    "assertions": [
+      {"id": "10.1", "text": "OnStart launches the long-running method inside a goroutine"},
+      {"id": "10.2", "text": "OnStart itself returns nil (or an error) quickly without waiting for the worker to finish"},
+      {"id": "10.3", "text": "OnStop signals the worker to stop (closing a channel, calling Cancel, etc.) and waits for it to drain"},
+      {"id": "10.4", "text": "Does NOT call the long-running method synchronously inside OnStart"},
+      {"id": "10.5", "text": "Mentions that a blocking OnStart would hang the boot / dependent hooks"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "fx-when-not-dig",
+    "description": "Tests recommending raw dig (instead of fx) when the user does not need lifecycle / app boot",
+    "prompt": "I'm writing a one-shot Go CLI command that builds a small object graph (parses input, creates a few services, calls one of them, exits). I'm reading about uber-go/fx but it seems heavy. Should I use fx for this?",
+    "trap": "Without the skill, the model unconditionally recommends fx — missing that for one-shot programs without lifecycle, raw uber-go/dig is the lighter, simpler choice.",
+    "assertions": [
+      {"id": "11.1", "text": "Recommends raw uber-go/dig (or notes fx is overkill for this case)"},
+      {"id": "11.2", "text": "Mentions that fx is built on dig — the wiring patterns are nearly identical"},
+      {"id": "11.3", "text": "Mentions that fx adds value when the program needs lifecycle hooks, signal handling, or modular composition"},
+      {"id": "11.4", "text": "Does NOT recommend introducing fx.Lifecycle/fx.Module to a one-shot program"},
+      {"id": "11.5", "text": "May recommend manual constructor injection if the graph is very small"}
+    ]
+  }
+]

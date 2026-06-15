@@ -1,0 +1,53 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go:
+          - "1.25"
+          - "1.26"
+          - "stable"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Verify dependencies
+        run: |
+          go mod verify
+          go mod download
+
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run tests
+        run: go test -v -race -shuffle=on -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        if: matrix.go == 'stable'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

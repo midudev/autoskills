@@ -1,0 +1,1081 @@
+[
+  {
+    "id": 1,
+    "name": "b-loop-vs-range-bn",
+    "description": "Tests whether the model uses b.Loop() (Go 1.24+) instead of the legacy for range b.N pattern",
+    "prompt": "Write a Go benchmark for a function `ComputeHash(data []byte) [32]byte` that uses SHA-256. The project uses Go 1.24. Include setup code that loads a 1MB test fixture.",
+    "trap": "Without the skill, the model defaults to `for i := 0; i < b.N; i++` or `for range b.N`, where setup may need manual b.ResetTimer() and unused results may need a sink to prevent dead code elimination",
+    "assertions": [
+      {"id": "1.1", "text": "Uses b.Loop() as the benchmark loop construct"},
+      {"id": "1.2", "text": "Setup code (loading fixture) is placed BEFORE the b.Loop() call, not inside it"},
+      {"id": "1.3", "text": "Does NOT use b.ResetTimer() since b.Loop() automatically excludes setup"},
+      {"id": "1.4", "text": "Does NOT use a package-level sink variable to prevent dead code elimination"},
+      {"id": "1.5", "text": "Does NOT use `for i := 0; i < b.N; i++` or `for range b.N`"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "dead-code-elimination-awareness",
+    "description": "Tests whether the model understands that b.Loop() prevents compiler dead code elimination",
+    "prompt": "I have this benchmark that seems unrealistically fast — the results show 0.3 ns/op for a function that parses a 10KB JSON document. What's wrong?\n\n```go\nfunc BenchmarkParseJSON(b *testing.B) {\n    data := loadFixture(\"large.json\")\n    for i := 0; i < b.N; i++ {\n        ParseJSON(data)\n    }\n}\n```\nThe project uses Go 1.24.",
+    "trap": "Without the skill, the model may suggest adding b.ResetTimer() or increasing benchtime, missing the core issue of dead code elimination",
+    "assertions": [
+      {"id": "2.1", "text": "Identifies dead code elimination as the cause — the compiler optimizes away the ParseJSON call because its result is unused"},
+      {"id": "2.2", "text": "Recommends migrating to b.Loop() as the primary fix since it prevents DCE automatically"},
+      {"id": "2.3", "text": "If mentioning the legacy workaround, describes using a package-level sink variable (not a local one)"},
+      {"id": "2.4", "text": "Explains that b.Loop() also automatically excludes the setup code from timing"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "count-flag-statistical-significance",
+    "description": "Tests whether the model recommends -count=10 for statistical significance rather than single runs",
+    "prompt": "I want to compare the performance of two JSON serialization approaches. How should I run the benchmarks to get reliable comparison data?",
+    "trap": "Without the skill, the model may suggest a single `go test -bench=.` run per version without -count, making benchstat comparison impossible",
+    "assertions": [
+      {"id": "3.1", "text": "Recommends -count=10 (or higher) for statistical significance"},
+      {"id": "3.2", "text": "Recommends using benchstat to compare the two runs"},
+      {"id": "3.3", "text": "Recommends -benchmem to track allocation metrics"},
+      {"id": "3.4", "text": "Recommends saving output to files (e.g., via tee) for later benchstat comparison"},
+      {"id": "3.5", "text": "Uses -run='^$' to skip unit tests during benchmark runs"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "benchstat-output-interpretation",
+    "description": "Tests understanding of benchstat output format including p-value, tilde symbol, and confidence intervals",
+    "prompt": "I ran benchstat and got this output. What does it mean? Should I merge my optimization?\n\n```\n          │   old.txt   │              new.txt               │\n          │   sec/op    │   sec/op     vs base               │\nParse-16    4.592µ ± 8%   4.481µ ± 7%  ~ (p=0.089 n=10)\n```",
+    "trap": "Without the skill, the model may interpret the lower number as an improvement and recommend merging",
+    "assertions": [
+      {"id": "4.1", "text": "Explains that the ~ symbol means no statistically significant difference was detected"},
+      {"id": "4.2", "text": "States that p=0.089 is above the 0.05 significance threshold"},
+      {"id": "4.3", "text": "Notes that the wide confidence intervals (±8%, ±7%) overlap, making the result untrustworthy"},
+      {"id": "4.4", "text": "Advises NOT to claim improvement based on this result"},
+      {"id": "4.5", "text": "Suggests increasing -count to 20+ or reducing noise sources as next steps"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "p-hacking-awareness",
+    "description": "Tests whether the model warns against rerunning benchmarks until significance appears",
+    "prompt": "My benchstat comparison keeps showing `~` (no significant difference). Can I just rerun the benchmarks a few more times and pick the run that shows significance?",
+    "trap": "Without the skill, the model may naively agree or suggest cherry-picking favorable runs",
+    "assertions": [
+      {"id": "5.1", "text": "Explicitly warns against 'retry until significant' as selection bias / p-hacking"},
+      {"id": "5.2", "text": "Explains that rerunning until ~ disappears introduces bias"},
+      {"id": "5.3", "text": "Recommends increasing -count ONCE and accepting the result"},
+      {"id": "5.4", "text": "Mentions that at alpha=0.05, ~5% of benchmarks will randomly show significance (false positives)"},
+      {"id": "5.5", "text": "Suggests the change may genuinely have no measurable effect"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "interleaving-benchmark-runs",
+    "description": "Tests knowledge of interleaving old/new benchmark runs to reduce systematic bias",
+    "prompt": "I'm comparing performance before and after an optimization. I ran all 10 baseline iterations first, then all 10 optimized iterations. My colleague says this approach is flawed. Why?",
+    "trap": "Without the skill, the model may not know about systematic bias from sequential runs or may not suggest pre-compilation with go test -c",
+    "assertions": [
+      {"id": "6.1", "text": "Identifies systematic bias: thermal throttling, background processes, CPU frequency scaling can differ between the first batch and second batch"},
+      {"id": "6.2", "text": "Recommends interleaving runs (alternating old/new) to reduce this bias"},
+      {"id": "6.3", "text": "Recommends pre-compiling both versions with `go test -c` to avoid measuring compilation time"},
+      {"id": "6.4", "text": "Shows running the pre-compiled test binaries directly (e.g., ./old.test -test.bench=...)"},
+      {"id": "6.5", "text": "Explains that without pre-compilation, each go test -bench invocation includes compilation overhead that varies"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "alloc-objects-vs-inuse-space",
+    "description": "Tests understanding of when to use alloc_objects vs inuse_space heap profile types",
+    "prompt": "My Go service has high GC CPU overhead (30% of CPU in runtime.mallocgc according to pprof). I captured a heap profile. Should I look at alloc_objects, alloc_space, or inuse_space?",
+    "trap": "Without the skill, the model may suggest inuse_space (which shows live objects, not allocation rate) or alloc_space (which shows bytes, not count)",
+    "assertions": [
+      {"id": "7.1", "text": "Recommends alloc_objects as the primary choice for GC pressure / high allocation rate"},
+      {"id": "7.2", "text": "Explains that alloc_objects counts allocation events and helps find high-frequency object churn driving GC work"},
+      {"id": "7.3", "text": "Explains that inuse_space shows currently live objects and is for leak detection, not GC churn"},
+      {"id": "7.4", "text": "Distinguishes alloc_space (total bytes allocated) as useful for reducing peak memory, not GC frequency"},
+      {"id": "7.5", "text": "Mentions that runtime.mallocgc dominating CPU profile indicates allocation rate is the bottleneck, not computation"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "pprof-flat-vs-cum",
+    "description": "Tests understanding of flat vs cumulative time in pprof and when to use top -cum",
+    "prompt": "I ran `go tool pprof cpu.prof` and the top command shows runtime.mallocgc, runtime.memmove, and runtime.scanobject as the top functions. These are all runtime functions I can't modify. How do I find which of MY functions is causing this?",
+    "trap": "Without the skill, the model may suggest trying to optimize runtime functions or be unsure how to trace back to application code",
+    "assertions": [
+      {"id": "8.1", "text": "Recommends using `top -cum` to find application functions with high cumulative time"},
+      {"id": "8.2", "text": "Explains that runtime functions appearing in top (flat) are symptoms, not causes — they're called by application code"},
+      {"id": "8.3", "text": "Explains the difference: flat = time in the function itself, cum = time in the function + everything it calls"},
+      {"id": "8.4", "text": "Suggests using `list` or `peek` to drill into the application functions that delegate to these runtime calls"},
+      {"id": "8.5", "text": "Explains the 'flat low + cum high' pattern: the function is a coordinator calling expensive things"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "escape-analysis-interpretation",
+    "description": "Tests ability to use and interpret escape analysis output",
+    "prompt": "My benchmark shows unexpected heap allocations for a function that only uses local variables. How can I find out why Go is allocating on the heap instead of the stack?",
+    "trap": "Without the skill, the model may suggest generic profiling without mentioning the specific compiler flag for escape analysis",
+    "assertions": [
+      {"id": "9.1", "text": "Recommends `go build -gcflags=\"-m\"` to show escape decisions"},
+      {"id": "9.2", "text": "Mentions `-m -m` (double -m) for verbose output showing the escape chain / reason"},
+      {"id": "9.3", "text": "Lists common escape causes like returning pointer to local, interface boxing, closure captures"},
+      {"id": "9.4", "text": "Notes that this analysis is free (compile-time, no runtime overhead)"},
+      {"id": "9.5", "text": "Advises to only investigate escapes in hot functions identified by pprof, not all functions"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "inlining-budget-and-blockers",
+    "description": "Tests knowledge of Go's inlining cost budget and common blockers",
+    "prompt": "I have a small helper function in a hot path that I want the Go compiler to inline. How do I check if it's being inlined, and what might prevent it?",
+    "trap": "Without the skill, the model may not know the specific budget number (80) or all the blockers like defer, recover, go statements",
+    "assertions": [
+      {"id": "10.1", "text": "Recommends `go build -gcflags=\"-m\"` and grepping for 'can inline' or 'cannot inline'"},
+      {"id": "10.2", "text": "Mentions the inline cost budget of 80 (as of Go 1.22+)"},
+      {"id": "10.3", "text": "Lists defer as an inlining blocker"},
+      {"id": "10.4", "text": "Lists recover() as an inlining blocker"},
+      {"id": "10.5", "text": "Mentions that splitting large functions into smaller ones can help the hot inner function inline"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "trace-vs-pprof-selection",
+    "description": "Tests judgment on when to use execution trace vs pprof",
+    "prompt": "My Go HTTP service has high P99 latency (500ms) but pprof CPU profile shows only 15% CPU utilization. The top functions in the CPU profile are all fast. Where is the time going?",
+    "trap": "Without the skill, the model may suggest more CPU profiling or generic optimization, missing that this is a scheduling/blocking problem requiring the execution tracer",
+    "assertions": [
+      {"id": "11.1", "text": "Identifies this as a case where pprof is insufficient — low CPU with high latency means goroutines are waiting, not working"},
+      {"id": "11.2", "text": "Recommends `go tool trace` (execution tracer) to see scheduling delays and blocking"},
+      {"id": "11.3", "text": "Explains that pprof only shows on-CPU time; trace shows off-CPU waiting states"},
+      {"id": "11.4", "text": "Suggests looking at goroutine states: yellow/orange (runnable but waiting for P) or red/pink (blocked on I/O, channel, mutex)"},
+      {"id": "11.5", "text": "Mentions the -pprof=sync or -pprof=net flag to extract blocking profiles from trace data"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "benchstat-unit-normalization",
+    "description": "Tests understanding of benchstat's automatic unit normalization",
+    "prompt": "I'm confused by benchstat output. My benchmark reports `ns/op` but benchstat shows `sec/op` with a µ prefix. Is this an error?",
+    "trap": "Without the skill, the model may think there's a bug or unit mismatch",
+    "assertions": [
+      {"id": "12.1", "text": "Explains that benchstat automatically normalizes units for display"},
+      {"id": "12.2", "text": "States that ns/op is displayed as sec/op with µ (micro) prefix to avoid nonsensical 'µns/op'"},
+      {"id": "12.3", "text": "Mentions that MB/s is similarly normalized to B/s with K, M, G prefixes"},
+      {"id": "12.4", "text": "Confirms this is expected behavior, not an error"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "benchstat-filter-syntax",
+    "description": "Tests knowledge of benchstat's filter expression syntax for selecting specific benchmarks",
+    "prompt": "I have benchmark output with many sub-benchmarks like BenchmarkParse/format=json, BenchmarkParse/format=gob, BenchmarkEncode/size=1k, etc. I only want to compare the json format benchmarks. How do I filter benchstat output?",
+    "trap": "Without the skill, the model may suggest grepping the output file instead of using benchstat's built-in filter syntax",
+    "assertions": [
+      {"id": "13.1", "text": "Uses benchstat's -filter flag rather than pre-processing with grep"},
+      {"id": "13.2", "text": "Shows the correct filter syntax: -filter '/format:json' or similar key:value pattern"},
+      {"id": "13.3", "text": "Mentions regex support in filters (e.g., .name:/Parse/)"},
+      {"id": "13.4", "text": "Mentions logical operators (AND, OR, negation with -) in filter expressions"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "benchstat-projection-col-flag",
+    "description": "Tests knowledge of benchstat's -col flag for comparing sub-benchmark parameters",
+    "prompt": "I have a single benchmark file with results for BenchmarkEncode/format=json and BenchmarkEncode/format=gob. I want to compare json vs gob performance side by side in benchstat. How?",
+    "trap": "Without the skill, the model may suggest splitting into two files and comparing, or not know about the -col flag",
+    "assertions": [
+      {"id": "14.1", "text": "Uses the -col /format flag to create columns from sub-benchmark parameter values"},
+      {"id": "14.2", "text": "Shows the correct command: benchstat -col /format bench.txt"},
+      {"id": "14.3", "text": "Mentions -row .name to simplify row names by stripping sub-benchmark config"},
+      {"id": "14.4", "text": "Mentions the @() sort modifier for controlling column order (e.g., /format@(gob json))"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "benchstat-assume-exact",
+    "description": "Tests knowledge of benchstat's assume=exact unit metadata for non-varying metrics",
+    "prompt": "I want to track binary size across commits using benchstat. The size doesn't vary between runs (it's deterministic). But benchstat complains about insufficient samples when I use -count=1. How do I handle deterministic metrics?",
+    "trap": "Without the skill, the model may suggest using -count=10 anyway (wasteful for deterministic metrics) or abandoning benchstat",
+    "assertions": [
+      {"id": "15.1", "text": "Recommends the assume=exact unit metadata annotation"},
+      {"id": "15.2", "text": "Shows the syntax: Unit <metric> assume=exact in benchmark output"},
+      {"id": "15.3", "text": "Explains that assume=exact disables non-parametric statistics"},
+      {"id": "15.4", "text": "Notes that benchstat will warn if values vary when assume=exact is set"},
+      {"id": "15.5", "text": "States that single measurement (no -count needed) works with assume=exact"}
+    ]
+  },
+  {
+    "id": 16,
+    "name": "ci-regression-tool-selection",
+    "description": "Tests judgment on which CI regression detection tool to use",
+    "prompt": "I want to add automated benchmark regression detection to my CI pipeline. I need something that:\n1. Compares PR performance against the base branch\n2. Uses statistical analysis (not just single-run comparison)\n3. Integrates with our GitHub Actions workflow\n\nWhat tool should I use?",
+    "trap": "Without the skill, the model may suggest writing a custom script or using only raw benchstat without knowing about benchdiff",
+    "assertions": [
+      {"id": "16.1", "text": "Recommends benchdiff as the primary tool for PR-to-base comparison with statistical rigor"},
+      {"id": "16.2", "text": "Explains that benchdiff uses benchstat internally for statistical analysis"},
+      {"id": "16.3", "text": "Mentions cob as a simpler alternative but notes it uses single-run comparison without benchstat-style statistics"},
+      {"id": "16.4", "text": "Mentions gobenchdata for long-term trend tracking and visualization"},
+      {"id": "16.5", "text": "Explains the tradeoff: benchdiff=high rigor, cob=quick+simple, gobenchdata=trends+dashboard"}
+    ]
+  },
+  {
+    "id": 17,
+    "name": "cob-data-loss-warning",
+    "description": "Tests awareness of cob's destructive behavior with uncommitted changes",
+    "prompt": "I want to use `cob` for quick benchmark regression checking in my local development workflow. Any caveats?",
+    "trap": "Without the skill, the model may recommend cob for local use without the critical safety warning",
+    "assertions": [
+      {"id": "17.1", "text": "Warns that cob uses `git reset` internally which can cause data loss with uncommitted changes"},
+      {"id": "17.2", "text": "Recommends committing all work before running cob"},
+      {"id": "17.3", "text": "Suggests running cob only in CI pipelines, not locally"},
+      {"id": "17.4", "text": "Notes that cob compares single runs without benchstat-style statistics, making it susceptible to noise"},
+      {"id": "17.5", "text": "Mentions [skip cob] commit message convention to bypass checks"}
+    ]
+  },
+  {
+    "id": 18,
+    "name": "noisy-neighbor-mitigation",
+    "description": "Tests knowledge of why CI benchmarks are noisy and mitigation strategies",
+    "prompt": "Our CI benchmark results fluctuate wildly — sometimes showing 15% regression, sometimes 10% improvement, for the same code. We're using GitHub-hosted runners. How do we fix this?",
+    "trap": "Without the skill, the model may suggest tightening thresholds (which causes more false positives) or simply retrying",
+    "assertions": [
+      {"id": "18.1", "text": "Explains that shared CI runners have 5-10% variance due to noisy neighbors"},
+      {"id": "18.2", "text": "Recommends running both base and head benchmarks in the same CI job for relative comparison"},
+      {"id": "18.3", "text": "Recommends using -count=10+ with benchstat to filter noise statistically"},
+      {"id": "18.4", "text": "Suggests conservative thresholds (20%+) on shared runners rather than tight thresholds"},
+      {"id": "18.5", "text": "Warns against 'retry until pass' as selection bias"},
+      {"id": "18.6", "text": "Mentions dedicated/self-hosted runners as the definitive solution for critical benchmarks"}
+    ]
+  },
+  {
+    "id": 19,
+    "name": "self-hosted-runner-tuning",
+    "description": "Tests knowledge of system-level tuning for reproducible benchmarks on self-hosted runners",
+    "prompt": "We have a dedicated self-hosted CI runner for benchmark tests. What system-level settings should we configure to minimize benchmark variance?",
+    "trap": "Without the skill, the model may only suggest generic OS tuning without knowing the specific settings for benchmark stability",
+    "assertions": [
+      {"id": "19.1", "text": "Recommends disabling CPU frequency scaling by setting the 'performance' governor"},
+      {"id": "19.2", "text": "Recommends disabling Turbo Boost (Intel no_turbo or AMD boost)"},
+      {"id": "19.3", "text": "Recommends pinning benchmarks to specific CPU cores using taskset"},
+      {"id": "19.4", "text": "Recommends disabling SMT/Hyper-Threading to avoid execution unit sharing"},
+      {"id": "19.5", "text": "Warns that these settings should ONLY be applied to dedicated runners, never developer machines"}
+    ]
+  },
+  {
+    "id": 20,
+    "name": "taskset-core-pinning-rationale",
+    "description": "Tests understanding of WHY core pinning helps benchmarks",
+    "prompt": "Why does pinning a Go benchmark to specific CPU cores with taskset help reduce variance? What's the underlying mechanism?",
+    "trap": "Without the skill, the model may give a vague answer about CPU contention without explaining the cache thrashing mechanism",
+    "assertions": [
+      {"id": "20.1", "text": "Explains that without pinning, the OS migrates the process across cores"},
+      {"id": "20.2", "text": "Explains that L1/L2 caches are per-core, so migration causes cache thrashing"},
+      {"id": "20.3", "text": "Recommends leaving cores 0-1 for OS and other processes, using cores 2+ for benchmarks"},
+      {"id": "20.4", "text": "Shows the taskset command syntax (e.g., taskset -c 2,3 go test ...)"}
+    ]
+  },
+  {
+    "id": 21,
+    "name": "b-report-metric-custom",
+    "description": "Tests knowledge of b.ReportMetric and b.Elapsed for custom benchmark metrics",
+    "prompt": "I want my Go benchmark to report throughput in bytes/second in addition to the standard ns/op. How do I add custom metrics to benchmark output?",
+    "trap": "Without the skill, the model may suggest manual calculation and fmt.Printf instead of the built-in b.ReportMetric",
+    "assertions": [
+      {"id": "21.1", "text": "Uses b.ReportMetric() to add custom metrics"},
+      {"id": "21.2", "text": "Uses b.Elapsed() to get the total benchmark duration"},
+      {"id": "21.3", "text": "Shows the correct pattern: b.ReportMetric(float64(bytes)/b.Elapsed().Seconds(), \"bytes/s\")"},
+      {"id": "21.4", "text": "The custom metric integrates with standard benchmark output format (not separate print statements)"}
+    ]
+  },
+  {
+    "id": 22,
+    "name": "alloc-space-cumulative-trap-for-leak",
+    "description": "Tests that alloc_space is cumulative (includes freed objects) and therefore wrong for leak detection",
+    "prompt": "My Go service's memory keeps growing. I captured a heap profile with:\n\ngo tool pprof -alloc_space http://localhost:6060/debug/pprof/heap\n\nThe top functions show my database layer allocating hundreds of MBs. But when I check the actual process RSS, most of that memory has already been freed. Am I reading this profile correctly?",
+    "trap": "Without the skill, the model validates the use of alloc_space for leak detection, missing that alloc_space is cumulative since program start and includes objects already freed by GC — inuse_space is the correct choice for leak detection",
+    "assertions": [
+      {"id": "22.1", "text": "Explains that alloc_space is cumulative since program start — it counts ALL allocations including those already freed by GC"},
+      {"id": "22.2", "text": "Identifies that alloc_space is the wrong profile type for leak detection because freed memory still appears"},
+      {"id": "22.3", "text": "Recommends inuse_space instead — it shows only currently live heap objects, making leaked objects visible"},
+      {"id": "22.4", "text": "Explains the correct leak detection workflow: take two inuse_space snapshots separated by time and compare with pprof -base"},
+      {"id": "22.5", "text": "Mentions common leak causes: unbounded caches, maps that never shrink, goroutine leaks holding references"}
+    ]
+  },
+  {
+    "id": 23,
+    "name": "mutex-block-profile-enablement",
+    "description": "Tests awareness that mutex and block profiles must be explicitly enabled",
+    "prompt": "I want to profile mutex contention in my Go service. I fetched the mutex profile from /debug/pprof/mutex but it's empty. What's wrong?",
+    "trap": "Without the skill, the model may suggest the endpoint is broken or suggest different debugging approaches",
+    "assertions": [
+      {"id": "23.1", "text": "Identifies that mutex profiling is disabled by default and must be explicitly enabled"},
+      {"id": "23.2", "text": "Shows runtime.SetMutexProfileFraction() as the enablement call"},
+      {"id": "23.3", "text": "Explains the fraction parameter (e.g., 5 means 1 out of 5 events recorded)"},
+      {"id": "23.4", "text": "Recommends disabling after investigation (SetMutexProfileFraction(0)) to eliminate overhead"},
+      {"id": "23.5", "text": "Mentions runtime.SetBlockProfileRate() for the related block profile"}
+    ]
+  },
+  {
+    "id": 24,
+    "name": "trace-custom-annotations",
+    "description": "Tests knowledge of runtime/trace custom annotations (tasks, regions, logs)",
+    "prompt": "I'm using go tool trace to analyze my HTTP handler but the trace timeline only shows generic goroutine activity. How can I add application-level context to see which request phases (validation, database query, serialization) are taking time?",
+    "trap": "Without the skill, the model may suggest using log statements or pprof labels instead of trace-specific annotations",
+    "assertions": [
+      {"id": "24.1", "text": "Recommends trace.NewTask for logical operations that may span goroutines"},
+      {"id": "24.2", "text": "Recommends trace.WithRegion for phases within a task or goroutine"},
+      {"id": "24.3", "text": "Mentions trace.Log for point-in-time markers in the trace"},
+      {"id": "24.4", "text": "Shows correct usage with context propagation (ctx parameter)"},
+      {"id": "24.5", "text": "Notes that annotations add negligible overhead when tracing is disabled"}
+    ]
+  },
+  {
+    "id": 25,
+    "name": "trace-gc-phase-interpretation",
+    "description": "Tests ability to interpret GC phases in execution traces",
+    "prompt": "I'm looking at an execution trace and I see large blocks of time where my goroutines show as 'GC assist' (blue). What does this mean and how do I fix it?",
+    "trap": "Without the skill, the model may not explain the proportional allocation tax mechanism or the specific remediation",
+    "assertions": [
+      {"id": "25.1", "text": "Explains that GC mark assist means goroutines are being drafted by the GC to help scan the heap"},
+      {"id": "25.2", "text": "Explains that the runtime forces goroutines to assist in proportion to their allocation rate — heavy allocators get taxed more"},
+      {"id": "25.3", "text": "Identifies this as a symptom of too many allocations, not a GC configuration problem"},
+      {"id": "25.4", "text": "Recommends reducing allocation rate (the root cause) rather than tuning GOGC"},
+      {"id": "25.5", "text": "Distinguishes mark assist from STW (stop-the-world) phases which affect all goroutines equally"}
+    ]
+  },
+  {
+    "id": 26,
+    "name": "trace-pprof-extraction",
+    "description": "Tests knowledge of extracting pprof profiles from trace data",
+    "prompt": "I have an execution trace file from a production service. I want to find which functions are responsible for the most network blocking time. Can I use the trace for this?",
+    "trap": "Without the skill, the model may suggest capturing a separate pprof profile instead of extracting from the trace",
+    "assertions": [
+      {"id": "26.1", "text": "Uses `go tool trace -pprof=net trace.out > net.prof` to extract a network blocking profile"},
+      {"id": "26.2", "text": "Then uses go tool pprof on the extracted profile for analysis (top, list, etc.)"},
+      {"id": "26.3", "text": "Mentions other extractable profile types: sync, syscall, sched"},
+      {"id": "26.4", "text": "Explains this bridges trace data (nanosecond events) with pprof analysis (statistical aggregation)"}
+    ]
+  },
+  {
+    "id": 27,
+    "name": "fieldalignment-no-autofix",
+    "description": "Tests that the model uses fieldalignment without the -fix flag",
+    "prompt": "I suspect some of my Go structs have suboptimal field ordering causing padding waste. How do I check?",
+    "trap": "Without the skill, the model may suggest using fieldalignment with -fix flag or structlayout without the diagnostic-first approach",
+    "assertions": [
+      {"id": "27.1", "text": "Recommends running `fieldalignment ./...` to detect padding waste"},
+      {"id": "27.2", "text": "Does NOT use the -fix flag — the skill explicitly says to let the agent apply changes manually"},
+      {"id": "27.3", "text": "Mentions using unsafe.Sizeof/Alignof/Offsetof to inspect struct layout before and after"},
+      {"id": "27.4", "text": "Treats this as a diagnostic step, not an automatic fix"}
+    ]
+  },
+  {
+    "id": 28,
+    "name": "godebug-gctrace-output-interpretation",
+    "description": "Tests ability to read and interpret a GODEBUG=gctrace=1 output line",
+    "prompt": "I ran my Go service with GODEBUG=gctrace=1 and see lines like:\n\ngc 14 @5.234s 2%: 0.13+1.4+0.21 ms clock, 0.53+0.43/1.1/0+0.85 ms cpu, 24->27->13 MB, 24 MB goal, 0 MB stacks, 0 MB globals, 4 P\n\nWhat does each field mean? Is this GC behavior healthy?",
+    "trap": "Without the skill, the model knows GODEBUG=gctrace exists but cannot interpret the specific output format fields — it guesses or gives vague descriptions",
+    "assertions": [
+      {"id": "28.1", "text": "Identifies 'gc 14' as the GC cycle number"},
+      {"id": "28.2", "text": "Identifies '@5.234s 2%' as time since program start and CPU percentage spent in GC"},
+      {"id": "28.3", "text": "Identifies '24->27->13 MB' as heap size before GC, heap size at GC trigger, and live heap after GC"},
+      {"id": "28.4", "text": "Identifies '24 MB goal' as the target heap size for the next GC cycle based on the GC pacing algorithm"},
+      {"id": "28.5", "text": "Assesses health: 2% CPU in GC is acceptable (generally <5% is fine); 13MB live vs 24MB goal means 46% overhead headroom"}
+    ]
+  },
+  {
+    "id": 29,
+    "name": "runtime-scanobject-cpu-diagnosis",
+    "description": "Tests interpretation of runtime.scanobject appearing high in CPU profile",
+    "prompt": "My CPU profile shows `runtime.scanobject` consuming 25% of CPU time. What does this mean and how do I reduce it?",
+    "trap": "Without the skill, the model may not recognize this as a GC pointer scanning issue or may suggest wrong remediation",
+    "assertions": [
+      {"id": "29.1", "text": "Identifies runtime.scanobject as GC pointer scanning — the GC is tracing pointers in the heap"},
+      {"id": "29.2", "text": "Explains that the heap contains many pointers that the GC must trace"},
+      {"id": "29.3", "text": "Recommends reducing pointer density: value types instead of pointers in slices/maps"},
+      {"id": "29.4", "text": "Suggests flattening nested structures or using [N]byte arrays instead of strings in hot structs"},
+      {"id": "29.5", "text": "References the golang-performance skill for optimization patterns"}
+    ]
+  },
+  {
+    "id": 30,
+    "name": "top-cum-for-application-callsites",
+    "description": "Tests that top -cum is the correct command to find application code when runtime symbols dominate flat profile",
+    "prompt": "I ran `go tool pprof cpu.prof` and typed `top`. The output is dominated by runtime functions:\n\n1. runtime.memmove  18%\n2. runtime.mallocgc  14%\n3. runtime.gcWriteBarrier  9%\n\nNone of my application code appears in the top 10. My CPU overhead is high. What pprof command should I run next?",
+    "trap": "Without the skill, the model suggests using `web` for the graph view, `list` on a runtime function, or other commands — missing that `top -cum` reveals the application callers who are responsible",
+    "assertions": [
+      {"id": "30.1", "text": "Recommends running `top -cum` (cumulative mode) as the immediate next command"},
+      {"id": "30.2", "text": "Explains that flat time shows where CPU is spent directly; cumulative time shows which application functions called into the expensive runtime functions"},
+      {"id": "30.3", "text": "Explains that runtime.memmove, mallocgc, gcWriteBarrier are symptoms — the application code that triggers them will have high cumulative time"},
+      {"id": "30.4", "text": "Suggests using `list FunctionName` on the top cumulative callers to see the exact lines triggering the expensive runtime calls"},
+      {"id": "30.5", "text": "Does NOT suggest trying to optimize the runtime functions directly"}
+    ]
+  },
+  {
+    "id": 31,
+    "name": "fgprof-off-cpu-profiling",
+    "description": "Tests knowledge of fgprof for capturing off-CPU time that pprof misses",
+    "prompt": "My Go service has high latency but the CPU profile barely shows any CPU usage. Standard pprof doesn't reveal where time is spent. What tool captures both on-CPU and off-CPU time in a single profile?",
+    "trap": "Without the skill, the model may suggest only the execution tracer or not know about fgprof",
+    "assertions": [
+      {"id": "31.1", "text": "Recommends fgprof (github.com/felixge/fgprof) for full goroutine profiling"},
+      {"id": "31.2", "text": "Explains that fgprof captures both on-CPU and off-CPU (I/O wait) time in a single profile"},
+      {"id": "31.3", "text": "Explains that standard pprof CPU profiles only show on-CPU time, missing I/O waits"},
+      {"id": "31.4", "text": "Describes the use case: pprof shows low CPU% but latency is high"}
+    ]
+  },
+  {
+    "id": 32,
+    "name": "flight-recorder-go125",
+    "description": "Tests knowledge of the Go 1.25 flight recorder for retroactive trace capture",
+    "prompt": "My Go service occasionally experiences timeout spikes but I can't reproduce them. By the time I notice and start tracing, the problem is gone. Is there a way to capture trace data retroactively for these intermittent issues?",
+    "trap": "Without the skill, the model may suggest continuous tracing (too expensive) or instrumented logging",
+    "assertions": [
+      {"id": "32.1", "text": "Recommends the Go 1.25 flight recorder (trace.NewFlightRecorder)"},
+      {"id": "32.2", "text": "Explains it keeps a circular buffer of recent trace data in memory"},
+      {"id": "32.3", "text": "Shows snapshotting with WriteTo when the anomaly is detected"},
+      {"id": "32.4", "text": "Mentions the MinAge and MaxBytes configuration parameters"},
+      {"id": "32.5", "text": "Shows a trigger pattern (e.g., slow request detection with time.Since threshold)"},
+      {"id": "32.6", "text": "Notes the constraint: at most one flight recorder active at a time"}
+    ]
+  },
+  {
+    "id": 33,
+    "name": "flight-recorder-sync-once-pattern",
+    "description": "Tests the sync.Once pattern for flight recorder snapshots",
+    "prompt": "I'm setting up a flight recorder in my Go service. I want to snapshot it when a slow request is detected, but multiple goroutines might detect slow requests simultaneously. How do I prevent multiple overlapping snapshots?",
+    "trap": "Without the skill, the model may use a mutex or channel instead of the idiomatic sync.Once pattern",
+    "assertions": [
+      {"id": "33.1", "text": "Uses sync.Once to ensure only one snapshot is taken"},
+      {"id": "33.2", "text": "Calls fr.WriteTo inside the sync.Once.Do function"},
+      {"id": "33.3", "text": "Notes that only one goroutine may call WriteTo at a time"},
+      {"id": "33.4", "text": "Shows calling the snapshot in a separate goroutine (go captureSnapshot)"},
+      {"id": "33.5", "text": "Shows fr.Stop() after WriteTo completes"}
+    ]
+  },
+  {
+    "id": 34,
+    "name": "flight-recorder-sizing",
+    "description": "Tests understanding of flight recorder buffer sizing",
+    "prompt": "I'm configuring a flight recorder for my Go service. My typical investigation window when a timeout occurs is about 5 seconds. How should I size the MinAge and MaxBytes parameters?",
+    "trap": "Without the skill, the model may guess arbitrary values without the 2x rule or data rate context",
+    "assertions": [
+      {"id": "34.1", "text": "Sets MinAge to ~2x the problem window (10 seconds for a 5-second investigation window)"},
+      {"id": "34.2", "text": "Mentions that busy services generate ~1-10 MB/s of trace data"},
+      {"id": "34.3", "text": "Recommends starting MaxBytes at 1-5 MiB and adjusting"},
+      {"id": "34.4", "text": "Explains that MaxBytes takes precedence over MinAge — when buffer fills, older data is discarded"}
+    ]
+  },
+  {
+    "id": 35,
+    "name": "trace-timeline-color-coding",
+    "description": "Tests ability to interpret execution trace timeline colors",
+    "prompt": "I opened an execution trace in the web UI. I see lots of yellow/orange gaps before green segments on my goroutine lanes, and some red bands spanning all processor lanes. What does this indicate?",
+    "trap": "Without the skill, the model may not know the specific color coding of the trace viewer",
+    "assertions": [
+      {"id": "35.1", "text": "Identifies yellow/orange as runnable state — goroutines ready to run but waiting for a processor"},
+      {"id": "35.2", "text": "Identifies red bands across all P lanes as GC stop-the-world pauses"},
+      {"id": "35.3", "text": "Diagnoses the yellow gaps as CPU saturation — too many runnable goroutines competing for processors"},
+      {"id": "35.4", "text": "Identifies green as actively executing/running state"},
+      {"id": "35.5", "text": "Suggests examining goroutine count vs GOMAXPROCS to verify CPU saturation"}
+    ]
+  },
+  {
+    "id": 36,
+    "name": "pprof-labels-tagfocus-multitenant",
+    "description": "Tests knowledge of pprof.Do() custom labels and tagfocus for isolating a specific request type in a mixed-workload profile",
+    "prompt": "My Go service handles both API requests and batch jobs in the same process. CPU profiles mix both workloads together so I can't tell if API or batch is causing GC pressure. How can I profile only the API request code path?",
+    "trap": "Without the skill, the model suggests running a separate dedicated process for each workload, or using separate profiles — missing pprof.Do() labels with -tagfocus filtering which solves this in a single profile",
+    "assertions": [
+      {"id": "36.1", "text": "Recommends using pprof.Do() with pprof.Labels() to tag goroutines with a request_type label"},
+      {"id": "36.2", "text": "Shows the pattern: pprof.Do(ctx, pprof.Labels(\"request_type\", \"api\"), func(ctx context.Context) { ... })"},
+      {"id": "36.3", "text": "Shows using -tagfocus=request_type=api when analyzing the profile to filter to only API samples"},
+      {"id": "36.4", "text": "Explains that labels are inherited by the goroutine's profile samples — no need for separate processes"},
+      {"id": "36.5", "text": "Mentions the tags command in pprof interactive mode to see all label keys and their value distributions"}
+    ]
+  },
+  {
+    "id": 37,
+    "name": "pprof-focus-ignore-difference",
+    "description": "Tests understanding of the difference between pprof's focus, ignore, show, and hide filters",
+    "prompt": "In pprof, what's the difference between `focus`, `ignore`, `show`, and `hide`? When would I use each one?",
+    "trap": "Without the skill, the model may confuse the cost accounting behavior of these filters",
+    "assertions": [
+      {"id": "37.1", "text": "Explains that focus keeps only paths containing a matching function — everything else dropped"},
+      {"id": "37.2", "text": "Explains that ignore removes matching functions entirely, attributing their costs to callers"},
+      {"id": "37.3", "text": "Explains that show is like focus but only affects display, not cost accounting"},
+      {"id": "37.4", "text": "Explains that hide is like ignore but only hides from display, not cost accounting"},
+      {"id": "37.5", "text": "Mentions `reset` to clear all filters"}
+    ]
+  },
+  {
+    "id": 38,
+    "name": "pprof-tags-and-labels",
+    "description": "Tests knowledge of pprof custom labels via pprof.Do() for multi-tenant profiling",
+    "prompt": "I want to break down my CPU profile by request type (API vs batch). How can I add custom labels to pprof samples so I can filter and group by request type?",
+    "trap": "Without the skill, the model may suggest separate profiles per request type instead of using pprof labels",
+    "assertions": [
+      {"id": "38.1", "text": "Uses pprof.Labels() and pprof.Do() to add custom labels to profiled code"},
+      {"id": "38.2", "text": "Shows the correct pattern: pprof.Do(ctx, pprof.Labels(\"key\", \"value\"), func(ctx context.Context) {...})"},
+      {"id": "38.3", "text": "Shows using tagfocus to filter by label (e.g., -tagfocus=request_type=api)"},
+      {"id": "38.4", "text": "Shows using tagroot to group by label (e.g., -tagroot=request_type)"},
+      {"id": "38.5", "text": "Mentions the tags command to see all tag keys and distributions"}
+    ]
+  },
+  {
+    "id": 39,
+    "name": "pprof-sample-index-switching",
+    "description": "Tests knowledge of switching between metric types in a heap profile without reloading",
+    "prompt": "I opened a heap profile in pprof interactive mode and I'm looking at alloc_objects. Now I want to also see inuse_space. Do I need to exit and reopen with different flags?",
+    "trap": "Without the skill, the model may suggest exiting and reopening with a different flag",
+    "assertions": [
+      {"id": "39.1", "text": "Uses sample_index command to switch metrics without reloading"},
+      {"id": "39.2", "text": "Shows the correct syntax: sample_index=inuse_space"},
+      {"id": "39.3", "text": "Lists available indices: alloc_objects, alloc_space, inuse_objects, inuse_space"},
+      {"id": "39.4", "text": "Explains that heap profiles contain multiple metrics and you can switch between them interactively"}
+    ]
+  },
+  {
+    "id": 40,
+    "name": "pprof-granularity-lines",
+    "description": "Tests knowledge of pprof granularity control for multi-hot-spot functions",
+    "prompt": "I used `list` on a function and it shows two expensive lines, but the `top` output only shows the function name once with aggregated cost. How can I see per-line costs in the top output?",
+    "trap": "Without the skill, the model may only suggest using list for per-line analysis",
+    "assertions": [
+      {"id": "40.1", "text": "Uses granularity=lines to group by exact source line in top output"},
+      {"id": "40.2", "text": "Mentions other granularity levels: functions (default), filefunctions, files, addresses"},
+      {"id": "40.3", "text": "Shows the command: either `granularity=lines` in interactive mode or `-granularity=lines` as flag"}
+    ]
+  },
+  {
+    "id": 41,
+    "name": "ssa-dump-investigation",
+    "description": "Tests knowledge of SSA dump for understanding compiler optimization passes",
+    "prompt": "I want to understand exactly what optimizations the Go compiler applies to a specific function. I need more detail than escape analysis or inlining flags provide. Is there a way to see the compiler's intermediate representation?",
+    "trap": "Without the skill, the model may not know about the GOSSAFUNC environment variable",
+    "assertions": [
+      {"id": "41.1", "text": "Uses GOSSAFUNC=FunctionName go build to generate SSA dump"},
+      {"id": "41.2", "text": "Mentions that it creates ssa.html which can be opened in a browser"},
+      {"id": "41.3", "text": "Describes the optimization passes visible: source, AST, start SSA, optimization, lower, regalloc, genssa"},
+      {"id": "41.4", "text": "Mentions what to look for: remaining bounds checks, dead code elimination, constant folding, register spills"},
+      {"id": "41.5", "text": "Mentions clicking on values to highlight them across passes"}
+    ]
+  },
+  {
+    "id": 42,
+    "name": "noinlines-inlined-function-attribution",
+    "description": "Tests that noinlines aggregates inlined function costs to the outer non-inlined caller",
+    "prompt": "My pprof call graph is cluttered. A single hot function has been inlined into 6 different callers, so its cost is split across 6 separate nodes in the graph. I want to see the aggregated cost in one place. What pprof option should I use?",
+    "trap": "Without the skill, the model suggests using show/hide filters or focus (which change display but not cost aggregation) or ignoring inlined nodes — missing the noinlines option which correctly attributes inlined function costs to their first out-of-line caller",
+    "assertions": [
+      {"id": "42.1", "text": "Recommends the noinlines option (or -noinlines flag)"},
+      {"id": "42.2", "text": "Explains that noinlines attributes inlined function costs to their first out-of-line caller — the inlined nodes are collapsed"},
+      {"id": "42.3", "text": "Shows correct usage: noinlines in interactive mode or -noinlines as CLI flag"},
+      {"id": "42.4", "text": "Distinguishes noinlines from hide/ignore: hide/ignore only affect display without changing cost attribution"}
+    ]
+  },
+  {
+    "id": 43,
+    "name": "receiver-choice-inlining-and-escape-tradeoffs",
+    "description": "Tests knowledge that receiver choice can affect copying, aliasing, escape analysis, and inlining, but must be verified",
+    "prompt": "I'm designing a fluent API for a small config builder in a performance-sensitive path. Should I use value receivers or pointer receivers for the method chain? Consider both correctness and compiler optimization.",
+    "trap": "Without the skill, the model defaults to pointer receivers for method chains without considering inlining implications",
+    "assertions": [
+      {"id": "43.1", "text": "Mentions that receiver choice can affect copying, aliasing, escape analysis, and inlining"},
+      {"id": "43.2", "text": "Does NOT claim that pointer receivers categorically block inlining or that value receivers guarantee full inlining"},
+      {"id": "43.3", "text": "Recommends checking with -gcflags=\"-m -m\" to verify inlining and escape behavior"},
+      {"id": "43.4", "text": "Considers both the performance trade-off and the struct size (value receivers copy the struct)"}
+    ]
+  },
+  {
+    "id": 44,
+    "name": "prometheus-go-metrics-vs-runtime-metrics",
+    "description": "Tests understanding that runtime/metrics are NOT the same as Prometheus metrics",
+    "prompt": "I want to monitor Go runtime metrics in my Prometheus dashboard. Can I just use Go's runtime/metrics package directly in my PromQL queries?",
+    "trap": "Without the skill, the model may conflate runtime/metrics keys with Prometheus metric names",
+    "assertions": [
+      {"id": "44.1", "text": "Clarifies that runtime/metrics are Go internal data structures, not Prometheus metrics"},
+      {"id": "44.2", "text": "Explains that prometheus/client_golang selectively converts some runtime/metrics into Prometheus format"},
+      {"id": "44.3", "text": "Lists the actual Prometheus metric names (e.g., go_memstats_alloc_bytes, go_goroutines)"},
+      {"id": "44.4", "text": "Mentions that by default only traditional go_memstats_* and go_gc_* are exposed"}
+    ]
+  },
+  {
+    "id": 45,
+    "name": "go-memstats-stw-overhead",
+    "description": "Tests awareness of ReadMemStats causing stop-the-world pauses",
+    "prompt": "I'm using prometheus/client_golang to expose Go runtime metrics. My high-throughput service occasionally shows brief latency spikes correlated with Prometheus scrape intervals. Could the metrics collection itself be causing this?",
+    "trap": "Without the skill, the model may not connect metrics collection to STW pauses",
+    "assertions": [
+      {"id": "45.1", "text": "Identifies that go_memstats_* metrics internally call runtime.ReadMemStats() which triggers a short stop-the-world pause"},
+      {"id": "45.2", "text": "Recommends the Go 1.17+ runtime/metrics-based collector as lower overhead alternative"},
+      {"id": "45.3", "text": "Shows the code to register the modern collector: collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)) or specific runtime metric rules"},
+      {"id": "45.4", "text": "Recommends using a custom prometheus.NewRegistry() rather than the default one"}
+    ]
+  },
+  {
+    "id": 46,
+    "name": "promql-gc-pressure-queries",
+    "description": "Tests knowledge of specific PromQL queries for GC pressure investigation",
+    "prompt": "I suspect my Go service has excessive GC pressure. What Prometheus queries should I use to confirm this and find the root cause?",
+    "trap": "Without the skill, the model may suggest generic monitoring queries without the specific GC-related PromQL",
+    "assertions": [
+      {"id": "46.1", "text": "Uses rate(go_gc_duration_seconds_count[5m]) for GC frequency (cycles per second)"},
+      {"id": "46.2", "text": "States that >2 GC cycles/s sustained indicates excessive allocation rate"},
+      {"id": "46.3", "text": "Uses go_gc_duration_seconds{quantile=\"1\"} for worst-case GC pause"},
+      {"id": "46.4", "text": "Uses rate(go_memstats_alloc_bytes_total[5m]) for allocation rate comparison before/after deploy"},
+      {"id": "46.5", "text": "Recommends correlating with P99 latency to confirm GC pauses cause tail latency"}
+    ]
+  },
+  {
+    "id": 47,
+    "name": "promql-goroutine-leak-detection",
+    "description": "Tests specific PromQL patterns for detecting goroutine leaks",
+    "prompt": "How do I detect goroutine leaks in my production Go service using Prometheus metrics?",
+    "trap": "Without the skill, the model may suggest only looking at the absolute go_goroutines count without the delta pattern",
+    "assertions": [
+      {"id": "47.1", "text": "Uses go_goroutines gauge for current count"},
+      {"id": "47.2", "text": "Uses delta(go_goroutines[1h]) for net goroutine change — positive without load increase indicates leak"},
+      {"id": "47.3", "text": "Notes that goroutine count should correlate with load — independent growth is a leak signal"},
+      {"id": "47.4", "text": "Suggests an alerting rule with threshold (e.g., go_goroutines > 10000)"}
+    ]
+  },
+  {
+    "id": 48,
+    "name": "investigation-session-setup",
+    "description": "Tests the structured approach to production performance investigation sessions",
+    "prompt": "I need to do a deep-dive performance investigation on one instance of my Go service in production. What should I set up before I start collecting profiles?",
+    "trap": "Without the skill, the model may jump straight to pprof without the investigation session preparation",
+    "assertions": [
+      {"id": "48.1", "text": "Recommends reducing Prometheus scrape interval to <=10s on the target instance"},
+      {"id": "48.2", "text": "Recommends enabling pprof via environment variable without recompile"},
+      {"id": "48.3", "text": "Recommends enabling continuous profiling on only the target instance, not fleet-wide"},
+      {"id": "48.4", "text": "Emphasizes reverting all changes after investigation"},
+      {"id": "48.5", "text": "Mentions the key design principle: all debug features should be toggleable via environment variables"}
+    ]
+  },
+  {
+    "id": 49,
+    "name": "cost-warnings-trace-duration",
+    "description": "Tests awareness of the cost and practical limits of execution traces",
+    "prompt": "I want to capture a 5-minute execution trace of my Go service to analyze a periodic issue that happens every 2-3 minutes. Is this feasible?",
+    "trap": "Without the skill, the model may agree to a 5-minute trace without warning about data volume",
+    "assertions": [
+      {"id": "49.1", "text": "Warns that traces generate data at MB/s — a 5-minute trace would be enormous (potentially GBs)"},
+      {"id": "49.2", "text": "Recommends keeping traces to 5-10 seconds maximum"},
+      {"id": "49.3", "text": "Warns that large traces are slow to parse and may need 1GB+ RAM to open"},
+      {"id": "49.4", "text": "Suggests using the flight recorder (Go 1.25+) as an alternative for intermittent issues"},
+      {"id": "49.5", "text": "Notes that the browser UI struggles with traces >100MB"}
+    ]
+  },
+  {
+    "id": 50,
+    "name": "benchstat-three-version-comparison",
+    "description": "Tests knowledge of comparing more than two versions with benchstat",
+    "prompt": "I have benchmark results from three different versions of my code (v1, v2, v3). I want to compare all three in a single benchstat output. How?",
+    "trap": "Without the skill, the model may suggest running benchstat twice for pairwise comparisons",
+    "assertions": [
+      {"id": "50.1", "text": "Shows labeling inputs: benchstat v1=v1.txt v2=v2.txt v3=v3.txt"},
+      {"id": "50.2", "text": "Explains that the first input is always the base for comparison"},
+      {"id": "50.3", "text": "States that v2 vs v1 and v3 vs v1 comparisons are shown (both relative to first input)"}
+    ]
+  },
+  {
+    "id": 51,
+    "name": "host-level-correlation",
+    "description": "Tests awareness of correlating Go metrics with host-level metrics",
+    "prompt": "My Go service shows high process_cpu_seconds_total but the CPU profile looks normal. Could the problem be outside my application?",
+    "trap": "Without the skill, the model may only investigate within the Go application",
+    "assertions": [
+      {"id": "51.1", "text": "Recommends checking node_exporter metrics for host-level CPU, memory, disk I/O"},
+      {"id": "51.2", "text": "Explains the noisy neighbor pattern: high node_cpu with low process_cpu = external contention"},
+      {"id": "51.3", "text": "Mentions process-exporter for per-process metrics when multiple services share a host"},
+      {"id": "51.4", "text": "Suggests correlating Go app metrics with infrastructure metrics to determine if the problem is in the app or the environment"}
+    ]
+  },
+  {
+    "id": 52,
+    "name": "pprof-diff-base-vs-base",
+    "description": "Tests understanding of -base vs -diff_base flags in pprof for comparison",
+    "prompt": "I want to compare two CPU profiles — one before and one after my optimization. What's the difference between `pprof -base` and `pprof -diff_base`?",
+    "trap": "Without the skill, the model may not know both flags exist or may confuse their semantics",
+    "assertions": [
+      {"id": "52.1", "text": "Explains that -base subtracts base from source — all values become deltas"},
+      {"id": "52.2", "text": "Explains that -diff_base shows percentages relative to the base profile"},
+      {"id": "52.3", "text": "Mentions -normalize flag for making ratios comparable when capture durations differ"},
+      {"id": "52.4", "text": "Shows how to generate a diff SVG for visual comparison"}
+    ]
+  },
+  {
+    "id": 53,
+    "name": "gobenchdata-github-action-setup",
+    "description": "Tests knowledge of setting up gobenchdata for long-term trend tracking",
+    "prompt": "I want to track benchmark performance trends over time with an interactive web dashboard. I'm using GitHub Actions. What's the best approach?",
+    "trap": "Without the skill, the model may suggest building a custom dashboard or only using benchstat",
+    "assertions": [
+      {"id": "53.1", "text": "Recommends gobenchdata for trend tracking and visualization"},
+      {"id": "53.2", "text": "Shows the GitHub Action configuration with bobheadxi/gobenchdata@v1"},
+      {"id": "53.3", "text": "Mentions publishing to gh-pages for the dashboard"},
+      {"id": "53.4", "text": "Shows the regression checks config (.gobenchdata-checks.yml) with thresholds"},
+      {"id": "53.5", "text": "Mentions PRUNE_COUNT to limit stored history"}
+    ]
+  },
+  {
+    "id": 54,
+    "name": "benchstat-single-file-summary",
+    "description": "Tests knowledge of using benchstat with a single file for variance analysis",
+    "prompt": "I haven't made any code changes yet. I just want to check if my benchmarks are stable (low variance) before I start optimizing. Can benchstat help?",
+    "trap": "Without the skill, the model may say benchstat requires two files for comparison",
+    "assertions": [
+      {"id": "54.1", "text": "Shows running benchstat with a single file: benchstat bench.txt"},
+      {"id": "54.2", "text": "Explains it shows median and confidence interval for each benchmark"},
+      {"id": "54.3", "text": "Recommends using this to check measurement stability before making changes"},
+      {"id": "54.4", "text": "Notes that high variance (± >5%) indicates noisy benchmarks needing more runs or better isolation"}
+    ]
+  },
+  {
+    "id": 55,
+    "name": "count-minimum-by-scenario",
+    "description": "Tests knowledge of appropriate -count values for different scenarios",
+    "prompt": "How many benchmark iterations (-count) should I use? I've seen recommendations ranging from 1 to 30.",
+    "trap": "Without the skill, the model may give a single number without context-dependent guidance",
+    "assertions": [
+      {"id": "55.1", "text": "Recommends 6 minimum for quick local checks"},
+      {"id": "55.2", "text": "Recommends 10 for standard pre-merge comparisons"},
+      {"id": "55.3", "text": "Recommends 20-30 for detecting small changes (<5%)"},
+      {"id": "55.4", "text": "Recommends 20+ for noisy CI environments"},
+      {"id": "55.5", "text": "Explicitly warns against -count=1 as providing no variance information"}
+    ]
+  },
+  {
+    "id": 56,
+    "name": "closure-capturing-pointer-escape",
+    "description": "Tests understanding of a subtle escape: a closure capturing a loop variable forces the variable to escape to the heap even when no interface boxing occurs",
+    "prompt": "I have a benchmark and escape analysis shows these local integer variables escaping to the heap:\n\n```go\nfor i := 0; i < 10; i++ {\n    val := computeValue(i)\n    go func() {\n        results[i] = val\n    }()\n}\n```\n\nWhy do `i` and `val` escape to the heap? There are no interface conversions here.",
+    "trap": "Without the skill, the model explains interface boxing (which isn't happening here) or vaguely mentions 'closures cause escapes' without explaining the specific mechanism: the goroutine may outlive the enclosing function, so any variable the closure captures must be heap-allocated to remain accessible",
+    "assertions": [
+      {"id": "56.1", "text": "Explains that the goroutine launched with `go func()` may outlive the enclosing function"},
+      {"id": "56.2", "text": "Explains that any variable captured by a closure that escapes (e.g., via goroutine launch or return) must be heap-allocated to remain accessible after the outer function returns"},
+      {"id": "56.3", "text": "Identifies the specific escape cause: `go func()` body references `val` and `i`, so both variables escape via closure capture"},
+      {"id": "56.4", "text": "Distinguishes this from interface boxing — this escape is purely lifetime-based, not type-conversion based"},
+      {"id": "56.5", "text": "Suggests passing variables as arguments to the goroutine function to break the closure capture and avoid escape"}
+    ]
+  },
+  {
+    "id": 57,
+    "name": "trace-scheduling-latency-diagnosis",
+    "description": "Tests ability to diagnose scheduling latency from trace data",
+    "prompt": "My execution trace shows many goroutines spending significant time in the 'runnable' (yellow) state before becoming 'running' (green). What does this mean and how do I fix it?",
+    "trap": "Without the skill, the model may not connect runnable-to-running delay with CPU saturation",
+    "assertions": [
+      {"id": "57.1", "text": "Identifies this as high scheduling latency — goroutines ready to run but waiting for a processor"},
+      {"id": "57.2", "text": "Diagnoses the cause: too many goroutines competing for GOMAXPROCS processors (CPU saturation)"},
+      {"id": "57.3", "text": "Suggests extracting the scheduling latency profile: go tool trace -pprof=sched trace.out"},
+      {"id": "57.4", "text": "Recommends checking for uneven distribution across Ps (work imbalance)"},
+      {"id": "57.5", "text": "Lists other potential causes: OS scheduling interference, goroutines pinned by cgo or long syscalls"}
+    ]
+  },
+  {
+    "id": 58,
+    "name": "benchmark-output-format-parsing",
+    "description": "Tests understanding of the benchmark output format",
+    "prompt": "I see this benchmark output: `BenchmarkEncode/size=64-8  5000000  230.5 ns/op  128 B/op  2 allocs/op`. What does each part mean?",
+    "trap": "Without the skill, the model may not explain the -8 suffix correctly",
+    "assertions": [
+      {"id": "58.1", "text": "Explains that -8 is the GOMAXPROCS suffix"},
+      {"id": "58.2", "text": "Explains that 5000000 is the number of iterations (b.N)"},
+      {"id": "58.3", "text": "Explains that ns/op is time per operation"},
+      {"id": "58.4", "text": "Explains that B/op is bytes allocated per operation"},
+      {"id": "58.5", "text": "Explains that allocs/op is heap allocation count per operation"}
+    ]
+  },
+  {
+    "id": 59,
+    "name": "pprof-show-from-framework-noise",
+    "description": "Tests knowledge of show_from to trim framework noise in profiles",
+    "prompt": "My pprof output is cluttered with HTTP framework routing functions (net/http.(*ServeMux).ServeHTTP, etc.) that appear above every handler. How do I remove this noise and start the analysis from my handler code?",
+    "trap": "Without the skill, the model may suggest using ignore (which changes cost accounting) instead of show_from",
+    "assertions": [
+      {"id": "59.1", "text": "Uses show_from=regex to trim all frames above the first matching function"},
+      {"id": "59.2", "text": "Shows the correct pattern: show_from=handler.Handle or similar"},
+      {"id": "59.3", "text": "Explains that show_from hides all callers above the match point"},
+      {"id": "59.4", "text": "Differentiates from ignore which removes functions and re-attributes their costs"}
+    ]
+  },
+  {
+    "id": 60,
+    "name": "optional-prometheus-metrics-enablement",
+    "description": "Tests knowledge of how to enable optional Go runtime Prometheus metrics",
+    "prompt": "I want to expose Go scheduler metrics (goroutine scheduling latency) and CPU class breakdowns in Prometheus. The default go_memstats_* metrics don't include these. How do I enable them?",
+    "trap": "Without the skill, the model may not know about the opt-in collector configuration",
+    "assertions": [
+      {"id": "60.1", "text": "Shows creating a custom registry with collectors.NewGoCollector"},
+      {"id": "60.2", "text": "Uses collectors.WithGoCollectorRuntimeMetrics option"},
+      {"id": "60.3", "text": "Mentions collectors.MetricsAll or specific GoRuntimeMetricsRule values"},
+      {"id": "60.4", "text": "Notes this requires Go 1.17+"},
+      {"id": "60.5", "text": "Lists scheduler metrics like go_sched_latencies_seconds and CPU class metrics like go_cpu_classes_*"}
+    ]
+  },
+  {
+    "id": 61,
+    "name": "benchdiff-usage-patterns",
+    "description": "Tests practical usage of benchdiff for PR comparisons",
+    "prompt": "I want to quickly compare the benchmark performance of my current changes against the main branch. I don't want to manually check out branches and run benchmarks separately. What tool can automate this?",
+    "trap": "Without the skill, the model may suggest a manual checkout-and-compare workflow",
+    "assertions": [
+      {"id": "61.1", "text": "Recommends benchdiff for automatic branch comparison"},
+      {"id": "61.2", "text": "Shows the basic command: benchdiff -base-ref main -- -benchmem -count=10"},
+      {"id": "61.3", "text": "Explains that benchdiff caches results for non-worktree refs so re-runs are fast"},
+      {"id": "61.4", "text": "Mentions benchdiff -clear-cache for stale cache situations"},
+      {"id": "61.5", "text": "Notes that benchdiff prevents macOS sleep during benchmarks"}
+    ]
+  },
+  {
+    "id": 62,
+    "name": "pprof-noinlines-attribution",
+    "description": "Tests knowledge of the noinlines option for simplifying inlined function chains",
+    "prompt": "My pprof call graph shows many tiny inlined functions creating confusing chains. The real cost is in the outer function but it's split across multiple inline nodes. How do I simplify this?",
+    "trap": "Without the skill, the model may suggest using show/hide which don't properly aggregate inlined costs",
+    "assertions": [
+      {"id": "62.1", "text": "Uses the noinlines option or -noinlines flag"},
+      {"id": "62.2", "text": "Explains that noinlines attributes inlined functions to their first out-of-line caller"},
+      {"id": "62.3", "text": "Shows correct usage: either `noinlines` in interactive mode or `-noinlines` as CLI flag"}
+    ]
+  },
+  {
+    "id": 63,
+    "name": "sub-benchmarks-table-driven",
+    "description": "Tests proper structure for table-driven sub-benchmarks with b.Run",
+    "prompt": "I want to benchmark my Encode function with different input sizes (64, 256, 4096 bytes) in a single benchmark function. The project uses Go 1.24.",
+    "trap": "Without the skill, the model may write separate benchmark functions or use b.N loop inside b.Run without b.Loop()",
+    "assertions": [
+      {"id": "63.1", "text": "Uses b.Run() with descriptive sub-benchmark names (e.g., size=64)"},
+      {"id": "63.2", "text": "Uses b.Loop() (not range b.N) inside each sub-benchmark since Go 1.24"},
+      {"id": "63.3", "text": "Places setup code (like make([]byte, size)) before the b.Loop() call"},
+      {"id": "63.4", "text": "Uses a loop or range over sizes with fmt.Sprintf for names"},
+      {"id": "63.5", "text": "Output will look like BenchmarkEncode/size=64, BenchmarkEncode/size=256, etc."}
+    ]
+  },
+  {
+    "id": 64,
+    "name": "benchstat-row-col-projection",
+    "description": "Tests knowledge of -row flag to control what appears as rows vs the default grouping",
+    "prompt": "I ran benchmarks for two packages (parser and encoder) with two sub-benchmark parameters each (format=json and format=gob). benchstat mixes everything into one table. I want separate tables per package, with format as columns. What benchstat flags should I use?",
+    "trap": "Without the skill, the model suggests splitting into separate files and running benchstat separately, missing the -table pkg and -col /format flags that combine to produce the desired layout",
+    "assertions": [
+      {"id": "64.1", "text": "Uses -table pkg to produce a separate table per package"},
+      {"id": "64.2", "text": "Uses -col /format to make format values (json, gob) the column headers"},
+      {"id": "64.3", "text": "Shows the combined command: benchstat -table pkg -col /format bench.txt"},
+      {"id": "64.4", "text": "Explains that -table controls the grouping dimension and -col controls column layout"}
+    ]
+  },
+  {
+    "id": 65,
+    "name": "trace-short-lived-goroutines",
+    "description": "Tests ability to identify goroutine creation overhead in traces",
+    "prompt": "My execution trace shows thousands of very short-lived goroutines being created and destroyed rapidly. Is this a problem?",
+    "trap": "Without the skill, the model may say goroutines are cheap and this is fine",
+    "assertions": [
+      {"id": "65.1", "text": "Identifies high overhead from goroutine creation and scheduling for very short-lived goroutines"},
+      {"id": "65.2", "text": "Recommends batching work or using worker pools to reduce creation overhead"},
+      {"id": "65.3", "text": "Mentions checking for goroutines created in loops without bounds as a potential leak pattern"},
+      {"id": "65.4", "text": "Notes that goroutines created but never finishing indicates a leak"}
+    ]
+  },
+  {
+    "id": 66,
+    "name": "benchmark-side-effects-corrupt-results",
+    "description": "Tests awareness that benchmarks with shared mutable state produce non-reproducible and misleading results",
+    "prompt": "I wrote this benchmark to measure LRU cache insertions:\n\n```go\nvar globalCache = NewLRUCache(1000)\n\nfunc BenchmarkCacheInsert(b *testing.B) {\n    for b.Loop() {\n        globalCache.Set(randomKey(), randomValue())\n    }\n}\n```\n\nThe first run shows 45 ns/op. The second run shows 180 ns/op. Why do results vary so much between runs?",
+    "trap": "Without the skill, the model suggests adding b.ResetTimer() or increasing benchtime — missing that shared mutable global state across runs causes the cache to be in different fill states, making each b.N iteration operate on a different cache state (empty, half-full, full with evictions)",
+    "assertions": [
+      {"id": "66.1", "text": "Identifies that globalCache is mutable shared state — its fill level changes across b.N iterations and across separate runs"},
+      {"id": "66.2", "text": "Explains that early iterations insert into empty slots (fast), while later iterations trigger evictions (slow) — the benchmark measures a mix of two different operations"},
+      {"id": "66.3", "text": "Recommends using b.StopTimer()/b.StartTimer() or b.ResetTimer() with setup per batch, OR pre-filling/resetting the cache state to a known baseline before the benchmark loop"},
+      {"id": "66.4", "text": "Notes that mutable global state in benchmarks produces results that vary by execution order — isolated state inside b.Run sub-benchmarks or per-benchmark setup is the correct pattern"}
+    ]
+  },
+  {
+    "id": 67,
+    "name": "async-work-allocation-measurement-scope",
+    "description": "Tests that benchmark allocation counts cover allocations during the measured window, including other goroutines, but async work can escape measurement if synchronization is wrong",
+    "prompt": "I have a benchmark that spawns a goroutine inside the loop to do async work:\n\n```go\nfunc BenchmarkProcess(b *testing.B) {\n    b.ReportAllocs()\n    for b.Loop() {\n        ch := make(chan Result, 1)\n        go worker(ch)  // worker allocates internally\n        <-ch\n    }\n}\n```\n\nThe benchmark reports 1 alloc/op (just the channel). But profiling shows the worker goroutine allocates heavily. Why doesn't ReportAllocs see those?",
+    "trap": "Without the skill, the model may incorrectly claim ReportAllocs only tracks the benchmark goroutine. Allocation counts are global deltas while the timer is running; discrepancies usually mean async work occurred outside the measured window, synchronization is wrong, or the profile covers a different scope.",
+    "assertions": [
+      {"id": "67.1", "text": "Explains that ReportAllocs/-benchmem use allocation deltas while the benchmark timer is running, not per-goroutine attribution"},
+      {"id": "67.2", "text": "Checks whether the worker goroutine is fully synchronized inside the b.Loop measured window"},
+      {"id": "67.3", "text": "Recommends using a heap profile (-memprofile) to inspect allocation sites across goroutines"},
+      {"id": "67.4", "text": "Notes that profile-vs-benchmark discrepancies can come from async work outside timing or a different measurement scope"}
+    ]
+  },
+  {
+    "id": 68,
+    "name": "pprof-goroutine-debug-levels",
+    "description": "Tests knowledge of the different debug levels for goroutine dumps",
+    "prompt": "I want to get a human-readable dump of all goroutine stacks from my running Go service via HTTP, without using go tool pprof. How?",
+    "trap": "Without the skill, the model may only suggest the binary profile format",
+    "assertions": [
+      {"id": "68.1", "text": "Uses curl with ?debug=1 for human-readable goroutine dump"},
+      {"id": "68.2", "text": "Mentions ?debug=2 for full stack traces with creation site and labels"},
+      {"id": "68.3", "text": "Shows the URL: http://localhost:6060/debug/pprof/goroutine?debug=1 or ?debug=2"},
+      {"id": "68.4", "text": "Notes that no go tool pprof is needed for debug mode dumps"}
+    ]
+  },
+  {
+    "id": 69,
+    "name": "ci-threshold-calibration",
+    "description": "Tests knowledge of appropriate regression thresholds for different CI environments",
+    "prompt": "I'm setting up benchmark regression detection in CI. What threshold should I set for failing PRs on performance regression?",
+    "trap": "Without the skill, the model may suggest a tight threshold (5%) without considering the CI environment",
+    "assertions": [
+      {"id": "69.1", "text": "Recommends 20%+ threshold on shared/GitHub-hosted runners"},
+      {"id": "69.2", "text": "Recommends 10% on dedicated self-hosted runners"},
+      {"id": "69.3", "text": "Explains that tight thresholds on noisy environments produce false positives that erode trust"},
+      {"id": "69.4", "text": "Mentions that GitHub-hosted runners show ~2-3% coefficient of variation in best case"},
+      {"id": "69.5", "text": "States that <1% false positive rate requires 7%+ performance gate"}
+    ]
+  },
+  {
+    "id": 70,
+    "name": "cpu-profile-requires-binary-for-symbolization",
+    "description": "Tests knowledge that a CPU profile file captured from a benchmark contains no symbols — the original test binary is required for symbolization",
+    "prompt": "I ran `go test -bench=BenchmarkParse -cpuprofile=cpu.prof ./pkg/parser` on our CI server, then downloaded cpu.prof to my laptop to analyze. When I run `go tool pprof cpu.prof` I see only hex addresses instead of function names. What's missing?",
+    "trap": "Without the skill, the model may suggest rebuilding pprof or using -symbolize=remote — missing that the pprof file is unsymbolized and requires the original compiled test binary (parser.test) to resolve addresses to function names",
+    "assertions": [
+      {"id": "70.1", "text": "Explains that cpu.prof contains memory addresses, not function names — it requires the compiled test binary for symbolization"},
+      {"id": "70.2", "text": "States that go test -bench also produces a test binary (e.g., parser.test) alongside the profile"},
+      {"id": "70.3", "text": "Shows the correct command: go tool pprof parser.test cpu.prof (pass the binary as the first argument)"},
+      {"id": "70.4", "text": "Recommends downloading both the .prof file AND the corresponding test binary from CI for remote analysis"}
+    ]
+  },
+  {
+    "id": 71,
+    "name": "benchstat-ignore-dimension-warning",
+    "description": "Tests knowledge of the -ignore flag for suppressing benchstat dimension warnings",
+    "prompt": "benchstat gives me a warning: 'benchmarks vary in /gomaxprocs'. How do I suppress this?",
+    "trap": "Without the skill, the model may suggest filtering the output or restructuring benchmarks",
+    "assertions": [
+      {"id": "71.1", "text": "Uses -ignore /gomaxprocs to suppress the warning"},
+      {"id": "71.2", "text": "Explains that -ignore omits keys from grouping"},
+      {"id": "71.3", "text": "Alternatively suggests -row .name to simplify row grouping"},
+      {"id": "71.4", "text": "Mentions that -col /gomaxprocs could be used to compare across GOMAXPROCS values instead"}
+    ]
+  },
+  {
+    "id": 72,
+    "name": "gcflags-all-vs-single-package-scope",
+    "description": "Tests understanding of -gcflags=\"all=-m\" vs -gcflags=\"-m\" and when the wider scope matters",
+    "prompt": "I'm investigating unexpected heap allocations in my Go service. I ran `go build -gcflags=\"-m\" ./...` and the escape analysis output only shows my own packages. But I suspect a third-party library function is causing my structs to escape when passed to it. How do I see escape decisions for dependencies too?",
+    "trap": "Without the skill, the model only knows -gcflags=\"-m\" which applies to packages named on the command line, not their dependencies — missing the all= prefix that applies flags to all transitively compiled packages including vendor/module dependencies",
+    "assertions": [
+      {"id": "72.1", "text": "Explains that -gcflags=\"-m\" only applies escape analysis to packages explicitly listed on the command line, not their dependencies"},
+      {"id": "72.2", "text": "Shows go build -gcflags=\"all=-m\" ./... to apply escape analysis to ALL compiled packages including dependencies"},
+      {"id": "72.3", "text": "Warns that all=-m produces very verbose output — recommends piping through grep to filter for the specific package or function of interest"},
+      {"id": "72.4", "text": "Notes this is especially useful for diagnosing parameter escapes caused by passing values to functions in external packages that the compiler cannot analyze inline"}
+    ]
+  },
+  {
+    "id": 73,
+    "name": "runtime-readmemstats-vs-runtime-metrics",
+    "description": "Tests knowledge of the programmatic APIs for runtime statistics",
+    "prompt": "I want to read GC statistics programmatically in my Go application for a custom dashboard. What APIs are available and which should I prefer?",
+    "trap": "Without the skill, the model may recommend ReadMemStats without noting its overhead or the modern alternative",
+    "assertions": [
+      {"id": "73.1", "text": "Mentions runtime.ReadMemStats for heap size, NumGC, pause durations"},
+      {"id": "73.2", "text": "Mentions debug.ReadGCStats for GC-specific statistics"},
+      {"id": "73.3", "text": "Recommends runtime/metrics (Go 1.16+) as the preferred modern API"},
+      {"id": "73.4", "text": "Explains that runtime/metrics has lower overhead and is safe for concurrent reads"},
+      {"id": "73.5", "text": "Notes that ReadMemStats is more expensive due to internal locking"}
+    ]
+  },
+  {
+    "id": 74,
+    "name": "pprof-callgrind-export",
+    "description": "Tests knowledge of exporting pprof data to external visualization tools",
+    "prompt": "I want to analyze a Go pprof profile in KCachegrind for more advanced visualization. How do I export the data?",
+    "trap": "Without the skill, the model may not know about the callgrind export format",
+    "assertions": [
+      {"id": "74.1", "text": "Uses the callgrind command or -callgrind flag to export"},
+      {"id": "74.2", "text": "Shows the command: go tool pprof -callgrind cpu.prof > cpu.callgrind"},
+      {"id": "74.3", "text": "Mentions KCachegrind or QCachegrind as visualization tools"},
+      {"id": "74.4", "text": "Notes the proto command for saving in protobuf format as an alternative"}
+    ]
+  },
+  {
+    "id": 75,
+    "name": "expvar-lightweight-monitoring",
+    "description": "Tests knowledge of expvar as a lightweight alternative to Prometheus for runtime metrics",
+    "prompt": "I want a lightweight way to expose Go runtime variables as JSON for monitoring without adding a full Prometheus dependency. What does the stdlib offer?",
+    "trap": "Without the skill, the model may suggest writing a custom handler or only mention pprof",
+    "assertions": [
+      {"id": "75.1", "text": "Recommends expvar package from the stdlib"},
+      {"id": "75.2", "text": "Shows that import _ \"expvar\" auto-registers at /debug/vars"},
+      {"id": "75.3", "text": "Notes it serves JSON format"},
+      {"id": "75.4", "text": "Mentions integration with Netdata, Telegraf, or custom dashboards"}
+    ]
+  },
+  {
+    "id": 76,
+    "name": "benchstat-table-flag-per-package",
+    "description": "Tests knowledge of the -table flag for grouping benchstat output by package",
+    "prompt": "I ran benchmarks across multiple packages and the benchstat output mixes them all together. How do I get separate comparison tables per package?",
+    "trap": "Without the skill, the model may suggest running benchstat separately per package",
+    "assertions": [
+      {"id": "76.1", "text": "Uses -table pkg flag to create one table per package"},
+      {"id": "76.2", "text": "Shows the command: benchstat -table pkg old.txt new.txt"},
+      {"id": "76.3", "text": "Explains that the default -table value is .config which groups by goos/goarch/pkg/cpu"}
+    ]
+  },
+  {
+    "id": 77,
+    "name": "pprof-symbolization-remote",
+    "description": "Tests knowledge of pprof symbolization modes for remote profiling",
+    "prompt": "I captured a pprof profile from a production server but the function names show as hex addresses instead of readable names. How do I fix this?",
+    "trap": "Without the skill, the model may not know about the symbolization modes",
+    "assertions": [
+      {"id": "77.1", "text": "Explains pprof symbolization modes: local, remote, none"},
+      {"id": "77.2", "text": "Shows -symbolize=local to use local binaries"},
+      {"id": "77.3", "text": "Mentions PPROF_BINARY_PATH environment variable for setting binary search paths"},
+      {"id": "77.4", "text": "Shows -symbolize=remote to contact the running service for symbol information"}
+    ]
+  },
+  {
+    "id": 78,
+    "name": "trace-concurrent-with-flight-recorder",
+    "description": "Tests understanding that trace.Start and FlightRecorder can run concurrently",
+    "prompt": "I have a flight recorder running in my service. If I also call trace.Start() to capture a short trace for debugging, will they conflict?",
+    "trap": "Without the skill, the model may assume they can't coexist",
+    "assertions": [
+      {"id": "78.1", "text": "States that a flight recorder can run concurrently with trace.Start"},
+      {"id": "78.2", "text": "Notes the constraint that at most one flight recorder may be active at a time"},
+      {"id": "78.3", "text": "Clarifies that both can be active simultaneously without conflict"}
+    ]
+  },
+  {
+    "id": 79,
+    "name": "pyroscope-overhead-warning",
+    "description": "Tests awareness of continuous profiling overhead at scale",
+    "prompt": "Our SRE team wants to enable Pyroscope continuous profiling on all 200 production instances. Any concerns?",
+    "trap": "Without the skill, the model may approve fleet-wide enablement without the cost warning",
+    "assertions": [
+      {"id": "79.1", "text": "Warns about ~2-5% CPU overhead per instance for continuous profiling"},
+      {"id": "79.2", "text": "Notes that at 200 instances, the aggregate compute cost and backend storage cost is significant"},
+      {"id": "79.3", "text": "Recommends enabling on a subset of instances or on-demand via environment variable"},
+      {"id": "79.4", "text": "Emphasizes the investigation session approach: enable on target instances only, not fleet-wide"}
+    ]
+  },
+  {
+    "id": 80,
+    "name": "non-go-memory-leak-detection",
+    "description": "Tests the PromQL pattern for detecting non-Go memory leaks (cgo, mmap)",
+    "prompt": "My Go service's RSS keeps growing but go_memstats_alloc_bytes appears stable. The leak doesn't seem to be in Go heap memory. How do I diagnose this?",
+    "trap": "Without the skill, the model may only investigate Go heap, missing cgo/mmap leaks",
+    "assertions": [
+      {"id": "80.1", "text": "Uses the PromQL pattern: process_resident_memory_bytes - go_memstats_sys_bytes"},
+      {"id": "80.2", "text": "Explains that the gap represents non-Go memory (cgo, mmap, etc.)"},
+      {"id": "80.3", "text": "A growing gap indicates a non-Go memory leak"},
+      {"id": "80.4", "text": "Suggests investigating cgo calls or memory-mapped files as potential sources"}
+    ]
+  }
+]

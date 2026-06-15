@@ -319,9 +319,9 @@ describe("CLI", () => {
       writeFile(tmp.path, "go.mod", "module example.com/test\n\ngo 1.24.0\n");
       const output = run(["--dry-run"], tmp.path);
       ok(output.includes("Go"));
-      ok(output.includes("golang-patterns"));
-      ok(output.includes("golang-testing"));
-      ok(output.indexOf("golang-patterns") < output.indexOf("golang-testing"));
+      ok(output.includes("golang-code-style"));
+      ok(output.includes("golang-concurrency"));
+      ok(output.indexOf("golang-code-style") < output.indexOf("golang-concurrency"));
       ok(!output.includes("No skills available for your stack yet."));
       ok(output.includes("nothing was installed"));
     });

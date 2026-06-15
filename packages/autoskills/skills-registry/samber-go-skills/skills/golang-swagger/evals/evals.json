@@ -1,0 +1,149 @@
+{
+  "skill_name": "golang-swagger",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I've already run `swag init` and the docs/ folder was generated. Now wire up the Swagger UI in my Gin server so the docs actually show up at /swagger/index.html. Here's my main.go:\n\n```go\npackage main\n\nimport \"github.com/gin-gonic/gin\"\n\nfunc main() {\n    r := gin.Default()  \n    r.GET(\"/api/users\", getUsers)\n    r.Run(\":8080\")\n}\n```",
+      "expected_output": "Adds the blank import `_ \"yourmodule/docs\"` AND wires the ginSwagger endpoint. The blank import is the trap — without it the UI loads empty even if the route is registered.",
+      "assertions": [
+        "Adds a blank import of the docs package (e.g., `_ \"<module>/docs\"`)",
+        "Imports github.com/swaggo/gin-swagger",
+        "Imports github.com/swaggo/files",
+        "Registers a GET route matching /swagger/*any using ginSwagger.WrapHandler",
+        "Does not suggest running swag init again (it was already done)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our GET /settings endpoint returns a dynamic set of feature flags as a map: `map[string]bool`. Document this endpoint for Swagger so the response schema is visible in the UI.",
+      "expected_output": "Defines a named struct for the response or uses swaggertype annotation — swag cannot generate a schema for map[string]bool directly. The trap is using `{object} map[string]bool` in @Success which fails generation.",
+      "assertions": [
+        "Does NOT use `{object} map[string]bool` directly in @Success",
+        "Defines a named struct for the response OR acknowledges a swaggertype workaround is needed",
+        "@Success annotation uses a named type (not a raw map literal)",
+        "@Router annotation is present with [get] method",
+        "@Produce annotation specifies json"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Document this Go struct for Swagger. We need the docs to look correct:\n\n```go\ntype AuditRecord struct {\n    CreatedAt time.Time\n    UpdatedAt time.Time\n    Payload   []byte\n}\n```",
+      "expected_output": "Uses swaggertype tag to override time.Time (which becomes an object by default) and []byte (which becomes a base64 string). Without the skill the model leaves the types as-is, producing wrong schemas.",
+      "assertions": [
+        "Adds swaggertype tag to CreatedAt field (e.g., `swaggertype:\"string\"` with format:\"date-time\" or `swaggertype:\"primitive,integer\"`)",
+        "Adds swaggertype tag to UpdatedAt field with the same treatment",
+        "Adds swaggertype:\"string\" and format:\"base64\" to the Payload []byte field",
+        "Preserves the json tags (does not remove them)",
+        "Does not leave time.Time fields without any swaggertype override"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Set up the Swagger UI for a Chi HTTP router. The BasePath must be set dynamically from an `API_BASE_PATH` environment variable because we deploy behind different path prefixes in staging and production.",
+      "expected_output": "Uses github.com/swaggo/http-swagger for Chi AND sets docs.SwaggerInfo.BasePath from os.Getenv. The trap is not knowing the http-swagger package for Chi and not knowing about the runtime docs.SwaggerInfo override.",
+      "assertions": [
+        "Imports github.com/swaggo/http-swagger",
+        "Uses r.Get (chi method) to register the swagger route with a wildcard pattern",
+        "Sets docs.SwaggerInfo.BasePath using os.Getenv(\"API_BASE_PATH\") or equivalent",
+        "Imports the docs package (blank `_ \"<module>/docs\"` or named `docs \"<module>/docs\"`)",
+        "Does not suggest rebuilding or running swag init per environment"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "This endpoint requires BOTH an API key AND basic authentication — not one or the other. Both must be present. Show me the @Security annotation for this.",
+      "expected_output": "Uses the && syntax on a single @Security line. Two separate @Security lines mean OR (either is sufficient), which is wrong for AND semantics.",
+      "assertions": [
+        "Uses && between security schemes on a single @Security annotation line",
+        "Does NOT write two separate @Security lines for AND semantics",
+        "References valid security definition names (ApiKeyAuth, BasicAuth, or similar)",
+        "Explains or implies that two separate @Security lines would mean OR, not AND",
+        "@Security line appears inside the handler doc comment block"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Our API has endpoints tagged with 'Internal' and 'Admin' that must not appear in the public Swagger docs we ship to customers. How do we generate a spec that excludes both of these tags?",
+      "expected_output": "Uses swag init --tags flag with ! prefix to exclude tags. Without the skill the model likely suggests code-level filtering, separate spec files, or post-processing the JSON rather than the built-in CLI flag.",
+      "assertions": [
+        "Uses the --tags flag (or -t) with swag init",
+        "Uses ! prefix to exclude tags (e.g., --tags '!Internal,!Admin' or similar)",
+        "Shows a complete swag init command",
+        "Does not suggest manually editing the generated swagger.json",
+        "Does not require writing custom Go code to filter endpoints"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Add swagger annotations to this handler and make sure `swag fmt` formats them correctly:\n\n```go\nfunc CreateOrder(c *gin.Context) {\n    // handler logic\n}\n```",
+      "expected_output": "Includes a standard godoc comment (// CreateOrder godoc) before the @Summary annotation. Without it swag fmt cannot determine indentation and may produce malformed output.",
+      "assertions": [
+        "Adds `// CreateOrder godoc` as the first line of the comment block",
+        "godoc comment appears before any @ annotation",
+        "At minimum includes @Summary, @Router annotations",
+        "@Router specifies both path and HTTP method",
+        "Annotation block is placed directly above the function signature"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Document a GET /export endpoint with two query parameters: `ids` accepts multiple values as separate query keys (e.g., ?ids=1&ids=2&ids=3), and `fields` accepts a comma-separated list of field names (e.g., ?fields=name,email,age). Both are optional.",
+      "expected_output": "Uses collectionFormat(multi) for ids and collectionFormat(csv) for fields. Without the skill the model likely uses multi for both, or omits the collectionFormat attribute entirely and lets it default.",
+      "assertions": [
+        "@Param for ids uses collectionFormat(multi)",
+        "@Param for fields uses collectionFormat(csv) or omits it (csv is the default)",
+        "Both params use []string or []int as data type",
+        "Both params are marked as not required (false)",
+        "@Router annotation is present with [get] method"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "We want to expose the Swagger UI in development but disable it entirely in production. Our app reads `APP_ENV=production` or `APP_ENV=development`. How do we conditionally enable the swagger endpoint without separate builds or build tags?",
+      "expected_output": "Guards the swagger route registration behind an os.Getenv check at startup. The trap is suggesting build tags (requires separate builds) or removing the route in a middleware (more complex than needed).",
+      "assertions": [
+        "Uses os.Getenv (or equivalent) to read APP_ENV at runtime",
+        "Conditionally registers the swagger route only when not in production",
+        "Does not require separate builds or build tags",
+        "The blank docs import is still present (or acknowledged as needed)",
+        "Solution works without recompiling between environments"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Our API always wraps responses in this envelope:\n\n```go\ntype Envelope struct {\n    Data    interface{} `json:\"data\"`\n    Message string      `json:\"message\"`\n}\n```\n\nDocument a GET /users/{id} endpoint that returns an Envelope where Data is a User object. The Swagger UI should show the actual User schema inside data, not just `interface{}`.",
+      "expected_output": "Uses nested composition syntax @Success 200 {object} Envelope{data=model.User}. Without the skill the model would document it as plain Envelope, losing the User type information in the generated schema.",
+      "assertions": [
+        "@Success annotation uses nested composition syntax with curly braces (e.g., Envelope{data=model.User})",
+        "The inner type is the User struct (or equivalent named type)",
+        "Does not create a new wrapper struct just for documentation purposes",
+        "@Param for the id path parameter is present with path location",
+        "@Router specifies the correct path and [get] method"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Add swagger documentation to this struct. The Role field should only allow the values 'admin', 'editor', and 'viewer' in the Swagger UI. The Score field should be between 0 and 100.\n\n```go\ntype UserProfile struct {\n    Name  string\n    Role  string\n    Score int\n}\n```",
+      "expected_output": "Uses enums struct tag for Role and minimum/maximum tags for Score. Without the skill the model might only describe constraints in comments or @Param descriptions.",
+      "assertions": [
+        "Adds `enums:\"admin,editor,viewer\"` struct tag to Role field",
+        "Adds `minimum:\"0\"` and `maximum:\"100\"` struct tags to Score field",
+        "Adds json tags to all fields",
+        "Adds example tags to at least one field",
+        "Does not only describe constraints in a comment — they must be machine-readable struct tags"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "We have a struct with a `LastModified time.Time` field used for ETag generation in middleware. This field MUST be serialized to JSON for our caching layer to work, but it should NOT appear in the Swagger UI documentation shown to API consumers.",
+      "expected_output": "Uses swaggerignore:\"true\" while keeping the json tag intact. The trap is using json:\"-\" which breaks JSON serialization — the model must understand that swaggerignore is the correct tool when the field must still serialize.",
+      "assertions": [
+        "Uses swaggerignore:\"true\" on the LastModified field",
+        "Keeps a valid json tag on LastModified (NOT json:\"-\")",
+        "Does NOT suggest removing the field from the struct",
+        "Other struct fields retain their json and swagger documentation",
+        "Explains or implies why json:\"-\" would be wrong here (breaks serialization)"
+      ]
+    }
+  ]
+}

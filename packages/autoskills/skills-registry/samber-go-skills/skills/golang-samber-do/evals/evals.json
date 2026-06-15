@@ -1,0 +1,154 @@
+[
+  {
+    "id": 1,
+    "name": "v2-import-not-v1",
+    "description": "Tests whether the model uses samber/do/v2, never v1",
+    "prompt": "I want to set up dependency injection in my Go project using samber/do. Show me how to install it and create a basic container.",
+    "trap": "Without the skill, the model might import github.com/samber/do (v1) instead of github.com/samber/do/v2",
+    "assertions": [
+      {"id": "1.1", "text": "Uses go get github.com/samber/do/v2 (not github.com/samber/do without v2)"},
+      {"id": "1.2", "text": "Import path is github.com/samber/do/v2 in the code"},
+      {"id": "1.3", "text": "Uses do.New() to create the container"},
+      {"id": "1.4", "text": "Does NOT reference v1 API or import paths anywhere"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "lazy-vs-eager-vs-transient",
+    "description": "Tests whether the model correctly chooses between lazy, eager, and transient service types",
+    "prompt": "I have three services in my Go app: (1) a database connection that must be ready before serving requests, (2) a user repository that's only needed when user endpoints are called, and (3) a request logger that should be a fresh instance per request. Register them with samber/do.",
+    "trap": "Without the skill, the model registers all three with do.Provide (lazy), missing do.Eager for the database and do.ProvideTransient for the logger",
+    "assertions": [
+      {"id": "2.1", "text": "Uses do.Provide with do.Eager wrapper (or equivalent) for the database connection that must be ready immediately"},
+      {"id": "2.2", "text": "Uses do.Provide (lazy, the default) for the user repository that's only needed on demand"},
+      {"id": "2.3", "text": "Uses do.ProvideTransient for the request logger that needs a fresh instance each time"},
+      {"id": "2.4", "text": "Correctly distinguishes between the three service lifecycle types"},
+      {"id": "2.5", "text": "Does NOT register all three services with the same registration function"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "implicit-aliasing-invokeAs",
+    "description": "Tests whether the model uses InvokeAs for implicit aliasing instead of explicit aliasing",
+    "prompt": "I have a PostgreSQLDatabase struct that implements a Database interface. I want to register the concrete type but invoke it as the interface in my Go service. How do I set this up with samber/do?",
+    "trap": "Without the skill, the model uses do.As or do.MustAs for explicit aliasing, which is only needed for legacy code. Implicit aliasing via InvokeAs is preferred.",
+    "assertions": [
+      {"id": "3.1", "text": "Registers the concrete type *PostgreSQLDatabase with do.Provide"},
+      {"id": "3.2", "text": "Uses do.MustInvokeAs[Database] or do.InvokeAs[Database] to invoke as the interface"},
+      {"id": "3.3", "text": "Prefers implicit aliasing (InvokeAs) over explicit aliasing (As/MustAs)"},
+      {"id": "3.4", "text": "Does NOT require a separate alias registration step for this basic case"},
+      {"id": "3.5", "text": "The provider function returns the concrete type, not the interface"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "package-organization",
+    "description": "Tests whether the model organizes service registrations using do.Package",
+    "prompt": "My Go project has infrastructure services (database, cache), domain services (user service, order service), and transport services (HTTP handlers). How should I organize the DI registrations with samber/do?",
+    "trap": "Without the skill, the model registers everything in main.go in a long list, missing do.Package for modular organization",
+    "assertions": [
+      {"id": "4.1", "text": "Uses do.Package to group related service registrations into separate packages/modules"},
+      {"id": "4.2", "text": "Creates separate package variables (e.g., infrastructure.Package, service.Package, transport.Package)"},
+      {"id": "4.3", "text": "Passes all packages to do.New() in main.go: do.New(infrastructure.Package, service.Package, transport.Package)"},
+      {"id": "4.4", "text": "Each package groups related services (infra, domain, transport) rather than one giant registration list"},
+      {"id": "4.5", "text": "Uses do.Lazy wrapper inside do.Package for lazy service registration"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "scopes-for-lifecycle",
+    "description": "Tests whether the model uses scopes to organize services by lifecycle and visibility",
+    "prompt": "In my Go web app using samber/do, I have global services (config, logger) and per-request services (request context, current user). How do I prevent per-request services from being shared across requests?",
+    "trap": "Without the skill, the model registers everything in the root container, leading to shared per-request state across concurrent requests",
+    "assertions": [
+      {"id": "5.1", "text": "Uses do.Scope to create child scopes for per-request services"},
+      {"id": "5.2", "text": "Registers global/stateless services (config, logger) in the root container"},
+      {"id": "5.3", "text": "Creates a new scope per request for request-scoped services"},
+      {"id": "5.4", "text": "Child scope services can access parent (root) services"},
+      {"id": "5.5", "text": "Does NOT register request-scoped services in the root container"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "testing-clone-override",
+    "description": "Tests whether the model uses container cloning and overrides for testing",
+    "prompt": "I have a Go service registered in samber/do that depends on a Database interface. I want to test the service with a mock database. How do I set up the test?",
+    "trap": "Without the skill, the model creates a brand new container from scratch in tests, missing the Clone+Override pattern that reuses the production container configuration",
+    "assertions": [
+      {"id": "6.1", "text": "Uses injector.Clone() or do.Clone() to clone the production container"},
+      {"id": "6.2", "text": "Uses do.Override or do.OverrideValue to replace the Database with a mock"},
+      {"id": "6.3", "text": "Invokes the service under test from the cloned container"},
+      {"id": "6.4", "text": "Does NOT build a completely new container from scratch for each test (unless justified)"},
+      {"id": "6.5", "text": "The test is isolated — changes to the cloned container don't affect the original"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "health-check-interface",
+    "description": "Tests whether the model implements the Healthchecker interface for service health checks",
+    "prompt": "I have a database service registered in samber/do. I want to add health checking so I can verify the database is reachable. How do I implement this?",
+    "trap": "Without the skill, the model writes a standalone health check function instead of implementing the Healthchecker interface that integrates with do's lifecycle",
+    "assertions": [
+      {"id": "7.1", "text": "Implements a HealthCheck() method on the database service struct"},
+      {"id": "7.2", "text": "The HealthCheck method signature is either HealthCheck() error or HealthCheck(ctx context.Context) error"},
+      {"id": "7.3", "text": "Uses do.HealthCheck[Database](injector) to invoke the health check through the container"},
+      {"id": "7.4", "text": "Does NOT write a standalone function that manually fetches the service and pings it"},
+      {"id": "7.5", "text": "The health check actually tests connectivity (e.g., conn.Ping())"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "graceful-shutdown-interface",
+    "description": "Tests whether the model implements the Shutdowner interface for graceful shutdown",
+    "prompt": "My Go application uses samber/do for DI. I need to gracefully shut down all services (close database connections, flush logs) when the application receives SIGINT. Show me how.",
+    "trap": "Without the skill, the model writes manual shutdown code with signal handling, missing do's ShutdownOnSignals integration and Shutdowner interface",
+    "assertions": [
+      {"id": "8.1", "text": "Implements Shutdown() or Shutdown(ctx context.Context) method on services that need cleanup"},
+      {"id": "8.2", "text": "Uses injector.ShutdownOnSignals or injector.ShutdownOnSignalsWithContext for signal-based shutdown"},
+      {"id": "8.3", "text": "Passes os.Interrupt or syscall.SIGTERM to the shutdown function"},
+      {"id": "8.4", "text": "Does NOT manually implement signal handling and iterate over services to shut them down"},
+      {"id": "8.5", "text": "May use context.WithTimeout for shutdown deadline"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "composition-root-only",
+    "description": "Tests that the container is only accessed at the composition root, not passed around or used as a service locator",
+    "prompt": "I'm using samber/do for DI in my Go project. I have a UserHandler that needs a UserService. Should I pass the do.Injector to UserHandler so it can resolve its own dependencies?",
+    "trap": "Without the skill, the model passes the injector into business logic code, turning it into an anti-pattern service locator",
+    "assertions": [
+      {"id": "9.1", "text": "Advises against passing do.Injector into business logic or handler code"},
+      {"id": "9.2", "text": "States that the container should only be accessed at the composition root (main/startup)"},
+      {"id": "9.3", "text": "Shows resolving dependencies in the provider function using do.MustInvoke from the injector parameter"},
+      {"id": "9.4", "text": "The UserHandler receives its dependencies as constructor parameters, not the container"},
+      {"id": "9.5", "text": "Explains that passing the container creates a service locator anti-pattern that hides dependencies"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "named-services-same-type",
+    "description": "Tests whether the model uses named services when registering multiple instances of the same type",
+    "prompt": "My Go app connects to two PostgreSQL databases — a primary for writes and a replica for reads. Both are *sql.DB instances. How do I register and retrieve them with samber/do?",
+    "trap": "Without the skill, the model tries to register both with do.Provide which overwrites the first registration, or wraps them in different types unnecessarily",
+    "assertions": [
+      {"id": "10.1", "text": "Uses do.ProvideNamed to register each database with a distinct name (e.g., 'primary-db', 'replica-db')"},
+      {"id": "10.2", "text": "Uses do.MustInvokeNamed or do.InvokeNamed to retrieve each database by name"},
+      {"id": "10.3", "text": "Both databases are registered as the same type (*sql.DB or a Database interface)"},
+      {"id": "10.4", "text": "Does NOT create unnecessary wrapper types just to distinguish the two databases"},
+      {"id": "10.5", "text": "Does NOT overwrite the first registration by using do.Provide twice for the same type"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "struct-injection-with-tags",
+    "description": "Tests knowledge of struct injection using do tags",
+    "prompt": "I have a Go struct with multiple service dependencies that I want to inject from my samber/do container. Is there a way to avoid calling MustInvoke for each field manually?",
+    "trap": "Without the skill, the model manually invokes each dependency and assigns to struct fields, missing the do:\"\" tag-based struct injection",
+    "assertions": [
+      {"id": "11.1", "text": "Uses struct field tags with do:\"\" or do:\"service-name\" syntax"},
+      {"id": "11.2", "text": "Uses do.MustInvokeStruct or do.InvokeStruct to populate the struct"},
+      {"id": "11.3", "text": "Shows that do:\"\" uses the type for resolution and do:\"name\" uses a named service"},
+      {"id": "11.4", "text": "Does NOT manually call MustInvoke for each field when struct injection is available"}
+    ]
+  }
+]

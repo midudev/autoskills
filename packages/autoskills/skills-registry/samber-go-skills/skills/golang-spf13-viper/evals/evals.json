@@ -1,0 +1,465 @@
+[
+  {
+    "id": 1,
+    "name": "env-key-replacer-nested-keys",
+    "description": "Tests SetEnvKeyReplacer for nested keys with dots mapping to underscore env vars",
+    "prompt": "I'm using viper in my Go service. I have a config key 'database.host' that should be configurable via an env var. I've set AutomaticEnv() and SetEnvPrefix('APP'). My env var APP_DATABASE_HOST is set but viper returns the default. What's wrong?",
+    "trap": "Without the skill, the model may suggest checking the env var name, case sensitivity, or re-reading the config. The root cause is the missing SetEnvKeyReplacer — viper looks for APP_DATABASE.HOST (dot preserved), not APP_DATABASE_HOST.",
+    "assertions": [
+      {
+        "id": "1.1",
+        "text": "Identifies the root cause as missing SetEnvKeyReplacer"
+      },
+      {
+        "id": "1.2",
+        "text": "Explains that viper preserves the dot in 'database.host' when looking up the env var"
+      },
+      {
+        "id": "1.3",
+        "text": "Provides the fix: viper.SetEnvKeyReplacer(strings.NewReplacer(\".\", \"_\"))"
+      },
+      {
+        "id": "1.4",
+        "text": "Shows that the full setup requires prefix + replacer + AutomaticEnv together"
+      },
+      {
+        "id": "1.5",
+        "text": "Does NOT suggest renaming the config key to avoid dots"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "sub-returns-nil",
+    "description": "Tests that viper.Sub() returns nil when the key doesn't exist and must be nil-checked",
+    "prompt": "I'm using viper.Sub('database') in my Go service to get a sub-viper for database config, then calling sub.Unmarshal(&dbCfg). Occasionally the service panics with a nil pointer dereference. What's happening?",
+    "trap": "Without the skill, the model may suggest checking the config file format or adding error handling to Unmarshal. The root cause is Sub() returning nil when the 'database' key doesn't exist, and nil.Unmarshal panics.",
+    "assertions": [
+      {
+        "id": "2.1",
+        "text": "Identifies that viper.Sub() returns nil when the key doesn't exist"
+      },
+      {
+        "id": "2.2",
+        "text": "Shows adding a nil check: if sub := viper.Sub(\"database\"); sub != nil { ... }"
+      },
+      {
+        "id": "2.3",
+        "text": "Suggests returning a clear error or using defaults when sub is nil"
+      },
+      {
+        "id": "2.4",
+        "text": "Does NOT suggest checking err from Sub() (it returns no error, only nil)"
+      },
+      {
+        "id": "2.5",
+        "text": "Optionally suggests UnmarshalKey(\"database\", &dbCfg) as an alternative that avoids Sub() entirely"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "config-file-not-found-graceful",
+    "description": "Tests graceful handling of ConfigFileNotFoundError for optional config files",
+    "prompt": "My Go service uses viper to read a config file. When users run it without a config file, it crashes with 'Config File config not found in ...'. The config file should be optional. How do I fix this?",
+    "trap": "Without the skill, the model may suggest pre-checking if the file exists before calling ReadInConfig, or using os.Stat. The correct pattern is errors.As with viper.ConfigFileNotFoundError.",
+    "assertions": [
+      {
+        "id": "3.1",
+        "text": "Uses errors.As(err, &notFound) with *viper.ConfigFileNotFoundError"
+      },
+      {
+        "id": "3.2",
+        "text": "Only propagates errors that are NOT ConfigFileNotFoundError"
+      },
+      {
+        "id": "3.3",
+        "text": "Continues execution normally when the config file is not found"
+      },
+      {
+        "id": "3.4",
+        "text": "Does NOT use os.Stat or file existence check as the solution"
+      },
+      {
+        "id": "3.5",
+        "text": "Does NOT ignore all errors from ReadInConfig (real errors like bad YAML should still propagate)"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "global-viper-test-pollution",
+    "description": "Tests viper.New() for test isolation instead of the global instance",
+    "prompt": "My Go tests for config loading are flaky — they pass when run in isolation but fail in a certain order. Each test calls viper.SetConfigFile and viper.ReadInConfig. What's causing this and how do I fix it?",
+    "trap": "Without the skill, the model may suggest adding t.Cleanup(viper.Reset) or running tests with -count=1. The correct fix is creating viper.New() per test to avoid shared global state.",
+    "assertions": [
+      {
+        "id": "4.1",
+        "text": "Identifies the root cause as shared global viper state across tests"
+      },
+      {
+        "id": "4.2",
+        "text": "Recommends viper.New() per test to create an isolated instance"
+      },
+      {
+        "id": "4.3",
+        "text": "Shows v := viper.New() and using v.SetConfigFile, v.ReadInConfig, etc."
+      },
+      {
+        "id": "4.4",
+        "text": "Does NOT recommend viper.Reset() as the primary solution"
+      },
+      {
+        "id": "4.5",
+        "text": "Explains why the tests are order-dependent (state set in one test persists to the next)"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "unmarshal-mapstructure-tags",
+    "description": "Tests use of mapstructure struct tags for correct Unmarshal behavior",
+    "prompt": "I'm unmarshaling my viper config into a Go struct. My config file has 'max_conn: 25' but after calling viper.Unmarshal(&cfg), cfg.MaxConn is always 0. My struct has field MaxConn int. What's wrong?",
+    "trap": "Without the skill, the model may suggest checking the config file key name or viper.GetInt. The fix is adding mapstructure:\"max_conn\" tag — without it, mapstructure uses case-insensitive name matching but doesn't handle underscores to camel-case conversion.",
+    "assertions": [
+      {
+        "id": "5.1",
+        "text": "Identifies the missing mapstructure struct tag as the root cause"
+      },
+      {
+        "id": "5.2",
+        "text": "Shows adding `mapstructure:\"max_conn\"` to the MaxConn field"
+      },
+      {
+        "id": "5.3",
+        "text": "Explains that mapstructure does case-insensitive matching but not underscore-to-camelcase conversion"
+      },
+      {
+        "id": "5.4",
+        "text": "Does NOT suggest using viper.GetInt as the fix (Unmarshal should work once tagged correctly)"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "bind-pflag-timing",
+    "description": "Tests that BindPFlag must be called before Execute() runs",
+    "prompt": "I'm integrating cobra and viper in my Go CLI. I call viper.BindPFlag in the command's RunE function to bind the --port flag. But viper.GetInt('port') always returns the default 8080, even when I pass --port 9090. Why?",
+    "trap": "Without the skill, the model may check the flag name spelling or viper setup. The root cause is binding after Execute() has already parsed the flags — BindPFlag must happen in init() or PersistentPreRunE, before the flags are resolved.",
+    "assertions": [
+      {
+        "id": "6.1",
+        "text": "Identifies that BindPFlag must be called before Execute() / before RunE runs"
+      },
+      {
+        "id": "6.2",
+        "text": "Recommends moving BindPFlag to init() or PersistentPreRunE"
+      },
+      {
+        "id": "6.3",
+        "text": "Explains that cobra parses flags before RunE runs — binding after parsing misses the Changed state"
+      },
+      {
+        "id": "6.4",
+        "text": "Shows the correct pattern: define flag + BindPFlag in init()"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "viper-key-case-insensitivity",
+    "description": "Tests understanding that viper keys are always lowercased internally",
+    "prompt": "I'm calling viper.GetString('DATABASE_HOST') in my Go service to read a config key. The config file has 'database_host: localhost' but I get an empty string. What's wrong?",
+    "trap": "Without the skill, the model may suggest checking env binding or config format. Viper lowercases all keys internally — 'DATABASE_HOST' is stored as 'database_host', but the lookup 'DATABASE_HOST' is also lowercased to 'database_host', so it should match. However, this highlights the convention: always use lowercase keys in viper calls.",
+    "assertions": [
+      {
+        "id": "7.1",
+        "text": "Explains that viper normalizes all keys to lowercase internally"
+      },
+      {
+        "id": "7.2",
+        "text": "Recommends using lowercase keys consistently in viper.Get* calls"
+      },
+      {
+        "id": "7.3",
+        "text": "Identifies that viper.GetString(\"database_host\") is the correct form"
+      },
+      {
+        "id": "7.4",
+        "text": "Notes that while viper.GetString(\"DATABASE_HOST\") also works (due to lowercasing), using uppercase keys is a source of confusion"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "duration-decode-hook",
+    "description": "Tests that time.Duration fields in structs require a decode hook for Unmarshal to work",
+    "prompt": "My Go viper config has 'timeout: 30s' in the YAML file. My struct has Timeout time.Duration and the mapstructure tag. After viper.Unmarshal, cfg.Timeout is 0. Why?",
+    "trap": "Without the skill, the model may suggest using GetDuration or changing the config format to nanoseconds. The correct fix is registering StringToTimeDurationHookFunc via a decode hook option in Unmarshal.",
+    "assertions": [
+      {
+        "id": "8.1",
+        "text": "Identifies that mapstructure cannot decode a duration string into time.Duration without a hook"
+      },
+      {
+        "id": "8.2",
+        "text": "Shows viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) { dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc(), ...) })"
+      },
+      {
+        "id": "8.3",
+        "text": "Uses mapstructure.StringToTimeDurationHookFunc() as part of the hook"
+      },
+      {
+        "id": "8.4",
+        "text": "Does NOT suggest changing the config value to nanoseconds"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "watch-config-atomic-rename-trap",
+    "description": "Tests understanding of fsnotify behavior with editors that use atomic rename",
+    "prompt": "I've set up viper.WatchConfig() in my Go service. When I test it by editing the config file in vim and saving, the OnConfigChange callback sometimes doesn't fire. What's happening?",
+    "trap": "Without the skill, the model may suggest checking fsnotify version or debugging the callback. The root cause is that vim uses atomic rename (write-tmp, rename) which replaces the inode — fsnotify watches the inode and may miss or misfire for rename-based writes.",
+    "assertions": [
+      {
+        "id": "9.1",
+        "text": "Explains that vim and many editors write atomically via rename (write-to-temp, then rename over original)"
+      },
+      {
+        "id": "9.2",
+        "text": "Explains that fsnotify watches the inode, which is replaced by rename-based writes"
+      },
+      {
+        "id": "9.3",
+        "text": "Recommends testing hot-reload using direct writes (os.WriteFile) rather than editor saves"
+      },
+      {
+        "id": "9.4",
+        "text": "Does NOT suggest downgrading vim or switching to a different editor as the fix"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "viper-alone-no-cobra",
+    "description": "Tests that viper can be used without cobra for non-CLI services",
+    "prompt": "I have a Go HTTP service (not a CLI) that should read config from a YAML file and environment variables. Should I use cobra alongside viper, or can I just use viper on its own?",
+    "trap": "Without the skill, the model may suggest always pairing them or adding a minimal cobra setup. Viper is perfectly valid alone for services that have no CLI command tree.",
+    "assertions": [
+      {
+        "id": "10.1",
+        "text": "Clearly states that viper can be used without cobra"
+      },
+      {
+        "id": "10.2",
+        "text": "Explains cobra is for command trees/flags and is not needed for a simple HTTP service"
+      },
+      { "id": "10.3", "text": "Shows viper setup without any cobra imports" },
+      {
+        "id": "10.4",
+        "text": "Does NOT recommend adding cobra just for configuration purposes"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "unmarshal-key-vs-sub",
+    "description": "Tests UnmarshalKey as a simpler alternative to Sub+Unmarshal",
+    "prompt": "I want to unmarshal just the 'database' section of my viper config into a DatabaseConfig struct in Go. I've been using viper.Sub('database') then calling Unmarshal on the result. Is there a simpler way?",
+    "trap": "Without the skill, the model may continue recommending Sub+Unmarshal without mentioning the nil risk or the cleaner alternative. UnmarshalKey avoids the Sub nil-check and is more direct.",
+    "assertions": [
+      {
+        "id": "11.1",
+        "text": "Recommends viper.UnmarshalKey(\"database\", &dbCfg) as the simpler alternative"
+      },
+      {
+        "id": "11.2",
+        "text": "Explains it avoids the nil check required with Sub()"
+      },
+      {
+        "id": "11.3",
+        "text": "Shows the correct usage: viper.UnmarshalKey(\"database\", &dbCfg)"
+      },
+      {
+        "id": "11.4",
+        "text": "If mentioning Sub+Unmarshal, notes the nil risk"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "allow-empty-env",
+    "description": "Tests AllowEmptyEnv behavior when an env var is set to empty string",
+    "prompt": "In my Go service using viper, I set LOG_LEVEL='' (empty string) in my environment to override the config file value. But viper still returns the config file value 'info'. Why does the empty env var not take effect?",
+    "trap": "Without the skill, the model may suggest checking AutomaticEnv or the prefix. By default, viper ignores empty-string env vars and continues down the precedence stack. AllowEmptyEnv(true) changes this behavior.",
+    "assertions": [
+      {
+        "id": "12.1",
+        "text": "Explains that viper treats empty string env vars as 'not set' by default"
+      },
+      {
+        "id": "12.2",
+        "text": "Introduces viper.AllowEmptyEnv(true) as the fix"
+      },
+      {
+        "id": "12.3",
+        "text": "Explains that with AllowEmptyEnv(true), an empty env var overrides the config file value"
+      },
+      {
+        "id": "12.4",
+        "text": "Does NOT suggest using viper.Set() as a workaround"
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "merge-in-config-layering",
+    "description": "Tests MergeInConfig for base+override config file pattern",
+    "prompt": "I want my Go service to ship with a built-in default config file, but let ops teams drop an override.yaml in /etc/myapp/ to customize specific values without copying the whole config. How do I implement this layered loading?",
+    "trap": "Without the skill, the model may suggest reading only one file or writing custom merge logic. MergeInConfig is the viper primitive for this — base file first, then MergeInConfig for the override.",
+    "assertions": [
+      {
+        "id": "13.1",
+        "text": "Uses ReadInConfig for the base config and MergeInConfig for the override"
+      },
+      {
+        "id": "13.2",
+        "text": "Explains that keys from the override file win on collision"
+      },
+      {
+        "id": "13.3",
+        "text": "Does NOT suggest duplicating the entire config in the override file"
+      },
+      {
+        "id": "13.4",
+        "text": "Handles the case where the override file is missing (ConfigFileNotFoundError or os.Stat check)"
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "bind-env-non-prefixed-third-party",
+    "description": "Tests BindEnv for env vars that don't follow the app prefix convention",
+    "prompt": "My Go service uses viper with SetEnvPrefix('MYAPP') and AutomaticEnv(). I also need to read GOOGLE_APPLICATION_CREDENTIALS from the environment and expose it as viper key 'google.credentials'. The prefix makes AutomaticEnv look for MYAPP_GOOGLE_CREDENTIALS. How do I bind to the exact env var name?",
+    "trap": "Without the skill, the model may suggest removing the prefix or reading via os.Getenv. BindEnv can bind a specific key to a specific env var name, bypassing the prefix.",
+    "assertions": [
+      {
+        "id": "14.1",
+        "text": "Uses viper.BindEnv(\"google.credentials\", \"GOOGLE_APPLICATION_CREDENTIALS\")"
+      },
+      {
+        "id": "14.2",
+        "text": "Explains BindEnv binds to the exact env var name, bypassing the prefix"
+      },
+      {
+        "id": "14.3",
+        "text": "Does NOT suggest removing SetEnvPrefix to fix this one case"
+      },
+      {
+        "id": "14.4",
+        "text": "Does NOT suggest using os.Getenv as the primary solution"
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "race-safe-on-config-change",
+    "description": "Tests mutex protection for shared state updated in OnConfigChange callback",
+    "prompt": "My Go service updates a global logLevel variable inside the viper.OnConfigChange callback. Under load I see data races flagged by the race detector. What's the correct pattern for updating shared state from a hot-reload callback?",
+    "trap": "Without the skill, the model may only mention logging the error or ignoring the race. The correct pattern is protecting the shared state with sync.RWMutex — OnConfigChange runs in a background goroutine.",
+    "assertions": [
+      {
+        "id": "15.1",
+        "text": "Identifies that OnConfigChange runs in a background goroutine, causing the race"
+      },
+      {
+        "id": "15.2",
+        "text": "Uses sync.RWMutex (or sync.Mutex) to protect the shared state"
+      },
+      {
+        "id": "15.3",
+        "text": "Updates the shared state under Lock() inside OnConfigChange"
+      },
+      {
+        "id": "15.4",
+        "text": "Readers of the shared state use RLock()"
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "go-embed-default-config",
+    "description": "Tests go:embed + viper.ReadConfig for shipping default config in the binary",
+    "prompt": "I want my Go service binary to work out of the box without any config file on disk by including sensible defaults in a bundled YAML file. How do I ship a default config inside the binary and load it via viper?",
+    "trap": "Without the skill, the model suggests calling viper.SetDefault for each key individually. The cleaner approach is //go:embed + viper.ReadConfig(bytes.NewReader(...)) which loads a full YAML file as defaults.",
+    "assertions": [
+      {
+        "id": "16.1",
+        "text": "Uses //go:embed to embed the YAML config file into the binary"
+      },
+      {
+        "id": "16.2",
+        "text": "Passes the embedded bytes to viper.ReadConfig(bytes.NewReader(...))"
+      },
+      {
+        "id": "16.3",
+        "text": "Calls viper.SetConfigType(\"yaml\") before ReadConfig"
+      },
+      {
+        "id": "16.4",
+        "text": "Does NOT suggest calling viper.SetDefault for each key as the primary approach"
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "validate-before-hot-reload-apply",
+    "description": "Tests validate-then-swap pattern to protect against invalid hot-reloaded config",
+    "prompt": "My Go service uses viper.WatchConfig(). A team member accidentally pushed a malformed config and my service began returning zero-values for all settings. How do I protect against invalid config being applied during a hot reload?",
+    "trap": "Without the skill, the model may only suggest logging the error. The correct pattern is: unmarshal into a candidate struct, validate it, and only swap in the new config if validation passes — keep the previous config on failure.",
+    "assertions": [
+      {
+        "id": "17.1",
+        "text": "Unmarshals into a temporary candidate struct before applying"
+      },
+      {
+        "id": "17.2",
+        "text": "Validates the candidate config before overwriting the active config"
+      },
+      {
+        "id": "17.3",
+        "text": "Keeps the previous config unchanged when validation fails"
+      },
+      {
+        "id": "17.4",
+        "text": "Logs a clear error when the reload is rejected"
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "weakly-typed-input-env-bool",
+    "description": "Tests WeaklyTypedInput for env vars that are always strings but map to bool struct fields",
+    "prompt": "My Go service has a Config struct with an Enabled bool field and mapstructure tag. Setting MY_APP_ENABLED=true in the environment and calling viper.Unmarshal leaves cfg.Enabled as false, even though viper.GetBool works. Why?",
+    "trap": "Without the skill, the model may suggest BindEnv or different env var naming. The issue is that env vars are always strings — mapstructure receives the string \"true\" and cannot decode it to bool without WeaklyTypedInput or a decode hook.",
+    "assertions": [
+      {
+        "id": "18.1",
+        "text": "Identifies that env vars are always strings and mapstructure cannot decode \"true\" to bool by default"
+      },
+      {
+        "id": "18.2",
+        "text": "Suggests enabling WeaklyTypedInput in the DecoderConfig or using a StringToBool decode hook"
+      },
+      {
+        "id": "18.3",
+        "text": "Shows viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) { dc.WeaklyTypedInput = true }) or equivalent"
+      },
+      {
+        "id": "18.4",
+        "text": "Does NOT suggest changing the env var format or using only viper.GetBool as the fix"
+      }
+    ]
+  }
+]

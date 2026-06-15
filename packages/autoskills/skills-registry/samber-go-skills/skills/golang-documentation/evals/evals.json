@@ -1,0 +1,276 @@
+{
+  "skill_name": "golang-documentation",
+  "evals": [
+    {
+      "id": 1,
+      "name": "readme-section-order",
+      "prompt": "Write a README.md for a Go library called `github.com/acme/taskflow` that provides a DAG-based task execution engine. It supports parallel execution, dependency resolution, cycle detection, and retry policies. Include installation instructions, a usage example, license info, and any other sections you think are appropriate for a Go open-source library.",
+      "trap": "Model will produce a reasonable README but likely not follow the exact section order: Title > Badges > Summary > Demo > Getting Started > Features > Contributing > License",
+      "assertions": [
+        { "id": "1.1", "text": "Badges section appears immediately after the title heading, before any prose" },
+        { "id": "1.2", "text": "A short summary (1-2 sentences) appears after badges, before any code block or Getting Started section" },
+        { "id": "1.3", "text": "A demo/example code snippet appears before the Getting Started/Installation section" },
+        { "id": "1.4", "text": "Getting Started section with `go get` appears after the demo and before Features" },
+        { "id": "1.5", "text": "Features section is the longest section, appearing after Getting Started" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "scrambled-readme-reorder",
+      "prompt": "I wrote a README for my Go library `github.com/acme/ratelimit` but my team says the sections are in the wrong order. Can you reorganize it following Go open-source best practices? Keep the content, just fix the order:\n\n```markdown\n# ratelimit\n\n## Getting Started\n```bash\ngo get github.com/acme/ratelimit\n```\n\n## Features\n- Token bucket algorithm\n- Redis backend support\n- Per-key rate limiting\n- Middleware for net/http\n\nA high-performance, distributed rate limiter for Go applications.\n\n## License\nMIT License - see LICENSE file.\n\n[![Build Status](https://img.shields.io/github/actions/workflow/status/acme/ratelimit/test.yml)](https://github.com/acme/ratelimit/actions)\n\n## Contributing\nSee CONTRIBUTING.md\n\n```go\nlimiter := ratelimit.New(ratelimit.WithRate(100, time.Second))\nif limiter.Allow(\"user-123\") {\n    // process request\n}\n```\n```\n",
+      "trap": "The README has sections in wrong order: Getting Started > Features > Summary (unlabeled) > License > Badges (unlabeled) > Contributing > Demo (unlabeled). Without skill the model might rearrange reasonably but miss the exact prescribed order or miss that Summary/Badges/Demo need their own placement",
+      "assertions": [
+        { "id": "2.1", "text": "Badges appear immediately after the title, before the summary text" },
+        { "id": "2.2", "text": "The summary sentence ('A high-performance...') appears after badges, before the demo code" },
+        { "id": "2.3", "text": "The demo code snippet (limiter := ...) appears before the Getting Started section" },
+        { "id": "2.4", "text": "Getting Started appears after demo and before Features" },
+        { "id": "2.5", "text": "Contributing and License appear at the end, after Features" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "doc-comment-why-not-what",
+      "prompt": "Write a godoc comment for this Go function. Make it comprehensive:\n\n```go\nfunc Merge(dst, src map[string]interface{}, overwrite bool) map[string]interface{} {\n    if dst == nil {\n        dst = make(map[string]interface{})\n    }\n    for k, v := range src {\n        if _, exists := dst[k]; !exists || overwrite {\n            dst[k] = v\n        }\n    }\n    return dst\n}\n```",
+      "trap": "Model might just restate: 'Merge merges two maps'. Skill teaches why/when/constraints, Parameters section, Returns section, error cases",
+      "assertions": [
+        { "id": "3.1", "text": "Comment starts with 'Merge' followed by a verb phrase (godoc convention)" },
+        { "id": "3.2", "text": "Includes a Parameters section listing dst, src, and overwrite with descriptions" },
+        { "id": "3.3", "text": "Explains the overwrite behavior (when true vs false)" },
+        { "id": "3.4", "text": "Documents nil dst handling (creates new map)" },
+        { "id": "3.5", "text": "Includes an inline code Example section showing usage" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "small-package-no-doc-go",
+      "prompt": "I have a Go package with 2 files: `handler.go` and `middleware.go`. My teammate suggests I should create a `doc.go` file for the package-level documentation comment. Is that the right approach? Where should I put the package comment?",
+      "trap": "Model without skill might agree to create doc.go (it's a common pattern). Skill teaches: doc.go is for packages with 3+ files; for small packages, put the comment at the top of the main .go file",
+      "assertions": [
+        { "id": "4.1", "text": "Advises AGAINST creating doc.go for a 2-file package" },
+        { "id": "4.2", "text": "Recommends placing the package comment at the top of the main .go file (handler.go)" },
+        { "id": "4.3", "text": "Mentions the 3+ files threshold for when doc.go becomes appropriate" },
+        { "id": "4.4", "text": "Shows the `// Package ... ` format starting with the Package keyword" },
+        { "id": "4.5", "text": "Explains that doc.go is for larger packages where no single file is the obvious home" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "example-test-naming",
+      "prompt": "Write Example test functions for this Go library function that converts temperatures. I need examples for: basic Celsius to Fahrenheit, Fahrenheit to Celsius, and Kelvin to Celsius conversions.\n\n```go\npackage tempconv\n\n// Convert converts a temperature from one unit to another.\nfunc Convert(value float64, from, to Unit) float64 { ... }\n```",
+      "trap": "Model might name multiple examples as ExampleConvert1/ExampleConvert2 or ExampleConvertCelsiusToFahrenheit (capitalized suffix). Skill teaches lowercase suffix convention.",
+      "assertions": [
+        { "id": "5.1", "text": "Uses external test package (package tempconv_test)" },
+        { "id": "5.2", "text": "Multiple examples use lowercase suffix: ExampleConvert_celsiusToFahrenheit or similar lowercase pattern" },
+        { "id": "5.3", "text": "Every example includes an // Output: comment for go test verification" },
+        { "id": "5.4", "text": "Examples use fmt.Println to print results (not fmt.Printf)" },
+        { "id": "5.5", "text": "Examples import the package and call tempconv.Convert (external test package pattern)" }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "contributing-10min-rule",
+      "prompt": "Write a CONTRIBUTING.md for a Go project that requires: PostgreSQL 15, Redis 7, Elasticsearch 8, Go 1.22+, and protoc for gRPC code generation. The test suite takes about 3 minutes to run. Building requires running `protoc` first, then `go generate`, then `go build`.",
+      "trap": "Complex setup with 5 dependencies. Model might just list prerequisites. Skill teaches the 10-minute rule and suggests Makefile, docker-compose, devcontainer",
+      "assertions": [
+        { "id": "6.1", "text": "Includes a Makefile or mentions make targets (make build, make test, make lint)" },
+        { "id": "6.2", "text": "Includes docker-compose.yml for running PostgreSQL, Redis, and Elasticsearch locally" },
+        { "id": "6.3", "text": "Provides a Quick Start section showing clone-to-running-tests in a few commands" },
+        { "id": "6.4", "text": "Mentions or provides devcontainer configuration for consistent environments" },
+        { "id": "6.5", "text": "Separates unit tests (fast, no deps) from integration tests (needs services)" }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "security-fix-miscategorized",
+      "prompt": "We use Keep a Changelog format. A junior developer wrote this CHANGELOG entry for our new release. Is it correct?\n\n```markdown\n## [2.3.0] - 2026-04-10\n\n### Added\n- New streaming API for large file transfers\n- Support for HTTP/3\n\n### Fixed\n- Null pointer dereference when config is missing\n- Deserialization flaw allowing arbitrary code execution via malformed input (GHSA-xxxx-yyyy-zzzz)\n- Off-by-one error in retry backoff calculation\n\n### Changed\n- Connection pool default size increased to 50\n```",
+      "trap": "The GHSA vulnerability is listed under Fixed. Per Keep a Changelog format, security fixes belong in a dedicated ### Security section. A model without skill knowledge treats all bug fixes as Fixed and has no reason to split them. The model must know that Keep a Changelog defines Security as its own top-level category.",
+      "assertions": [
+        { "id": "7.1", "text": "Identifies that the GHSA/deserialization fix belongs in a dedicated ### Security section, not ### Fixed" },
+        { "id": "7.2", "text": "Recommends creating a ### Security subsection that is separate from ### Fixed" },
+        { "id": "7.3", "text": "Keeps the null pointer and off-by-one fixes under ### Fixed — they are bugs, not vulnerabilities" },
+        { "id": "7.4", "text": "Does not move non-security bugs into the Security section" },
+        { "id": "7.5", "text": "Notes that the Security category exists as its own top-level changelog category, not a subcategory of Fixed" }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "llms-txt",
+      "prompt": "I have a Go library `github.com/acme/querybuilder` that provides a type-safe SQL query builder. It has these main types: Builder, Query, Condition, JoinClause. Main functions: New(), Select(), Insert(), Update(), Delete(). Errors: ErrInvalidColumn, ErrMissingTable. I want to make my library more accessible to AI coding assistants. What should I do and can you create any needed files?",
+      "trap": "Model without skill won't know about llms.txt convention. Might suggest better README or doc comments only.",
+      "assertions": [
+        { "id": "8.1", "text": "Creates or recommends creating an llms.txt file at the repository root" },
+        { "id": "8.2", "text": "llms.txt includes an Overview section explaining what the library does" },
+        { "id": "8.3", "text": "llms.txt includes Key Concepts or API Reference listing the main types and functions" },
+        { "id": "8.4", "text": "llms.txt includes Common Patterns section with code examples" },
+        { "id": "8.5", "text": "Mentions registering for discoverability platforms (Context7, DeepWiki, or similar)" }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "brief-doc-comment-trap",
+      "prompt": "Write a brief, one-line doc comment for this exported Go function. Keep it short — I don't want verbose documentation cluttering the code:\n\n```go\npackage retry\n\nfunc Do(ctx context.Context, maxAttempts int, delay time.Duration, backoff float64, fn func() error) error {\n    var lastErr error\n    for i := 0; i < maxAttempts; i++ {\n        if err := fn(); err != nil {\n            lastErr = err\n            select {\n            case <-ctx.Done():\n                return ctx.Err()\n            case <-time.After(delay):\n                delay = time.Duration(float64(delay) * backoff)\n            }\n            continue\n        }\n        return nil\n    }\n    return lastErr\n}\n```",
+      "trap": "User explicitly asks for 'brief, one-line'. Without skill, model complies and writes a minimal one-liner. With skill, the model should STILL write a comprehensive comment because the skill says every exported function MUST have a doc comment with Parameters, Returns, and Example sections",
+      "assertions": [
+        { "id": "9.1", "text": "Comment starts with 'Do' followed by a verb phrase (godoc convention)" },
+        { "id": "9.2", "text": "Includes a Parameters section or describes each parameter (ctx, maxAttempts, delay, backoff, fn)" },
+        { "id": "9.3", "text": "Documents the exponential backoff behavior (delay multiplied by backoff factor)" },
+        { "id": "9.4", "text": "Documents context cancellation behavior (returns ctx.Err())" },
+        { "id": "9.5", "text": "Includes an inline Example section showing a realistic usage pattern" }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "review-restating-comments",
+      "prompt": "Review these doc comments. My team says our documentation is solid. Do you see any issues?\n\n```go\npackage cache\n\n// Get gets a value from the cache by key.\n// Returns the value and true if found, zero value and false if not.\nfunc (c *Cache) Get(key string) (interface{}, bool) { ... }\n\n// Set sets a value in the cache for the given key.\nfunc (c *Cache) Set(key string, value interface{}) { ... }\n\n// Delete deletes a value from the cache by key.\nfunc (c *Cache) Delete(key string) { ... }\n\n// Size returns the number of items currently in the cache.\nfunc (c *Cache) Size() int { ... }\n\n// Clear clears all items from the cache.\nfunc (c *Cache) Clear() { ... }\n```",
+      "trap": "Team says docs are 'solid', creating social pressure to agree. All comments describe what the code does but not why/when/constraints — they omit thread safety, TTL/eviction behavior, and cache miss semantics. The skill requires comments to explain WHY and WHEN, not just WHAT.",
+      "assertions": [
+        { "id": "10.1", "text": "Identifies that the comments describe WHAT the code does but fail to explain WHY, WHEN, or any constraints" },
+        { "id": "10.2", "text": "Points out that Get is missing thread-safety documentation (is it safe for concurrent use?)" },
+        { "id": "10.3", "text": "Points out that Set is missing documentation on what happens if the key already exists and whether there is a TTL or capacity limit" },
+        { "id": "10.4", "text": "Rewrites at least one comment to include constraints, edge cases, or concurrent-use guarantees" },
+        { "id": "10.5", "text": "Does NOT simply agree that the docs are solid without identifying the missing context" }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "skip-test-func-comments",
+      "prompt": "I'm adding doc comments to every function in my Go project to reach 100% documentation coverage. Please add appropriate doc comments to these test functions:\n\n```go\npackage auth_test\n\nfunc TestValidateToken(t *testing.T) { ... }\nfunc TestValidateToken_expired(t *testing.T) { ... }\nfunc TestValidateToken_invalidSignature(t *testing.T) { ... }\nfunc BenchmarkValidateToken(b *testing.B) { ... }\nfunc TestHashPassword(t *testing.T) { ... }\nfunc TestComparePassword(t *testing.T) { ... }\n```",
+      "trap": "User explicitly asks to add doc comments to test functions citing '100% documentation coverage'. Without skill, model complies and writes comments for each test. The skill's 'What to Document' table explicitly says 'Test functions: No' and the model should push back on this request.",
+      "assertions": [
+        { "id": "11.1", "text": "Advises against or actively discourages adding doc comments to test functions" },
+        { "id": "11.2", "text": "Explains that test function names are designed to be self-descriptive — the name IS the documentation" },
+        { "id": "11.3", "text": "Does NOT produce doc comments for any of the standard Test/Benchmark functions listed" },
+        { "id": "11.4", "text": "Clarifies that '100% documentation coverage' tools do not count unexported or test functions — this goal does not apply here" },
+        { "id": "11.5", "text": "May suggest that complex test setup helpers warrant comments, but not the standard TestXxx/BenchmarkXxx functions themselves" }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "simple-crud-no-file-desc",
+      "prompt": "I have a Go file `user_handler.go` (120 lines) that contains standard CRUD HTTP handlers for a User resource: CreateUser, GetUser, UpdateUser, DeleteUser, and ListUsers. Each handler does basic JSON decode, calls a service, and returns a JSON response. Should I add a file-level description comment with an architecture diagram like I did for my scheduler file?",
+      "trap": "User references having added a file description to a complex scheduler file and wants to do the same for a simple CRUD handler. Without skill, model might agree or add unnecessary documentation. With skill, model should say NO — simple CRUD handlers don't warrant file-level descriptions per the 'When to Add File Descriptions' table",
+      "assertions": [
+        { "id": "12.1", "text": "Advises against adding a file-level description for this CRUD handler" },
+        { "id": "12.2", "text": "Explains that simple CRUD handlers don't warrant the same treatment as complex algorithms" },
+        { "id": "12.3", "text": "Distinguishes between when file descriptions ARE needed (algorithms, state machines, 200+ lines of complex logic) vs not needed (CRUD, data models)" },
+        { "id": "12.4", "text": "Still recommends good doc comments on the individual exported handler functions" },
+        { "id": "12.5", "text": "Does NOT produce an ASCII art diagram or elaborate file-level description" }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "file-level-description",
+      "prompt": "I have a Go file `scheduler.go` that implements a priority-queue-based task scheduler using container/heap. It supports recurring tasks, one-shot tasks, task cancellation, and graceful shutdown with a drain timeout. A single dispatcher goroutine polls the heap. The file is 350 lines. Should I add any special documentation to this file, and if so, what?",
+      "trap": "Model might just say 'add function comments'. Skill teaches file-level description with ASCII art architecture diagram for complex files",
+      "assertions": [
+        { "id": "13.1", "text": "Recommends a file-level description comment (not just function comments)" },
+        { "id": "13.2", "text": "Suggests including an ASCII art diagram showing the scheduler architecture/flow" },
+        { "id": "13.3", "text": "Places the file description below imports (not above package declaration)" },
+        { "id": "13.4", "text": "Description explains the algorithm/design (priority queue, dispatcher goroutine)" },
+        { "id": "13.5", "text": "Notes the 200+ line threshold or 'complex algorithm' as reason for adding the description" }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "grpc-api-docs",
+      "prompt": "I have a Go gRPC service for user management. The proto file currently has no comments at all. A teammate says I should use swaggo/swag since we already use it for our REST API. What's the right way to document a gRPC API?",
+      "trap": "Teammate explicitly suggests swaggo/swag for gRPC. The model must know that swaggo/swag generates OpenAPI from Go HTTP annotations — it has no concept of protobufs. Without skill knowledge, the model might go along with the suggestion or give a vague answer. With skill, the model knows proto files are the source of truth and buf is the right tool.",
+      "assertions": [
+        { "id": "14.1", "text": "Clearly states that swaggo/swag is NOT the right tool for gRPC — it generates OpenAPI for REST APIs, not protobuf documentation" },
+        { "id": "14.2", "text": "States that proto files themselves serve as the API contract AND documentation — add comments there" },
+        { "id": "14.3", "text": "Recommends adding comments directly to proto messages, services, and RPCs" },
+        { "id": "14.4", "text": "Recommends buf for proto linting and breaking change detection" },
+        { "id": "14.5", "text": "Mentions grpc-gateway as an option for projects needing both REST and gRPC from the same proto" }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "app-disguised-as-library",
+      "prompt": "I'm building a Go project at `github.com/acme/datactl`. The project structure is:\n```\ncmd/\n  datactl/\n    main.go\ninternal/\n  ingester/\n  transformer/\n  exporter/\npkg/\n  config/\n  client/\ngo.mod\n```\nThe `pkg/` directory exports a client SDK that other teams import. The `cmd/` directory builds the CLI binary. What documentation strategy should I use? Should I write ExampleXxx tests and Playground demos for the exported packages?",
+      "trap": "Project is BOTH a library (pkg/) AND an application (cmd/). Without skill, model might treat it as one or the other. With skill, model should detect both types and apply different documentation strategies: ExampleXxx for pkg/, CLI help + install methods for cmd/",
+      "assertions": [
+        { "id": "15.1", "text": "Identifies this as BOTH a library (pkg/) AND an application (cmd/) — not just one type" },
+        { "id": "15.2", "text": "Recommends ExampleXxx test functions for the pkg/client and pkg/config packages (library part)" },
+        { "id": "15.3", "text": "Recommends CLI --help text and multiple installation methods for the cmd/datactl binary (application part)" },
+        { "id": "15.4", "text": "Recommends configuration documentation (env vars, config files, flags) for the CLI" },
+        { "id": "15.5", "text": "Does NOT recommend Playground demos for internal/ packages (they are not importable by external users)" }
+      ]
+    },
+    {
+      "id": 16,
+      "name": "existing-contributing-improve",
+      "prompt": "Our Go project requires PostgreSQL and Redis. This is our current CONTRIBUTING.md. Improve it:\n\n```markdown\n# Contributing\n\n## Prerequisites\n- Go 1.22+\n- PostgreSQL 15\n- Redis 7\n\n## Setup\n1. Install Go from https://go.dev\n2. Install PostgreSQL from https://www.postgresql.org/download/\n3. Install Redis from https://redis.io/download/\n4. Create a database: `createdb myapp_test`\n5. Run `go build ./...`\n6. Run `go test ./...`\n\n## Pull Requests\nPlease open a PR against the main branch.\n```",
+      "trap": "The existing CONTRIBUTING requires manual installation of PostgreSQL and Redis — time-consuming and error-prone. Without skill, model might polish the text or add small improvements. With skill, model should apply the 10-minute rule: replace manual installs with docker-compose, add Makefile, suggest devcontainer",
+      "assertions": [
+        { "id": "16.1", "text": "Adds docker-compose.yml to replace manual PostgreSQL and Redis installation" },
+        { "id": "16.2", "text": "Adds a Makefile with targets (make build, make test, make lint, or similar)" },
+        { "id": "16.3", "text": "Reduces the setup steps to 3 or fewer commands (e.g., clone, docker-compose up, make test)" },
+        { "id": "16.4", "text": "Mentions or suggests devcontainer for consistent environments" },
+        { "id": "16.5", "text": "Separates unit tests (fast, no deps) from integration tests (needs PostgreSQL/Redis)" }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "play-link-doc-comment",
+      "prompt": "I maintain a public Go library. Write a comprehensive doc comment for this function. I need it to show up well on pkg.go.dev — include everything users need to understand it at a glance:\n\n```go\npackage sliceutil\n\nfunc Filter[T any](s []T, predicate func(T) bool) []T {\n    var result []T\n    for _, v := range s {\n        if predicate(v) {\n            result = append(result, v)\n        }\n    }\n    return result\n}\n```",
+      "trap": "Model may write a thorough doc comment but omit the Play: line entirely — it's a niche convention the skill specifically teaches. The Play: line with its exact format (// Play: https://...) is a skill-specific pattern not commonly known.",
+      "assertions": [
+        { "id": "17.1", "text": "Includes a `// Play:` line with a URL pointing to a Go Playground demo" },
+        { "id": "17.2", "text": "The Play: line uses the exact format `// Play: https://go.dev/play/p/...` (not inline, not as a different label)" },
+        { "id": "17.3", "text": "Comment starts with 'Filter' followed by a verb phrase" },
+        { "id": "17.4", "text": "Includes an inline code Example section (tab-indented)" },
+        { "id": "17.5", "text": "Documents that a new slice is returned (original is not modified)" }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "architecture-decision-records",
+      "prompt": "Our Go project has made several important architectural decisions: using PostgreSQL over MongoDB, choosing event-driven architecture with NATS, and using JWT for authentication. How should we document these decisions so future team members understand the rationale?",
+      "trap": "Model might suggest a wiki page or a section in README. Skill teaches docs/architecture/ directory with numbered ADR files",
+      "assertions": [
+        { "id": "18.1", "text": "Recommends a docs/architecture/ directory (not wiki or README section)" },
+        { "id": "18.2", "text": "Uses numbered file format (0001-xxx.md, 0002-xxx.md)" },
+        { "id": "18.3", "text": "Each ADR has Context section explaining the need" },
+        { "id": "18.4", "text": "Each ADR has Design/Decision section explaining what was chosen" },
+        { "id": "18.5", "text": "Each ADR has Consequences section (positive and negative trade-offs)" }
+      ]
+    },
+    {
+      "id": 19,
+      "name": "example-method-naming",
+      "prompt": "Write Example test functions for this Go type and its methods. Cover: creating a new client, making a GET request, making a POST request with a body, and setting custom headers.\n\n```go\npackage httpclient\n\ntype Client struct { ... }\nfunc New(opts ...Option) *Client { ... }\nfunc (c *Client) Get(ctx context.Context, url string) (*Response, error) { ... }\nfunc (c *Client) Post(ctx context.Context, url string, body io.Reader) (*Response, error) { ... }\nfunc (c *Client) SetHeader(key, value string) { ... }\n```",
+      "trap": "The method example naming convention (ExampleClient_Get, ExampleClient_Post) is less well known than the function convention. Without the skill, the model may write ExampleGetRequest, ExamplePost, ExampleClient_GetRequest (mixing conventions), or use capitalized suffixes. The exact pattern is TypeName_MethodName.",
+      "assertions": [
+        { "id": "19.1", "text": "Uses ExampleNew or ExampleClient for the constructor example — NOT ExampleNewClient (which stutters) or ExampleNew_client" },
+        { "id": "19.2", "text": "Uses ExampleClient_Get for the GET request example (TypeName_MethodName convention with capital method name)" },
+        { "id": "19.3", "text": "Uses ExampleClient_Post for the POST request example (same TypeName_MethodName pattern)" },
+        { "id": "19.4", "text": "Every example includes an // Output: comment" },
+        { "id": "19.5", "text": "Uses external test package (package httpclient_test)" }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "discoverability-registration",
+      "prompt": "I just published my Go library on GitHub (public repo, MIT license, tagged v1.0.0). I have a good README, doc comments, ExampleXxx tests, and a CHANGELOG. What else should I do to make sure developers and AI tools can find and use my library?",
+      "trap": "Model without skill knowledge of the specific platforms will give generic answers: 'share on social media', 'write a blog post', 'submit to HackerNews'. The skill teaches specific discoverability platforms: Context7, DeepWiki, OpenDeep, zRead — names the model won't know without the skill.",
+      "assertions": [
+        { "id": "20.1", "text": "Recommends registering with Context7 (context7.com) specifically for AI-accessible documentation" },
+        { "id": "20.2", "text": "Recommends registering with DeepWiki (deepwiki.com) specifically" },
+        { "id": "20.3", "text": "Recommends adding an llms.txt file at the repository root" },
+        { "id": "20.4", "text": "Recommends adding Go Playground demos linked from doc comments with the // Play: format" },
+        { "id": "20.5", "text": "Names at least 3 specific discoverability platforms (from: Context7, DeepWiki, OpenDeep, zRead) — not generic promotion advice" }
+      ]
+    },
+    {
+      "id": 21,
+      "name": "deprecated-marker-format",
+      "prompt": "I'm deprecating a function in my Go library. The old function is `ParseDuration` and the new replacement is `ParseDurationStrict`. Write the doc comment for the deprecated function. Also, I want to make sure automated tools and pkg.go.dev show it as deprecated correctly.",
+      "trap": "Model might use a freeform deprecation notice (e.g., 'This function is deprecated, use X instead') instead of the specific godoc Deprecated: marker format that tools recognize. The exact format with 'Deprecated:' on its own paragraph line is required for godoc rendering and tooling detection",
+      "assertions": [
+        { "id": "21.1", "text": "Uses the exact 'Deprecated:' marker (capital D, colon, space) on its own comment paragraph line — this is the format godoc and tools recognize" },
+        { "id": "21.2", "text": "Includes the replacement function name (ParseDurationStrict) after the Deprecated: marker" },
+        { "id": "21.3", "text": "Mentions a version or timeline for removal (e.g., 'will be removed in v3.0.0')" }
+      ]
+    }
+  ]
+}

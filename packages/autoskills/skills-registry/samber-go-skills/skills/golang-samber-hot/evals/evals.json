@@ -1,0 +1,202 @@
+[
+  {
+    "id": 1,
+    "name": "algorithm-selection-default",
+    "description": "Tests whether the model recommends W-TinyLFU as default instead of LRU",
+    "prompt": "I need an in-memory cache for my Go web API using samber/hot. It handles user profile lookups with mixed access patterns — some users are accessed frequently, others only occasionally. Set up a cache with 50k entries and 10-minute TTL.",
+    "trap": "Without the skill, the model defaults to hot.LRU (the most well-known algorithm) instead of hot.WTinyLFU which handles mixed workloads better",
+    "assertions": [
+      {"id": "1.1", "text": "Uses hot.WTinyLFU as the eviction algorithm (not hot.LRU)"},
+      {"id": "1.2", "text": "Uses hot.NewHotCache constructor with generic type parameters"},
+      {"id": "1.3", "text": "Chains .WithTTL(10 * time.Minute) or equivalent"},
+      {"id": "1.4", "text": "Chains .WithJanitor() in the builder (not calling cache.Janitor() separately after Build)"},
+      {"id": "1.5", "text": "Calls defer cache.StopJanitor() after Build()"},
+      {"id": "1.6", "text": "Calls .Build() to finalize the cache"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "algorithm-selection-frequency",
+    "description": "For stable frequency-dominated workloads, LFU beats W-TinyLFU despite W-TinyLFU being the general default",
+    "prompt": "I'm building a DNS resolver cache in Go with samber/hot. Lookups follow a heavy power-law distribution — a small set of domains (google.com, cloudflare.com) are looked up millions of times, while most domains are rare. The popularity rankings are very stable over time.\n\nA teammate says: 'The docs say W-TinyLFU is the general-purpose default that handles mixed workloads. We should always start with hot.WTinyLFU to avoid bike-shedding — you can always tune later.' Is this good advice for this specific use case? Which algorithm should I actually use?",
+    "trap": "The teammate's advice sounds pragmatic — 'start with the default, tune later' is usually good. But the skill teaches that for stable frequency-dominated workloads (where popularity rankings don't shift), hot.LFU is superior to W-TinyLFU. LFU's known weakness (stale popular items never evict) is irrelevant when rankings are stable. The model should override the default recommendation.",
+    "assertions": [
+      {"id": "2.1", "text": "Pushes back on the teammate — does NOT blindly apply hot.WTinyLFU when the workload is clearly stable-frequency-dominated"},
+      {"id": "2.2", "text": "Recommends hot.LFU as the correct algorithm: stable power-law distribution maps exactly to LFU's strength (keeping the most frequently accessed items)"},
+      {"id": "2.3", "text": "Explains why LFU's known weakness (stale popular items stuck in cache) does NOT apply here — popularity rankings are stable, so the stale-items problem doesn't manifest"},
+      {"id": "2.4", "text": "Correctly positions W-TinyLFU as 'general-purpose for unknown/shifting patterns' while LFU is 'optimal for known stable frequency patterns'"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "janitor-required",
+    "description": "Tests whether the model correctly includes WithJanitor() — the most common mistake",
+    "prompt": "Write a simple samber/hot cache in Go with a 5-minute TTL for caching API responses. Key is string, value is []byte.",
+    "trap": "Without the skill, the model forgets WithJanitor() — expired entries stay in memory until algorithm eviction, silently serving stale data",
+    "assertions": [
+      {"id": "3.1", "text": "Includes .WithJanitor() in the builder chain"},
+      {"id": "3.2", "text": "Includes defer cache.StopJanitor() for cleanup"},
+      {"id": "3.3", "text": "Uses .WithTTL() for expiration"},
+      {"id": "3.4", "text": "Does NOT call cache.Janitor() as a separate method after Build() — it should be chained in the builder"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "missing-cache-panic-prevention",
+    "description": "Tests whether the model correctly enables missing cache before calling SetMissing",
+    "prompt": "I have a samber/hot cache for user lookups in Go. When the database confirms a user ID doesn't exist, I want to cache that negative result so we don't keep querying the DB. Show me how to implement this.",
+    "trap": "Without the skill, the model calls cache.SetMissing() without configuring WithMissingCache() or WithMissingSharedCache() first, which panics at runtime",
+    "assertions": [
+      {"id": "4.1", "text": "Configures WithMissingCache(algorithm, capacity) or WithMissingSharedCache() in the builder"},
+      {"id": "4.2", "text": "Uses cache.SetMissing() or cache.SetMissingWithTTL() to cache the negative result"},
+      {"id": "4.3", "text": "Missing cache is configured BEFORE Build() is called (in the builder chain)"},
+      {"id": "4.4", "text": "Explains or demonstrates that SetMissing without the config panics"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "loader-pattern-singleflight",
+    "description": "Tests whether the model uses the loader pattern correctly with singleflight awareness",
+    "prompt": "My Go service using samber/hot gets 1000 concurrent requests per second for the same cache key when it expires. I'm worried about all 1000 requests hitting the database simultaneously. How do I prevent this thundering herd?",
+    "trap": "Without the skill, the model implements manual singleflight or sync.Once, missing that samber/hot's WithLoaders already includes built-in singleflight deduplication",
+    "assertions": [
+      {"id": "5.1", "text": "Uses .WithLoaders() in the builder chain to register a loader function"},
+      {"id": "5.2", "text": "Explains that samber/hot has built-in singleflight deduplication — concurrent Get() calls for the same key share one loader invocation"},
+      {"id": "5.3", "text": "Does NOT implement manual singleflight or sync.Once on top of the cache"},
+      {"id": "5.4", "text": "The loader function signature matches func(keys []K) (map[K]V, error)"},
+      {"id": "5.5", "text": "Recommends WithJitter() to spread TTL expirations as an additional thundering-herd mitigation"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "stale-while-revalidate",
+    "description": "Tests knowledge of the two-threshold revalidation pattern",
+    "prompt": "I want my samber/hot cache in Go to return stale data while refreshing in the background, rather than blocking on cache miss. The data should be considered fresh for 5 minutes, then stale-but-servable for another 2 minutes, then fully expired. Show the setup.",
+    "trap": "Without the skill, the model sets a single TTL of 7 minutes, missing the WithRevalidation two-threshold pattern that serves stale data while refreshing",
+    "assertions": [
+      {"id": "6.1", "text": "Uses .WithTTL(5 * time.Minute) for the fresh duration"},
+      {"id": "6.2", "text": "Uses .WithRevalidation(2 * time.Minute, loader) for the stale duration after TTL"},
+      {"id": "6.3", "text": "Explains the two-threshold model: fresh -> stale (async refresh) -> expired"},
+      {"id": "6.4", "text": "Uses .WithRevalidationErrorPolicy() to handle refresh failures (KeepOnError or DropOnError)"},
+      {"id": "6.5", "text": "Does NOT use a single TTL of 7 minutes as the only configuration"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "sharding-for-concurrency",
+    "description": "Tests whether the model correctly uses sharding to reduce lock contention",
+    "prompt": "My Go service using samber/hot has high lock contention — 64 CPU cores, 500k cache entries, and profiling shows mutex contention on the cache. How do I fix this?",
+    "trap": "Without the skill, the model suggests WithoutLocking() (dangerous) or external sharding, missing the built-in WithSharding",
+    "assertions": [
+      {"id": "7.1", "text": "Uses .WithSharding() in the builder to split cache into segments"},
+      {"id": "7.2", "text": "Shard count is a power of 2 (e.g., 16, 32, 64)"},
+      {"id": "7.3", "text": "Provides or discusses a hash function of type func(K) uint64"},
+      {"id": "7.4", "text": "Does NOT recommend WithoutLocking() for a concurrent workload"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "copy-on-read-mutable-values",
+    "description": "Tests whether the model uses CopyOnRead/CopyOnWrite for mutable cached values",
+    "prompt": "I'm caching *User structs in samber/hot in my Go service. Multiple goroutines read from the cache and modify the returned user objects (e.g., setting computed fields). I'm seeing race conditions. What's wrong and how do I fix it?",
+    "trap": "Without the skill, the model suggests adding external mutexes or cloning manually after Get(), missing the built-in WithCopyOnRead",
+    "assertions": [
+      {"id": "8.1", "text": "Identifies that callers are mutating shared cached pointers"},
+      {"id": "8.2", "text": "Uses .WithCopyOnRead(fn) to return cloned copies on Get()"},
+      {"id": "8.3", "text": "The copy function creates a shallow or deep copy of the struct"},
+      {"id": "8.4", "text": "Does NOT suggest only adding external mutexes as the primary solution"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "loader-chain-semantics",
+    "description": "Tests understanding of multi-loader chain behavior — later overwrites earlier, error stops chain",
+    "prompt": "I want a samber/hot cache in Go with two loaders: first try Redis, then fall back to PostgreSQL for remaining keys. If Redis returns a value for key X and PostgreSQL also returns a value for key X, which one wins? What happens if Redis returns an error?",
+    "trap": "Without the skill, the model assumes first-loader-wins or doesn't know the chain semantics",
+    "assertions": [
+      {"id": "9.1", "text": "States that later loaders can overwrite earlier loader values for the same key (PostgreSQL wins)"},
+      {"id": "9.2", "text": "States that any loader error stops the entire chain immediately"},
+      {"id": "9.3", "text": "States that partial results from earlier loaders are discarded on error"},
+      {"id": "9.4", "text": "Shows WithLoaders(redisLoader, dbLoader) with Redis first, PostgreSQL second"},
+      {"id": "9.5", "text": "States that later loaders only receive keys NOT found by previous loaders"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "algorithm-scan-resistance",
+    "description": "SIEVE is the simple scan-resistant alternative to LRU; W-TinyLFU and S3FIFO are valid but heavier",
+    "prompt": "My Go service using samber/hot has a cache for product data. Periodically, a batch job scans through ALL 500k products sequentially, which evicts all the genuinely hot items. Currently using LRU.\n\nA teammate says: 'Switch to hot.WTinyLFU — it's scan-resistant and the general best-practice default.' Another says: 'hot.S3FIFO is specifically designed for scan resistance at high throughput.' My cache is small (5k items) and the access pattern outside the scans is not particularly skewed. Which should I use?",
+    "trap": "Both teammates recommend valid scan-resistant algorithms — W-TinyLFU and S3FIFO are both correct answers to scan pollution. But the skill's table shows: S3FIFO should avoid small caches (<1000 items — but 5k is borderline), and SIEVE is the 'simple scan-resistant LRU alternative' for non-highly-skewed patterns. The model should know SIEVE is the best fit when simplicity matters and access isn't highly skewed.",
+    "assertions": [
+      {"id": "10.1", "text": "Identifies that SIEVE is the most appropriate choice: simple scan-resistant LRU alternative for non-highly-skewed access patterns"},
+      {"id": "10.2", "text": "Acknowledges that W-TinyLFU and S3FIFO are valid but notes one or both have tradeoffs: W-TinyLFU adds complexity, S3FIFO is optimized for high-throughput/larger caches"},
+      {"id": "10.3", "text": "Explains why SIEVE resists scan pollution (items must be visited multiple times before eviction — single-pass scan items get evicted while hot items are retained)"},
+      {"id": "10.4", "text": "Uses hot.SIEVE as the algorithm constant in the implementation"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "withoutlocking-janitor-conflict",
+    "description": "Tests knowledge of the WithoutLocking/WithJanitor mutual exclusion",
+    "prompt": "I want maximum performance for my single-goroutine Go batch processor using samber/hot. I plan to use WithoutLocking() to skip mutex overhead and WithJanitor() for TTL cleanup. Show me the setup.",
+    "trap": "Without the skill, the model writes code combining both, which panics at runtime",
+    "assertions": [
+      {"id": "11.1", "text": "Warns that WithoutLocking() and WithJanitor() are mutually exclusive and will panic"},
+      {"id": "11.2", "text": "Recommends removing one of the two options"},
+      {"id": "11.3", "text": "Suggests manually calling Purge() or Delete() for cleanup without a janitor, OR dropping WithoutLocking() to keep the janitor"},
+      {"id": "11.4", "text": "Does NOT produce code that chains both WithoutLocking() and WithJanitor()"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "warmup-before-traffic",
+    "description": "Tests whether the model uses WithWarmUp to pre-populate the cache",
+    "prompt": "My Go HTTP service using samber/hot takes 30 seconds of slow responses after each deploy while the cache warms up from loader calls. How can I ensure the cache is populated before the server starts accepting traffic?",
+    "trap": "Without the skill, the model suggests a manual loop calling Set() before ListenAndServe, missing the built-in WithWarmUp or WithWarmUpWithTimeout",
+    "assertions": [
+      {"id": "12.1", "text": "Uses .WithWarmUp(fn) or .WithWarmUpWithTimeout(timeout, fn) in the builder"},
+      {"id": "12.2", "text": "The warm-up function signature returns (map[K]V, []K, error) — values, missing keys, error"},
+      {"id": "12.3", "text": "Warm-up happens before Build() returns, so the cache is ready when the server starts"},
+      {"id": "12.4", "text": "Does NOT manually loop through keys calling Set() before server start"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "prometheus-monitoring-setup",
+    "description": "Tests whether the model correctly sets up Prometheus metrics for the cache",
+    "prompt": "I want to monitor my samber/hot cache in Go with Prometheus. Show me how to set it up and what metrics to alert on.",
+    "trap": "Without the skill, the model creates custom Prometheus metrics manually instead of using the built-in WithPrometheusMetrics and prometheus.Collector interface",
+    "assertions": [
+      {"id": "13.1", "text": "Uses .WithPrometheusMetrics(cacheName) in the builder"},
+      {"id": "13.2", "text": "Registers the cache with prometheus.MustRegister(cache) or prometheus.Register(cache)"},
+      {"id": "13.3", "text": "Mentions hit rate as a key metric to monitor (target >80%)"},
+      {"id": "13.4", "text": "Does NOT create custom Prometheus counters/gauges manually for basic cache metrics"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "get-error-handling",
+    "description": "Tests whether the model correctly handles all three Get() return values",
+    "prompt": "Write a Go function that retrieves a user from a samber/hot cache. Handle all possible outcomes: cache hit, cache miss, and loader error.",
+    "trap": "Without the skill, the model checks only (value, ok) ignoring the error return, or only checks error ignoring the bool",
+    "assertions": [
+      {"id": "14.1", "text": "Get() returns three values: (V, bool, error)"},
+      {"id": "14.2", "text": "Checks error first before checking the bool"},
+      {"id": "14.3", "text": "Handles all three cases: err != nil (loader failure), !found (cache miss with no loader), found (cache hit)"},
+      {"id": "14.4", "text": "Does NOT ignore the error return value"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "peek-vs-get-distinction",
+    "description": "Tests understanding of Peek() having no side effects unlike Get()",
+    "prompt": "In my Go monitoring dashboard, I need to inspect what's in my samber/hot cache without affecting the cache behavior — no loader triggers, no expiration checks, no algorithm promotion. Which method should I use?",
+    "trap": "Without the skill, the model uses Get() or Has() which may trigger loaders or affect the eviction algorithm's internal state",
+    "assertions": [
+      {"id": "15.1", "text": "Recommends Peek() or PeekMany() for side-effect-free inspection"},
+      {"id": "15.2", "text": "Explains that Peek() does not trigger loaders"},
+      {"id": "15.3", "text": "Explains that Peek() ignores expiration (returns expired entries too)"},
+      {"id": "15.4", "text": "Does NOT recommend Get() for inspection purposes"}
+    ]
+  }
+]

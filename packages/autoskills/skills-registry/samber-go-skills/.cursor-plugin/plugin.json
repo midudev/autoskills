@@ -1,0 +1,26 @@
+{
+    "name": "cc-skills-golang",
+    "displayName": "Skills for Golang",
+    "description": "AI Agent Skills for production-ready Go projects",
+    "version": "1.5.1",
+    "author": {
+        "name": "Samuel Berthe",
+        "email": "hey@samuel-berthe.fr"
+    },
+    "homepage": "https://github.com/samber/cc-skills-golang",
+    "repository": "https://github.com/samber/cc-skills-golang",
+    "license": "MIT",
+    "keywords": [
+        "plugin",
+        "go",
+        "golang",
+        "ai-agent",
+        "skills",
+        "agentic",
+        "engineering",
+        "developer",
+        "coding",
+        "productivity"
+    ],
+    "skills": "./skills/"
+}

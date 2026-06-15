@@ -1,0 +1,296 @@
+{
+  "skill_name": "golang-samber-ro",
+  "evals": [
+    {
+      "id": 1,
+      "name": "typed-pipe-vs-untyped",
+      "prompt": "I need to chain 3 operators in samber/ro: filter integers, map to strings, then take the first 5. Write the pipeline code.",
+      "assertions": [
+        "Uses ro.Pipe3 (or Pipe2 with nested) instead of untyped ro.Pipe for compile-time type safety",
+        "Uses ro.Filter with a func(int) bool predicate",
+        "Uses ro.Map with a func(int) string transform",
+        "Uses ro.Take[string](5) with correct generic type parameter"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "lo-vs-ro-boundary",
+      "prompt": "I have a []User slice with 500 users. I want to filter active users and extract their email addresses into a []string. Should I use samber/ro for this? Write the code.",
+      "assertions": [
+        "Recommends samber/lo instead of samber/ro for this finite slice operation",
+        "Explains WHY lo is better here: synchronous, no stream overhead, purpose-built for slices",
+        "Does NOT create an Observable pipeline for a simple slice transform",
+        "Uses lo.Filter and lo.Map (or equivalent lo functions)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "observer-error-handling",
+      "prompt": "Subscribe to this observable and print each value: observable := ro.Interval(time.Second). Write the subscription code.",
+      "assertions": [
+        "Uses ro.NewObserver with all 3 callbacks (onNext, onError, onComplete), not just ro.OnNext",
+        "Includes an error handler that logs or handles the error",
+        "Includes a completion handler",
+        "Mentions the risk of using OnNext alone (silent error dropping)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "infinite-stream-shutdown",
+      "prompt": "I have an infinite ro.Interval observable processing events. How do I gracefully shut it down when the application receives SIGTERM?",
+      "assertions": [
+        "Uses ro.TakeUntil with a signal observable OR context cancellation with ThrowOnContextCancel",
+        "Mentions the signal plugin (plugins/signal) or os/signal for SIGTERM handling",
+        "Calls .Wait() on the subscription to block until shutdown completes",
+        "Does NOT suggest manual channel closing or goroutine killing as the primary approach",
+        "Mentions Unsubscribe() as an alternative cleanup mechanism"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "subject-type-selection-config",
+      "prompt": "I need a reactive configuration store. When a new subscriber connects, it should immediately receive the current config value, and all subscribers should get updates when config changes. Which samber/ro Subject should I use?",
+      "assertions": [
+        "Recommends BehaviorSubject (not PublishSubject or ReplaySubject)",
+        "Explains that BehaviorSubject replays the last value to new subscribers",
+        "Shows NewBehaviorSubject[Config](initialConfig) constructor with initial value",
+        "Shows .Send() for pushing updates and .Subscribe() for consuming",
+        "Does NOT recommend PublishSubject (late subscribers would miss the current value)"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "subject-type-selection-chat",
+      "prompt": "I'm building a chat room. New users joining should see the last 50 messages, and all users should receive new messages in real-time. Which samber/ro Subject type?",
+      "assertions": [
+        "Recommends ReplaySubject with buffer size 50",
+        "Shows NewReplaySubject[Message](50) constructor",
+        "Explains that ReplaySubject buffers N past values for late subscribers",
+        "Does NOT recommend BehaviorSubject (only replays 1 value, not 50)"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "share-teardown-on-last-unsubscribe",
+      "prompt": "I have a samber/ro pipeline using Share() to multicast a WebSocket observable to 3 subscribers: a dashboard, a metrics recorder, and an alerting system. The dashboard and metrics recorder are temporary — they unsubscribe after 30 seconds. Only the alerting system stays permanently subscribed. After 30 seconds when the two temporary subscribers unsubscribe, will the WebSocket connection stay alive for the alerting system or will it be torn down?",
+      "assertions": [
+        "Correctly states that Share() tears down the underlying source when the LAST subscriber unsubscribes",
+        "Identifies that when dashboard and metrics recorder unsubscribe, the alerting system is the last subscriber — connection stays alive",
+        "Explains that Share() uses reference counting: source tears down only when refcount reaches 0",
+        "Warns that if ALL 3 unsubscribed simultaneously, the WebSocket would be torn down and alerting would stop receiving events",
+        "Distinguishes Share() (tears down on last unsubscribe) from a persistent Subject that stays alive regardless of subscriber count"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "combinlatest-vs-zip-vs-merge",
+      "prompt": "I have two observables: one emits the current stock price every second, and another emits the current exchange rate every 5 seconds. I need to compute the converted price (price * rate) using the latest values from both. Which combining operator should I use in samber/ro?",
+      "assertions": [
+        "Recommends CombineLatest2 (not Zip2 or Merge)",
+        "Explains WHY: CombineLatest re-emits when either source updates, using the latest from both",
+        "Explains WHY NOT Zip: Zip waits for one value from each, so it would only emit every 5s",
+        "Explains WHY NOT Merge: Merge interleaves but doesn't combine values from both sources",
+        "Shows CombineLatest2(priceStream, rateStream) returning lo.Tuple2",
+        "Uses ro.Map to compute the product from the tuple"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "retry-with-backoff",
+      "prompt": "I'm calling an unreliable external API via samber/ro. I want to retry up to 3 times with exponential backoff starting at 500ms, with a max delay of 10 seconds. If all retries fail, return a cached default value. Write the code.",
+      "assertions": [
+        "Uses ro.RetryWithConfig (not ro.Retry which retries infinitely)",
+        "Sets Max: 3 in RetryConfig",
+        "Sets Delay: 500ms and BackoffMultiplier: 2.0 in RetryConfig",
+        "Sets MaxDelay: 10*time.Second in RetryConfig",
+        "Chains OnErrorReturn or Catch after RetryWithConfig for the fallback",
+        "Orders operators correctly: source → RetryWithConfig → fallback (retry BEFORE fallback)"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "scan-accumulator-state-design",
+      "prompt": "I'm using ro.Scan in samber/ro to compute a running average of sensor readings. My first attempt accumulates a sum but I can't compute the average because I don't know the count inside the Scan callback. Here's my broken code:\n\n```go\nro.Scan(func(acc float64, reading float64) float64 {\n    return acc + reading  // sum grows but can't divide — don't know N\n}, 0.0)\n```\n\nHow do I fix this to emit the correct running average on each new reading?",
+      "assertions": [
+        "Identifies that the accumulator must carry both sum AND count as state (not just the running average)",
+        "Changes the accumulator type to a struct (or tuple) holding {sum float64, count int}",
+        "Shows Scan returning the updated struct with incremented count and added sum",
+        "Chains a Map after Scan to compute avg = acc.sum / float64(acc.count) for display",
+        "Does NOT attempt to maintain an external counter variable outside the Scan (would break with concurrent subscribers)"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "collect-synchronous",
+      "prompt": "I have a finite observable ro.Just(1, 2, 3, 4, 5) and I need to get all values into a regular Go slice []int. How do I do this with samber/ro?",
+      "assertions": [
+        "Uses ro.Collect(observable) which returns ([]int, error)",
+        "Checks the error return value from Collect",
+        "Does NOT manually subscribe and accumulate into a slice",
+        "Mentions that Collect blocks until the stream completes"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "context-propagation",
+      "prompt": "I have a long-running samber/ro pipeline that should respect a 30-second timeout from the request context. If the context is cancelled, the pipeline should stop cleanly. How do I wire context into the pipeline?",
+      "assertions": [
+        "Uses ro.ContextWithTimeout or ro.ContextReset to inject the context/timeout",
+        "Uses ro.ThrowOnContextCancel to convert context cancellation to a stream error",
+        "Chains these context operators in the pipeline (not just passing ctx to Subscribe)",
+        "Handles the cancellation error in the observer's onError callback"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "plugin-fsnotify",
+      "prompt": "I want to watch a directory for file changes using samber/ro and reload my app's configuration when a file is modified. I need debouncing to avoid reloading on every rapid save. Write the code.",
+      "assertions": [
+        "Knows about the fsnotify plugin (plugins/fsnotify)",
+        "Uses the fsnotify plugin to create an observable of file events",
+        "Uses ThrottleTime or a similar debounce operator to avoid rapid reloads",
+        "Filters for Write events specifically",
+        "Shows a Map operator to reload configuration from the changed file"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "plugin-cron-scheduling",
+      "prompt": "I need a samber/ro observable that emits an event every day at midnight for a daily report generation job. What plugin should I use and how?",
+      "assertions": [
+        "Knows about the cron plugin (plugins/cron)",
+        "Uses cron.Schedule or similar with a cron expression like `0 0 * * *`",
+        "Shows the correct import path for the cron plugin",
+        "Chains the cron observable with Map or FlatMap to trigger report generation"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "maperr-fallible-transform",
+      "prompt": "I have a stream of raw JSON strings in samber/ro. I want to parse each one into a struct, but some might be malformed. I want parsing errors to propagate through the pipeline's error channel, not panic. Which operator should I use?",
+      "assertions": [
+        "Uses ro.MapErr (not ro.Map) for the fallible JSON parsing",
+        "Shows MapErr with a func(string) (MyStruct, error) signature",
+        "Explains that MapErr propagates the error through the pipeline's error channel",
+        "Does NOT suggest using Map with a recover/panic pattern",
+        "Alternatively mentions the JSON encoding plugin (plugins/encoding/json) as an option"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "buffer-batching",
+      "prompt": "I have a high-throughput event stream in samber/ro and I need to batch events for efficient database writes. I want batches of up to 100 events OR a flush every 5 seconds, whichever comes first. Write the code.",
+      "assertions": [
+        "Uses ro.BufferWithTimeOrCount (not just BufferWithCount or BufferWithTime alone)",
+        "Sets count=100 and duration=5*time.Second",
+        "Chains with Map or MapErr to process the batch (e.g., database write)",
+        "Explains why both conditions matter: count prevents huge batches, time prevents stale data"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "unicast-subject-queue",
+      "prompt": "I need a job queue where a producer pushes tasks and exactly one consumer processes them. The queue should buffer tasks if the consumer is slow. Which samber/ro Subject should I use?",
+      "assertions": [
+        "Recommends UnicastSubject (not PublishSubject or ReplaySubject)",
+        "Shows NewUnicastSubject[Task](bufferSize) with an appropriate buffer",
+        "Explains that UnicastSubject allows exactly one subscriber",
+        "Explains that it buffers values before the subscriber connects",
+        "Does NOT recommend PublishSubject (allows multiple subscribers, no buffering for pre-subscribe values)"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "share-vs-sharereplay",
+      "prompt": "I'm using Share() on an HTTP request observable in samber/ro. But late subscribers don't receive the response that was already fetched. How do I fix this?",
+      "assertions": [
+        "Recommends ShareReplay(1) instead of Share()",
+        "Explains that Share() doesn't buffer — late subscribers only see future emissions",
+        "Explains that ShareReplay(n) buffers the last N values for late subscribers",
+        "Shows the correct syntax: ro.ShareReplay[T](1)"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "error-recovery-cascade",
+      "prompt": "I need a resilient data pipeline in samber/ro: first retry transient failures 2 times, then try a secondary data source, and if everything fails, return a cached default. Write the error recovery chain.",
+      "assertions": [
+        "Chains recovery operators in the correct order: RetryWithConfig FIRST, then Catch/OnErrorResumeNextWith, then OnErrorReturn",
+        "Uses RetryWithConfig with Max: 2 (not infinite Retry)",
+        "Uses Catch or OnErrorResumeNextWith to switch to the secondary source",
+        "Uses OnErrorReturn for the final cached default",
+        "Orders the operators correctly in the Pipe chain (retry → fallback source → default value)"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "observable-creation-channel-bridge-completion",
+      "prompt": "I'm bridging a legacy Go chan Event into a samber/ro pipeline. I've wrapped it with ro.FromChannel. Now my pipeline's onComplete callback never fires even though I've processed all the events I care about. The channel stays open because the legacy service never closes it. How do I make the pipeline complete cleanly after processing 100 events, without modifying the legacy channel producer?",
+      "assertions": [
+        "Uses ro.Take(100) to limit the observable to 100 events and trigger completion",
+        "Explains that ro.FromChannel only completes when the source channel is closed",
+        "Does NOT suggest modifying the channel producer or closing the channel externally",
+        "Does NOT suggest polling the channel manually outside the ro pipeline",
+        "Alternatively mentions TakeUntil with a signal or Timeout as other valid completion strategies"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "tap-for-observability",
+      "prompt": "I have a production samber/ro pipeline and I need to add logging at each stage without modifying the data flow. How should I instrument it?",
+      "assertions": [
+        "Uses Tap or TapOnNext/TapOnError/TapOnComplete for side-effect logging",
+        "Does NOT use Map with a side effect (which would change the return type signature)",
+        "Shows TapOnError for monitoring errors specifically",
+        "Explains that Tap/Do operators observe without altering the stream",
+        "Mentions the logging plugins (slog, zap, etc.) as structured alternatives"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "connectable-precise-control",
+      "prompt": "I need to set up 5 subscribers to a shared samber/ro observable, but I don't want the stream to start until ALL subscribers are connected. Share() starts on first subscribe. What should I use instead?",
+      "assertions": [
+        "Recommends Connectable (not Share or ShareReplay)",
+        "Shows ro.Connectable[T](source) to create a ConnectableObservable",
+        "Shows setting up all 5 subscribers before calling .Connect(ctx)",
+        "Explains that Connect() explicitly starts the shared execution",
+        "Explains why Share() is wrong: it starts on first subscribe, so sub2-5 might miss early events"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "flatmap-vs-map-nested",
+      "prompt": "I have a stream of user IDs and for each ID I need to fetch their orders from an API (which returns an Observable[Order]). If I use Map, I get Observable[Observable[Order]]. How do I flatten this in samber/ro?",
+      "assertions": [
+        "Recommends FlatMap (or MergeMap) instead of Map + manual flatten",
+        "Shows ro.FlatMap(func(id int) Observable[Order] { return fetchOrders(id) })",
+        "Explains that FlatMap maps each value to an Observable and flattens the results",
+        "Does NOT suggest Map followed by MergeAll as the primary approach (FlatMap is idiomatic)"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "async-subject-final-result",
+      "prompt": "I have a long computation that produces intermediate results but I only care about the final result. Which samber/ro Subject captures just the last emitted value and delivers it only after completion?",
+      "assertions": [
+        "Recommends AsyncSubject",
+        "Shows `NewAsyncSubject[T]()` constructor",
+        "Explains that AsyncSubject emits only the last value and only upon completion",
+        "Does NOT recommend BehaviorSubject (which emits on every new subscription, not just on complete)",
+        "Does NOT recommend ReplaySubject(1) (which replays immediately, not waiting for completion)"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "version-stability-warning",
+      "prompt": "I'm evaluating samber/ro for a production microservice. Are there any stability concerns I should know about?",
+      "assertions": [
+        "Mentions that samber/ro is at v0.x (pre-v1.0.0)",
+        "Warns about potential breaking changes before v1",
+        "Mentions that the library follows SemVer",
+        "Does NOT present the library as fully stable/production-ready without caveats"
+      ]
+    }
+  ]
+}

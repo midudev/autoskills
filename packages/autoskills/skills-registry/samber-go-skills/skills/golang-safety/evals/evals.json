@@ -1,0 +1,930 @@
+[
+  {
+    "id": 1,
+    "name": "typed-nil-error-interface-trap",
+    "description": "Returns untyped nil on success, not typed *ConfigError nil pointer through error interface",
+    "prompt": "In package `validator`, write a function `Validate(cfg Config) error` where Config has fields `Host string` and `Port int`. The function should check if Host is empty or Port is out of range (1-65535). Use a local `*ConfigError` variable to accumulate the first error found, then return it at the end. ConfigError is a struct with a `Field string` and an `Error() string` method.\n\nWrite the full code including the Config struct, ConfigError struct with its Error method, and the Validate function.",
+    "trap": "Model declares `var configErr *ConfigError` and returns it directly — `return configErr` wraps a typed nil pointer in the error interface, making the returned error non-nil even when configErr is nil",
+    "assertions": [
+      {
+        "id": "1.1",
+        "text": "Returns untyped nil on valid config — the success path must use `return nil` (not `return configErr` where configErr is *ConfigError), because a typed nil pointer wrapped in an error interface is non-nil"
+      },
+      {
+        "id": "1.2",
+        "text": "No typed nil pointer leaked through the error interface — `var configErr *ConfigError` followed by `return configErr` creates an interface{type: *ConfigError, value: nil} which is != nil"
+      },
+      {
+        "id": "1.3",
+        "text": "ConfigError.Error() returns a useful message including the Field name"
+      },
+      {
+        "id": "1.4",
+        "text": "Validates both Host and Port conditions independently, not short-circuiting on first error if using accumulation pattern"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "prevent-slice-aliasing-append",
+    "description": "Append-safe function prevents corrupting caller's backing array",
+    "prompt": "In package `sliceutil`, write a function `AddDefaults(base []string, defaults []string) []string` that appends any items from `defaults` that aren't already in `base`, and returns the extended slice. Keep it simple — just use append.",
+    "trap": "Model uses `base = append(base, v)` directly — if base has excess capacity, append writes into the caller's backing array without allocating, silently mutating data the caller still references",
+    "assertions": [
+      {
+        "id": "2.1",
+        "text": "Does not modify caller's input slice — `base = append(base, v)` silently corrupts the caller's backing array if capacity allows; must create a new slice first"
+      },
+      {
+        "id": "2.2",
+        "text": "Uses full-slice expression `base[:len(base):len(base)]`, `slices.Clone(base)`, or `copy` to prevent aliasing before appending new elements"
+      },
+      {
+        "id": "2.3",
+        "text": "Correctly checks membership — only appends items from defaults that are not already present in base"
+      },
+      {
+        "id": "2.4",
+        "text": "Does not modify the defaults slice either — both inputs are treated as read-only"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "defensive-copies-for-collection-getters",
+    "description": "Collection getters return defensive copies via slices.Clone/maps.Clone",
+    "prompt": "In package `user`, write a struct `UserProfile` with fields `Name string`, `Email string`, `Permissions []string`, and `Metadata map[string]string`. Add getter methods `GetPermissions() []string` and `GetMetadata() map[string]string`. Keep it simple.",
+    "trap": "Model returns direct references to internal slice and map fields, letting callers mutate the struct's internal state without going through any setter",
+    "assertions": [
+      {
+        "id": "3.1",
+        "text": "Collection fields (Permissions/Metadata) are unexported — exported slice/map fields let any caller mutate struct internals directly, bypassing any getters"
+      },
+      {
+        "id": "3.2",
+        "text": "GetPermissions returns a defensive copy (slices.Clone, make+copy, or append to nil) — not the internal slice reference"
+      },
+      {
+        "id": "3.3",
+        "text": "GetMetadata returns a defensive copy (maps.Clone or manual loop copy) — not the internal map reference"
+      },
+      {
+        "id": "3.4",
+        "text": "Scalar fields (Name, Email) can remain exported since strings are immutable in Go"
+      },
+      {
+        "id": "3.5",
+        "text": "Handles nil internal fields gracefully — GetPermissions on a zero-value UserProfile should not panic"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "defer-in-loop-helper-function",
+    "description": "Loop body extracted to helper so defer closes each connection per iteration",
+    "prompt": "In package `db`, write a function `PingAll(hosts []string) (string, error)` that tries to connect to each database host in order. For each host, call `sql.Open(\"postgres\", host)` then `db.Ping()`. Return the first host that responds successfully. Use `defer db.Close()` after each Open to clean up. If no host responds, return an error.",
+    "trap": "Model puts `defer db.Close()` inside the for loop — defers accumulate until the outer function returns, keeping all connections open simultaneously instead of closing each one after its Ping",
+    "assertions": [
+      {
+        "id": "4.1",
+        "text": "No bare `defer` in loop body — `defer db.Close()` inside a `for` loop defers ALL closes until function exit, keeping all connections open simultaneously"
+      },
+      {
+        "id": "4.2",
+        "text": "Extracts loop body to a helper function (or uses IIFE) so that defer runs once per iteration, closing each connection before opening the next"
+      },
+      {
+        "id": "4.3",
+        "text": "Checks error from sql.Open before proceeding to Ping"
+      },
+      {
+        "id": "4.4",
+        "text": "Returns meaningful error when no host responds — not just empty string"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "bounds-check-before-narrowing-int64-to-uint32",
+    "description": "Validates contentLength fits in uint32 before conversion to prevent silent truncation",
+    "prompt": "In package `protocol`, write a function `WriteHeader(w io.Writer, contentLength int64) error` that writes a 4-byte binary header using `binary.BigEndian.PutUint32`. The header contains the content length as a uint32. Write the header bytes to `w`.",
+    "trap": "Model uses `uint32(contentLength)` directly — values above math.MaxUint32 or negative values silently truncate to wrong results without any error",
+    "assertions": [
+      {
+        "id": "5.1",
+        "text": "Bounds-checks before narrowing int64 to uint32 — `uint32(contentLength)` silently truncates values > math.MaxUint32 or < 0"
+      },
+      {
+        "id": "5.2",
+        "text": "Returns error for out-of-range values instead of silently truncating"
+      },
+      {
+        "id": "5.3",
+        "text": "Checks for negative contentLength — negative values wrap to large uint32 values"
+      },
+      {
+        "id": "5.4",
+        "text": "Uses math.MaxUint32 for the upper bound check"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "copy-subslice-release-backing-array",
+    "description": "Returns copy of token bytes instead of raw subslice retaining large backing array",
+    "prompt": "In package `parser`, write a function `ExtractToken(response []byte) []byte` that returns the first 32 bytes of the response, which contain the authentication token. Keep it simple — one line is enough.",
+    "trap": "Model returns `response[:32]` — this subslice shares the backing array with the full response, preventing GC of potentially megabytes of data for the lifetime of the 32-byte token",
+    "assertions": [
+      {
+        "id": "6.1",
+        "text": "Does not return raw subslice of input — `response[:32]` retains the entire backing array in memory, preventing GC of potentially megabytes of data"
+      },
+      {
+        "id": "6.2",
+        "text": "Uses slices.Clone, make+copy, or append([]byte(nil), ...) to release the backing array"
+      },
+      {
+        "id": "6.3",
+        "text": "Handles the case where response might be shorter than 32 bytes — should check len(response) >= 32 or document the precondition"
+      },
+      {
+        "id": "6.4",
+        "text": "Result is independent of input — modifying the returned token should not affect the original response"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "comma-ok-type-assertion-not-bare",
+    "description": "Uses comma-ok type assertions or type switch, not bare panicking assertions",
+    "prompt": "In package `dispatch`, write a function `ProcessMessage(msg any) string` that handles messages. If msg is a string, return it uppercased. If msg is an int, return its string representation. If msg is []byte, return it as a string. Be concise — use direct type assertions, not a switch.",
+    "trap": "Model follows the prompt's 'direct type assertions' instruction and uses bare `v := msg.(string)`, which panics at runtime when msg is not the expected type",
+    "assertions": [
+      {
+        "id": "7.1",
+        "text": "Uses comma-ok form `v, ok := msg.(T)` or type switch — not bare assertion `v := msg.(T)` which panics on type mismatch"
+      },
+      {
+        "id": "7.2",
+        "text": "Handles unknown types without panic (returns empty string or error for unrecognized types)"
+      },
+      {
+        "id": "7.3",
+        "text": "Uses strings.ToUpper for string uppercasing, not manual byte manipulation"
+      },
+      {
+        "id": "7.4",
+        "text": "Uses strconv.Itoa or fmt.Sprintf for int-to-string conversion"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "nil-func-check-before-call",
+    "description": "Checks callback for nil before calling to prevent runtime panic",
+    "prompt": "In package `worker`, write a struct `Task` with fields `Name string` and `OnComplete func(result string)`. Add a `Run()` method that simulates work by setting `result := \"done: \" + t.Name`, then calls `t.OnComplete(result)` to notify completion.",
+    "trap": "Model calls `t.OnComplete(result)` without nil check — calling a nil func panics at runtime when OnComplete was never set",
+    "assertions": [
+      {
+        "id": "8.1",
+        "text": "Checks OnComplete for nil before calling — `t.OnComplete(result)` panics at runtime if OnComplete was never set"
+      },
+      {
+        "id": "8.2",
+        "text": "Task is usable without setting OnComplete — `Task{Name: \"foo\"}.Run()` should not panic"
+      },
+      {
+        "id": "8.3",
+        "text": "Result string is computed before the nil check — work simulation completes regardless of callback presence"
+      },
+      {
+        "id": "8.4",
+        "text": "Method uses pointer receiver `(t *Task)` for consistency with mutable struct patterns"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "initialize-map-before-write",
+    "description": "Constructor or Handle method initializes routes map before writing to prevent panic",
+    "prompt": "In package `router`, write a struct `Router` with fields `prefix string` and `routes map[string]http.HandlerFunc`. Add a constructor `NewRouter(prefix string) *Router` and a method `Handle(path string, handler http.HandlerFunc)` that stores the handler. Keep the constructor minimal — just set the prefix.",
+    "trap": "Model follows the prompt's 'keep the constructor minimal' instruction, creating Router with a nil map, and Handle() panics on first call when writing to a nil map",
+    "assertions": [
+      {
+        "id": "9.1",
+        "text": "Map initialized before write — either in the constructor or via lazy-init in Handle; writing to a nil map panics"
+      },
+      {
+        "id": "9.2",
+        "text": "Router is usable immediately after NewRouter — Handle() must not panic on first call"
+      },
+      {
+        "id": "9.3",
+        "text": "Handle stores the handler with the correct key (path or prefix+path)"
+      },
+      {
+        "id": "9.4",
+        "text": "Constructor returns a pointer to Router, not a value copy"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "epsilon-comparison-not-float-equality",
+    "description": "Uses epsilon comparison instead of == for floating-point values",
+    "prompt": "In package `pricing`, write a function `IsDiscountApplied(originalPrice, finalPrice, discountPercent float64) bool` that returns true if the final price equals the original price with the discount applied. The expected final price is `originalPrice * (1 - discountPercent/100)`. Just compare and return the result.",
+    "trap": "Model uses == to compare computed float64 values — IEEE 754 arithmetic is not exact, so computed results that should be equal often differ by small fractions",
+    "assertions": [
+      {
+        "id": "10.1",
+        "text": "Uses epsilon comparison (math.Abs(a-b) < epsilon), not == — IEEE 754 arithmetic is not exact for runtime float64 values"
+      },
+      {
+        "id": "10.2",
+        "text": "Epsilon value is reasonable (1e-9 for general precision, or 0.01 for cent-level financial precision)"
+      },
+      {
+        "id": "10.3",
+        "text": "Formula correctly computes expected as `originalPrice * (1 - discountPercent/100)`"
+      },
+      {
+        "id": "10.4",
+        "text": "Handles edge cases: zero discount, 100% discount, zero original price"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "defensive-map-copy-not-reference",
+    "description": "All() returns defensive copy of internal map, not a direct reference",
+    "prompt": "In package `cache`, write a struct `Cache` with an internal `data map[string]string`. Add methods: `Set(key, value string)`, `Get(key string) (string, bool)`, and `All() map[string]string` that returns all cache entries. Include a constructor `New() *Cache`.",
+    "trap": "Model returns c.data directly from All() — callers receive a reference to the internal map and can write to it, bypassing Set() and corrupting cache invariants",
+    "assertions": [
+      {
+        "id": "11.1",
+        "text": "All() returns defensive copy of internal map — using maps.Clone or manual loop copy, not the internal map reference"
+      },
+      {
+        "id": "11.2",
+        "text": "Constructor initializes the data map with make()"
+      },
+      {
+        "id": "11.3",
+        "text": "Get uses comma-ok idiom `v, ok := c.data[key]`"
+      },
+      {
+        "id": "11.4",
+        "text": "Callers cannot modify cache contents through the map returned by All()"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "closed-channel-handling-fan-in",
+    "description": "Correctly handles closed input channels without blocking forever on receive",
+    "prompt": "In package `pipeline`, write a function `FanIn(channels ...<-chan int) <-chan int` that merges all input channels into a single output channel using a select statement inside a loop. When a channel is closed, stop reading from it. Close the output channel when all inputs are done.",
+    "trap": "Model reads from closed channels without ok-check — a closed channel always succeeds immediately with the zero value, causing the loop to spin infinitely",
+    "assertions": [
+      {
+        "id": "12.1",
+        "text": "Handles closed channels without blocking — uses ok check on receive, nil-channel technique in select, or per-channel goroutines with WaitGroup"
+      },
+      {
+        "id": "12.2",
+        "text": "Output channel is closed exactly once when all inputs are exhausted"
+      },
+      {
+        "id": "12.3",
+        "text": "Does not leak goroutines — every launched goroutine terminates when inputs close"
+      },
+      {
+        "id": "12.4",
+        "text": "Handles nil input channels gracefully — a nil channel in the variadic args should not cause a deadlock"
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "named-return-typed-nil-trap",
+    "description": "Named error return not unconditionally assigned *ParseError to avoid nil interface trap",
+    "prompt": "In package `parser`, write a struct `ParseError` with `Line int` and `Msg string` fields, and an `Error() string` method. Write a `Parser` struct with a `Parse(input string) (*Result, *ParseError)` method that returns a ParseError if input is empty. Then write a standalone function `TryParse(p *Parser, input string) (*Result, error)` that wraps Parse and returns the result. Result is a struct with `Value string`. Use named returns `(result *Result, err error)` and a single return at the end.",
+    "trap": "Model unconditionally assigns `err = parseErr` in TryParse — when Parse returns nil *ParseError, this wraps a typed nil pointer in the error interface, making the returned error non-nil",
+    "assertions": [
+      {
+        "id": "13.1",
+        "text": "No typed nil leaked through named error return — must use conditional assignment (`if parseErr != nil { err = parseErr }`) rather than unconditional `err = parseErr` which wraps nil *ParseError into a non-nil error interface"
+      },
+      {
+        "id": "13.2",
+        "text": "Named return `err` starts as untyped nil and is only set when parseErr is actually non-nil"
+      },
+      {
+        "id": "13.3",
+        "text": "ParseError.Error() includes the Line number in the message for debugging"
+      },
+      {
+        "id": "13.4",
+        "text": "Parser.Parse returns nil *ParseError on success, not an empty ParseError{}"
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "nil-pointer-receiver-guard",
+    "description": "Guards against nil *Notifier before calling methods that dereference the receiver",
+    "prompt": "In package `notify`, write a struct `Notifier` with a `webhook string` field. Add a `Send(msg string) error` method that formats and would send the message (just return nil for now). Then write a function `NotifyAll(n *Notifier, messages []string) error` that sends each message using n.Send. Return the first error.",
+    "trap": "Model calls n.Send without checking n == nil — calling a method on a nil pointer panics when the method accesses n.webhook",
+    "assertions": [
+      {
+        "id": "14.1",
+        "text": "Handles nil *Notifier without panic — either NotifyAll checks `n == nil` before calling, or Send guards `if n == nil` before accessing n.webhook"
+      },
+      {
+        "id": "14.2",
+        "text": "Returns a meaningful error when Notifier is nil, not just silently succeeds"
+      },
+      {
+        "id": "14.3",
+        "text": "NotifyAll iterates all messages and returns on first error"
+      },
+      {
+        "id": "14.4",
+        "text": "Send method uses the webhook field in a way that would dereference the receiver (accessing n.webhook)"
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "defensive-slice-copy-getter",
+    "description": "Items() returns defensive copy of internal slice, not a shared reference",
+    "prompt": "In package `inventory`, write a struct `Inventory` with a `items []string` field. Add methods `Add(item string)` and `Items() []string` that returns the items. Keep it simple.",
+    "trap": "Model returns `inv.items` directly from Items() — callers can append to the returned slice and corrupt the Inventory's internal state through shared backing array",
+    "assertions": [
+      {
+        "id": "15.1",
+        "text": "Items() returns defensive copy — `return inv.items` lets callers mutate the internal slice; must use slices.Clone, make+copy, or append to nil"
+      },
+      {
+        "id": "15.2",
+        "text": "Add method uses append correctly to grow the internal slice"
+      },
+      {
+        "id": "15.3",
+        "text": "Modifying the returned slice from Items() does not affect the Inventory's internal state"
+      },
+      {
+        "id": "15.4",
+        "text": "Field is unexported (`items` not `Items`) — exported field would bypass the getter entirely"
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "sorted-map-keys-deterministic-output",
+    "description": "Sorts map keys before iterating for deterministic output",
+    "prompt": "In package `httputil`, write a function `HeaderString(headers map[string]string) string` that formats HTTP headers as \"Key: Value\\r\\n\" lines concatenated together. Keep it simple — just range over the map.",
+    "trap": "Model follows the prompt's 'just range over the map' instruction — Go map iteration is intentionally randomized, producing different header ordering on each run",
+    "assertions": [
+      {
+        "id": "16.1",
+        "text": "Sorts keys before iteration for deterministic output — map iteration order is randomized by the Go runtime; output changes between runs"
+      },
+      {
+        "id": "16.2",
+        "text": "Uses slices.Sorted(maps.Keys(headers)) or sort.Strings for key sorting"
+      },
+      {
+        "id": "16.3",
+        "text": "Uses strings.Builder for efficient concatenation instead of += in a loop"
+      },
+      {
+        "id": "16.4",
+        "text": "Each header line ends with \\r\\n as specified"
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "nan-propagation-float-division",
+    "description": "NaN from float division propagates silently through computations — not a panic, a silent bug",
+    "prompt": "In package `monitor`, write a function `Threshold(baseRate, currentRate float64) bool` that returns true if `currentRate` is at least 90% of `baseRate`. Formula: `currentRate / baseRate >= 0.9`. This is called to decide whether to trigger an alert — if it returns false, we page the on-call team.",
+    "trap": "Model guards against integer division panic but ignores the float case. When baseRate is 0.0, `currentRate / 0.0` can produce +Inf, -Inf, or NaN depending on currentRate; NaN comparisons always return false. The model may not check for zero because float division doesn't panic.",
+    "assertions": [
+      {
+        "id": "17.1",
+        "text": "Guards against zero baseRate — float division by zero produces +Inf, -Inf, or NaN, not a panic. In particular, 0.0/0.0 is NaN and comparisons with NaN are always false"
+      },
+      {
+        "id": "17.2",
+        "text": "Returns a defined value (true or false with documented semantics) when baseRate is 0, not NaN or +Inf silently propagating"
+      },
+      {
+        "id": "17.3",
+        "text": "Does not rely on the caller to ensure baseRate is non-zero — the function itself is defensive"
+      },
+      {
+        "id": "17.4",
+        "text": "Comparison uses the correct threshold (>= 0.9) for the 90% check"
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "defer-body-close-in-loop",
+    "description": "HTTP response bodies closed per-iteration via helper, not deferred to function exit",
+    "prompt": "In package `fetcher`, write a function `FetchAll(urls []string) ([][]byte, error)` that fetches each URL with http.Get, reads the response body with io.ReadAll, and collects results. Use `defer resp.Body.Close()` after each Get. Return the first error encountered, or all results on success.",
+    "trap": "Model puts `defer resp.Body.Close()` inside the for loop — all response bodies accumulate and are only closed when FetchAll returns, exhausting connections and memory for long URL lists",
+    "assertions": [
+      {
+        "id": "18.1",
+        "text": "No bare defer in loop body — `defer resp.Body.Close()` inside a for loop keeps all response bodies open until the function returns"
+      },
+      {
+        "id": "18.2",
+        "text": "Extracts loop body to helper function (or uses IIFE) so defer fires per iteration"
+      },
+      {
+        "id": "18.3",
+        "text": "Checks resp.StatusCode or at least the error from http.Get"
+      },
+      {
+        "id": "18.4",
+        "text": "Preallocates results slice with `make([][]byte, 0, len(urls))`"
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "zero-value-design-usable-without-constructor",
+    "description": "Types should be usable at zero value; map fields that are written to cannot be nil",
+    "prompt": "In package `registry`, write a struct `Registry` with a `handlers map[string]http.HandlerFunc` field and a `Register(name string, h http.HandlerFunc)` method. A teammate says: 'We don't need a constructor — the zero value should just work. Users can do `var r registry.Registry` and call Register immediately.'\n\nImplement Registry following the teammate's suggestion. The zero value must be usable.",
+    "trap": "Model follows the teammate's suggestion literally and writes `type Registry struct { handlers map[string]http.HandlerFunc }` with `func (r *Registry) Register(...)  { r.handlers[name] = h }` — writing to a nil map panics. The teammate is right that zero values should work, but the implementation needs lazy init. The model must recognize that a nil map panics on write and add lazy init inside Register.",
+    "assertions": [
+      {
+        "id": "19.1",
+        "text": "Register does NOT panic when called on a zero-value Registry — `var r Registry; r.Register(\"x\", h)` must work without calling a constructor first"
+      },
+      {
+        "id": "19.2",
+        "text": "Uses lazy initialization inside Register: `if r.handlers == nil { r.handlers = make(map[string]http.HandlerFunc) }` — writing to nil map panics; lazy init is the idiomatic pattern for zero-value-safe types"
+      },
+      {
+        "id": "19.3",
+        "text": "Does NOT require users to call a constructor — the design follows the teammate's suggestion that the zero value is usable"
+      },
+      {
+        "id": "19.4",
+        "text": "Confirms the teammate's goal is valid: sync.Mutex and bytes.Buffer are examples of zero-value-usable types in the stdlib"
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "bounds-check-before-narrowing-int-to-byte",
+    "description": "Validates age fits in byte range (0-255) before converting to prevent silent truncation",
+    "prompt": "In package `protocol`, write a function `PackAge(age int) byte` that converts a user's age to a single byte for a compact binary protocol. Keep it simple.",
+    "trap": "Model uses `byte(age)` directly — age 256 silently becomes 0, age -1 becomes 255, making the binary protocol produce subtly wrong data without any indication",
+    "assertions": [
+      {
+        "id": "20.1",
+        "text": "Validates age fits in byte range (0-255) — `byte(age)` silently truncates values outside 0-255 (e.g., age 256 becomes 0, age -1 becomes 255)"
+      },
+      {
+        "id": "20.2",
+        "text": "Returns error or panics for out-of-range values instead of silently truncating"
+      },
+      {
+        "id": "20.3",
+        "text": "May change signature to `(byte, error)` to signal validation failure"
+      },
+      {
+        "id": "20.4",
+        "text": "Handles negative ages explicitly — negative values wrap to high byte values"
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "copy-both-subslice-branches",
+    "description": "Both found and not-found paths return independent copies of the subslice",
+    "prompt": "In package `search`, write a function `ExtractBefore(buf []byte, marker byte) []byte` that returns everything in buf before the first occurrence of marker. Use bytes.IndexByte. If marker not found, return the full buf.",
+    "trap": "Model copies the found-marker case but returns the full buf directly for not-found, retaining the full backing array for either return value",
+    "assertions": [
+      {
+        "id": "21.1",
+        "text": "Returns copy, not subslice retaining backing array — `buf[:i]` keeps the entire potentially-large backing array alive in memory"
+      },
+      {
+        "id": "21.2",
+        "text": "Uses slices.Clone, make+copy, or append([]byte(nil), ...) to create independent copy"
+      },
+      {
+        "id": "21.3",
+        "text": "Both the found-marker path and the not-found fallback path return copies"
+      },
+      {
+        "id": "21.4",
+        "text": "Uses bytes.IndexByte as specified"
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "nil-check-all-func-fields",
+    "description": "Both OnRequest and OnResponse checked for nil before calling",
+    "prompt": "In package `http`, write a struct `Client` with fields `OnRequest func(url string)` and `OnResponse func(status int)`. Add a `Fetch(url string) (int, error)` method that calls OnRequest before fetching, does the fetch (simulate with status 200), and calls OnResponse after. Keep it simple.",
+    "trap": "Model guards OnRequest but forgets OnResponse, or neither — calling a nil func panics at runtime for any callback that was never set",
+    "assertions": [
+      {
+        "id": "22.1",
+        "text": "Checks OnRequest for nil before calling — calling a nil func panics at runtime"
+      },
+      {
+        "id": "22.2",
+        "text": "Checks OnResponse for nil before calling — same nil func panic risk"
+      },
+      {
+        "id": "22.3",
+        "text": "Client is usable with zero-value callbacks — `Client{}.Fetch(url)` should not panic"
+      },
+      {
+        "id": "22.4",
+        "text": "Both hooks are optional — fetch completes successfully even when neither is set"
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "name": "epsilon-comparison-financial",
+    "description": "Uses epsilon comparison for float equality in billing reconciliation",
+    "prompt": "In package `billing`, write a function `ChargesMatch(computed, invoiced float64) bool` that returns true if the computed charges match the invoiced amount. This is used to reconcile billing — the amounts should be equal.",
+    "trap": "Model uses `computed == invoiced` for float comparison — floating-point arithmetic accumulates tiny errors, making amounts computed via different paths fail equality even when they represent the same value",
+    "assertions": [
+      {
+        "id": "23.1",
+        "text": "Uses epsilon comparison (math.Abs(a-b) < epsilon), not == — floating-point arithmetic can produce values that differ by tiny fractions"
+      },
+      {
+        "id": "23.2",
+        "text": "Epsilon is reasonable for financial contexts (1e-2 for cent precision or 1e-9 for general precision)"
+      },
+      {
+        "id": "23.3",
+        "text": "Handles edge cases: both zero, one zero, negative values"
+      },
+      {
+        "id": "23.4",
+        "text": "Does not use reflect.DeepEqual — it uses == internally for floats"
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "name": "append-aliasing-caller-slice-corruption",
+    "description": "Appending to a caller-supplied slice with spare capacity silently mutates the caller's backing array",
+    "prompt": "In package `pipeline`, write a function `AppendDefaults(tags []string) []string` that ensures the tags slice contains `\"env:prod\"`, `\"region:us-east\"`, and `\"service:api\"`. If a tag is already present, don't add a duplicate. Return the resulting slice.\n\nHere is a caller that will use this function:\n\n```go\ntags := make([]string, 2, 10)  // len=2, cap=10\ntags[0] = \"team:backend\"\ntags[1] = \"version:1.2\"\n\nresult := pipeline.AppendDefaults(tags)\nfmt.Println(tags[2])  // what does this print?\n```\n\nWrite the AppendDefaults function. Is there a safety concern the caller should know about?",
+    "trap": "Model writes `tags = append(tags, missing...)` and returns the modified slice without copying first. Since make([]string, 2, 10) has capacity 10, append reuses the backing array — `tags[2]` in the caller now reads 'env:prod' even though the caller never wrote to it. The model likely misses this shared-memory aliasing.",
+    "assertions": [
+      {
+        "id": "24.1",
+        "text": "Identifies the aliasing hazard: the caller's make([]string, 2, 10) has spare capacity, so appending into the parameter slice writes into memory the caller still owns"
+      },
+      {
+        "id": "24.2",
+        "text": "Uses full-slice expression `tags[:len(tags):len(tags)]`, `slices.Clone(tags)`, or equivalent before appending — this forces a new allocation and prevents writing into the caller's backing array"
+      },
+      {
+        "id": "24.3",
+        "text": "Does not add duplicate tags — checks for presence before appending each default"
+      },
+      {
+        "id": "24.4",
+        "text": "Explains or demonstrates that `tags[2]` in the caller would be silently overwritten without the fix"
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "handler-typed-nil-interface-return",
+    "description": "Returns untyped nil on success; does not leak *AppError(nil) through error interface",
+    "prompt": "In package `middleware`, define `AppError` struct with `Code int` and `Msg string` (with `Error() string` method). Write a function `Handle(handler func() *AppError) error` that calls the handler and returns its result as an `error`. Keep it to one line in the body — just `return handler()`.",
+    "trap": "Model follows the prompt's 'one line' instruction and writes `return handler()` — this implicitly converts nil *AppError to a non-nil error interface when handler returns nil",
+    "assertions": [
+      {
+        "id": "25.1",
+        "text": "Avoids typed nil leak from handler() return — `return handler()` implicitly converts *AppError(nil) to a non-nil error interface when handler returns nil *AppError"
+      },
+      {
+        "id": "25.2",
+        "text": "Uses conditional check like `if err := handler(); err != nil { return err }; return nil` to ensure untyped nil is returned on success"
+      },
+      {
+        "id": "25.3",
+        "text": "Does not assign handler() result directly to an `error` variable — `var err error = handler()` has the same typed-nil trap"
+      },
+      {
+        "id": "25.4",
+        "text": "AppError.Error() returns a meaningful message combining Code and Msg, not just Msg alone"
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "name": "defensive-ingress-and-egress-slice",
+    "description": "Constructor copies input slice (ingress) and getter returns defensive copy (egress)",
+    "prompt": "In package `team`, write a struct `Team` with fields `name string` and `members []string`. Write a constructor `NewTeam(name string, members []string) *Team` and a getter `Members() []string`. Keep the constructor simple — just assign the fields.",
+    "trap": "Model follows 'just assign the fields' instruction — `members: members` shares backing array with caller; caller mutating their original slice after construction corrupts Team internals",
+    "assertions": [
+      {
+        "id": "26.1",
+        "text": "Constructor copies input slice (defensive ingress) — `members: members` shares the backing array; caller can mutate Team internals by modifying the original slice after construction"
+      },
+      {
+        "id": "26.2",
+        "text": "Members() returns defensive copy (egress) — `return t.members` lets callers append/modify the internal slice through the shared backing array"
+      },
+      {
+        "id": "26.3",
+        "text": "Uses slices.Clone, make+copy, or append([]string(nil), ...) for both ingress and egress copies"
+      },
+      {
+        "id": "26.4",
+        "text": "Fields are unexported (lowercase) — exported fields bypass getters entirely, defeating defensive copies"
+      },
+      {
+        "id": "26.5",
+        "text": "Handles nil input gracefully — constructor should not panic if members is nil"
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "name": "defer-file-close-in-loop",
+    "description": "File handles closed per-iteration via helper, not deferred to function exit",
+    "prompt": "In package `fileutil`, write a function `WriteAll(paths []string, data []byte) error` that creates each file path with os.Create, writes `data` to it, and closes it. Use defer for closing. Return the first error encountered.",
+    "trap": "Model puts `defer f.Close()` inside the for loop — all file descriptors accumulate until WriteAll returns, risking fd exhaustion when paths is a long list",
+    "assertions": [
+      {
+        "id": "27.1",
+        "text": "No bare defer in loop body — `defer f.Close()` inside a for loop keeps all file handles open until the function returns, risking file descriptor exhaustion on large path lists"
+      },
+      {
+        "id": "27.2",
+        "text": "Extracts loop body to a helper function or uses IIFE so defer runs once per iteration"
+      },
+      {
+        "id": "27.3",
+        "text": "Helper function handles os.Create, defer f.Close(), and f.Write in a single scope"
+      },
+      {
+        "id": "27.4",
+        "text": "Errors from os.Create and f.Write are both checked and returned"
+      },
+      {
+        "id": "27.5",
+        "text": "Does not ignore the error from f.Close() — write errors can be reported via Close on buffered/sync writers"
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "name": "initialize-result-map-before-merge",
+    "description": "Result's Labels map initialized before writing merged entries",
+    "prompt": "In package `config`, write a struct `Endpoint` with fields `Host string`, `Port int`, and `Labels map[string]string`. Write a function `Merge(a, b Endpoint) Endpoint` that returns a new Endpoint preferring b's non-zero values over a's. For Labels, merge both maps with b taking precedence.",
+    "trap": "Model creates `result := Endpoint{}` or `result := a` without initializing Labels, then writes to result.Labels — writing to a nil map panics at runtime",
+    "assertions": [
+      {
+        "id": "28.1",
+        "text": "Result Labels map initialized before write — creating an Endpoint{} with uninitialized Labels and then writing to it panics at runtime"
+      },
+      {
+        "id": "28.2",
+        "text": "Labels from both inputs are merged correctly with b taking precedence on key conflicts"
+      },
+      {
+        "id": "28.3",
+        "text": "Does not modify input a or b's Labels maps — creates a fresh map for the result (defensive copy)"
+      },
+      {
+        "id": "28.4",
+        "text": "Handles nil Labels in a or b gracefully — ranging over a nil map is safe (0 iterations) but the result map must still be initialized"
+      },
+      {
+        "id": "28.5",
+        "text": "Uses correct zero-value checks — empty string for Host, 0 for Port"
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "name": "copy-byte-subslice-both-branches",
+    "description": "Both found-word and full-line fallback paths return independent copies",
+    "prompt": "In package `text`, write a function `FirstWord(line []byte) []byte` that returns the first whitespace-delimited word from the line. Use `bytes.IndexByte(line, ' ')`. If no space found, return the whole line.",
+    "trap": "Model copies the found-word branch but returns `line` directly for the no-space case — both branches retain the full input buffer in memory",
+    "assertions": [
+      {
+        "id": "29.1",
+        "text": "Returns copy, not subslice retaining backing array — `line[:i]` keeps the entire input buffer alive in memory even if only a few bytes are needed"
+      },
+      {
+        "id": "29.2",
+        "text": "Uses slices.Clone, make+copy, or append([]byte(nil), ...) to create an independent copy"
+      },
+      {
+        "id": "29.3",
+        "text": "Both the found-word path and the full-line fallback path return copies (not just one branch)"
+      },
+      {
+        "id": "29.4",
+        "text": "Handles edge cases: empty input, input starting with space, single-character input"
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "name": "bounds-check-before-narrowing-int-to-uint16",
+    "description": "Validates port fits in uint16 range before conversion to prevent silent truncation",
+    "prompt": "In package `net`, write a function `EncodeAddr(host string, port int) ([]byte, error)` that creates a binary-encoded address. Write the port as a big-endian uint16 followed by the host bytes. Use `binary.BigEndian.PutUint16`.",
+    "trap": "Model uses `uint16(port)` directly — port 65536 silently becomes 0, port -1 becomes 65535, creating malformed binary addresses without any error",
+    "assertions": [
+      {
+        "id": "30.1",
+        "text": "Validates port fits in uint16 range (0-65535) — `uint16(port)` silently truncates values outside this range (e.g., port 65536 becomes 0, port -1 becomes 65535)"
+      },
+      {
+        "id": "30.2",
+        "text": "Returns error for negative ports or ports > 65535"
+      },
+      {
+        "id": "30.3",
+        "text": "Uses math.MaxUint16 or literal 65535 for the upper bound check"
+      },
+      {
+        "id": "30.4",
+        "text": "Correctly allocates buffer of size 2+len(host) for the binary encoding"
+      },
+      {
+        "id": "30.5",
+        "text": "Uses binary.BigEndian.PutUint16 as specified, not binary.Write or manual byte manipulation"
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "name": "assert-helper-t-helper-epsilon",
+    "description": "Test helper calls t.Helper() and uses epsilon comparison for float values",
+    "prompt": "In package `testing`, write a function `AssertPrice(t *testing.T, got, want float64)` that calls t.Errorf if the prices don't match. Use a clear error message showing both values.",
+    "trap": "Model uses `got != want` for float comparison and omits t.Helper() — failures report the helper's line and pass for prices that differ by tiny fractions",
+    "assertions": [
+      {
+        "id": "31.1",
+        "text": "Uses epsilon comparison (math.Abs) not == or != — float arithmetic is not exact; prices computed via multiplication/division may differ by tiny fractions"
+      },
+      {
+        "id": "31.2",
+        "text": "Epsilon value is reasonable for financial contexts (1e-2 for cents, or 1e-9 for general precision)"
+      },
+      {
+        "id": "31.3",
+        "text": "Calls t.Helper() so test failure points to the caller, not the helper itself"
+      },
+      {
+        "id": "31.4",
+        "text": "Error message includes both got and want values for debugging"
+      },
+      {
+        "id": "31.5",
+        "text": "Does not use reflect.DeepEqual for float comparison — it uses == internally and has the same problem"
+      }
+    ]
+  },
+  {
+    "id": 32,
+    "name": "nil-check-optional-callbacks",
+    "description": "Both OnStart and OnStop checked for nil before calling",
+    "prompt": "In package `server`, write a struct `Server` with fields `Addr string`, `OnStart func()`, and `OnStop func()`. Add a `Start() error` method that calls OnStart, prints \"listening on Addr\", and returns nil. Add a `Stop()` method that calls OnStop and prints \"stopped\".",
+    "trap": "Model calls both callbacks without nil checks — using Server with only Addr set causes a panic when Start or Stop is called",
+    "assertions": [
+      {
+        "id": "32.1",
+        "text": "Checks OnStart for nil before calling in Start() — calling a nil func panics at runtime"
+      },
+      {
+        "id": "32.2",
+        "text": "Checks OnStop for nil before calling in Stop() — same nil func panic risk"
+      },
+      {
+        "id": "32.3",
+        "text": "Both methods complete their remaining work (print, return nil) even when the callback is nil"
+      },
+      {
+        "id": "32.4",
+        "text": "Server is usable with zero-value callbacks — `Server{Addr: \":8080\"}` should work without setting OnStart/OnStop"
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "name": "guard-integer-division-by-zero",
+    "description": "Guards against zero capacity to prevent integer division panic",
+    "prompt": "In package `pool`, write a function `Utilization(active, capacity int) int` that returns the pool utilization as a percentage (0-100). Active is current connections, capacity is max. Return `active * 100 / capacity`.",
+    "trap": "Model computes `active * 100 / capacity` directly without checking capacity == 0 — integer division by zero causes an unrecoverable runtime panic",
+    "assertions": [
+      {
+        "id": "33.1",
+        "text": "Guards against zero capacity — integer division by zero panics at runtime with an unrecoverable crash; must check capacity == 0 first"
+      },
+      {
+        "id": "33.2",
+        "text": "Returns a sensible default (0) or an error when capacity is zero"
+      },
+      {
+        "id": "33.3",
+        "text": "Uses integer arithmetic (not float conversion) since the return type is int"
+      },
+      {
+        "id": "33.4",
+        "text": "Multiplication order `active * 100 / capacity` preserves precision better than `active / capacity * 100`"
+      }
+    ]
+  },
+  {
+    "id": 34,
+    "name": "defensive-copy-slice-from-map",
+    "description": "GetAll returns defensive copy of the internal slice value from map",
+    "prompt": "In package `store`, write a struct `Store` with field `data map[string][]string`. Add a constructor `New() *Store`, a method `Add(key, value string)`, and a method `GetAll(key string) []string` that returns all values for that key.",
+    "trap": "Model returns `s.data[key]` directly — callers receive a reference to the internal slice and can append to it, silently mutating the Store's data through shared backing array",
+    "assertions": [
+      {
+        "id": "34.1",
+        "text": "GetAll returns defensive copy of internal slice — `return s.data[key]` lets callers mutate the Store's internal data via the shared backing array"
+      },
+      {
+        "id": "34.2",
+        "text": "Uses slices.Clone, make+copy, or append([]string(nil), ...) to create an independent copy"
+      },
+      {
+        "id": "34.3",
+        "text": "Constructor initializes the data map with make() — writing to a nil map panics"
+      },
+      {
+        "id": "34.4",
+        "text": "Add method correctly uses append to grow the slice for the given key"
+      },
+      {
+        "id": "34.5",
+        "text": "GetAll returns nil or empty slice (not panics) for keys that don't exist"
+      }
+    ]
+  },
+  {
+    "id": 35,
+    "name": "defer-close-reader-in-loop",
+    "description": "io.Closer readers closed per-iteration via helper, not deferred to function exit",
+    "prompt": "In package `scanner`, write a function `ScanAll(readers []io.Reader) ([][]byte, error)` that reads each reader with io.ReadAll, collecting results. If a reader implements io.Closer, use defer to close it. Return all data or the first error.",
+    "trap": "Model puts `defer r.(io.Closer).Close()` inside the for loop — all readers that implement io.Closer remain open until ScanAll returns, consuming resources for the entire function duration",
+    "assertions": [
+      {
+        "id": "35.1",
+        "text": "No bare defer in loop body — defer close inside a for loop keeps all readers open until function exit, preventing resource cleanup between iterations"
+      },
+      {
+        "id": "35.2",
+        "text": "Extracts loop body to a helper function so defer fires per iteration"
+      },
+      {
+        "id": "35.3",
+        "text": "Uses type assertion `r.(io.Closer)` with comma-ok form to conditionally close only closeable readers"
+      },
+      {
+        "id": "35.4",
+        "text": "Preallocates results slice with `make([][]byte, 0, len(readers))` for known capacity"
+      }
+    ]
+  },
+  {
+    "id": 36,
+    "name": "guard-division-by-zero-float-precision",
+    "description": "Guards against zero before and converts to float64 before division for precision",
+    "prompt": "In package `metric`, write a function `PercentChange(before, after int) float64` that returns the percentage change from before to after. Formula: `(after - before) * 100 / before`. Keep it simple — one-liner.",
+    "trap": "Model computes `(after-before) * 100 / before` with integer arithmetic — result is truncated before float conversion, and division by zero panics when before is 0",
+    "assertions": [
+      {
+        "id": "36.1",
+        "text": "Guards against zero before — integer division by zero panics; float division by zero produces Inf/NaN which is silently wrong"
+      },
+      {
+        "id": "36.2",
+        "text": "Converts to float64 before division to preserve fractional precision — integer `(after-before)*100/before` truncates the result"
+      },
+      {
+        "id": "36.3",
+        "text": "Returns a sensible default (0.0) or changes signature to return error when before is zero"
+      },
+      {
+        "id": "36.4",
+        "text": "Formula is mathematically correct: `float64(after-before) / float64(before) * 100` or equivalent"
+      }
+    ]
+  }
+]

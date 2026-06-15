@@ -1,0 +1,38 @@
+{
+    // Glob patterns to lint
+    "globs": [
+        "**/*.md"
+    ],
+    // Glob patterns to ignore
+    "ignores": [
+        "node_modules",
+        "vendor/**"
+    ],
+    // Fix violations automatically (--fix)
+    "fix": false,
+    // Rule configuration (all rules enabled by default)
+    "config": {
+        // No hard tabs: disable (common for prose/READMEs)
+        "MD010": false,
+        // Line length: disable (common for prose/READMEs)
+        "MD013": false,
+        // No duplicate headings: disable (common for prose/READMEs)
+        "MD024": false,
+        // Inline HTML: disable (common for prose/READMEs)
+        "MD033": false,
+        // Emphasis as heading: disable (common for prose/READMEs)
+        "MD036": false,
+        // No language for code blocks: disable (common for prose/READMEs)
+        "MD040": false,
+        // Blank lines around fences: disable (common for prose/READMEs)
+        "MD041": false
+    },
+    // Custom rules (npm packages or local .js)
+    "customRules": [],
+    // Output formatters
+    "outputFormatters": [
+        [
+            "markdownlint-cli2-formatter-default"
+        ]
+    ]
+}

@@ -1,0 +1,148 @@
+[
+  {
+    "id": 1,
+    "name": "assert-vs-require-precondition",
+    "description": "Tests whether the model uses require for preconditions and assert for verifications, not mixing them randomly",
+    "prompt": "Write a Go test using testify that parses a JSON config file, checks it has no error, verifies the config is not nil, then checks that config.Port equals 8080, config.Host equals 'localhost', and config.Debug is false.",
+    "trap": "Model may use assert for the error check and nil check (preconditions), which would cause a nil pointer panic on subsequent assertions if parsing fails",
+    "assertions": [
+      {"id": "1.1", "text": "Uses require (not assert) for the NoError check on parsing"},
+      {"id": "1.2", "text": "Uses require (not assert) for the NotNil check on config"},
+      {"id": "1.3", "text": "Uses assert for the subsequent value checks (Port, Host, Debug)"},
+      {"id": "1.4", "text": "Does NOT use require for all assertions indiscriminately"},
+      {"id": "1.5", "text": "Argument order is (expected, actual) not (actual, expected) for Equal calls"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "assert-new-naming-convention",
+    "description": "Tests the skill's specific naming convention: 'is' for assert.New(t) and 'must' for require.New(t)",
+    "prompt": "I'm writing Go tests with testify and I find the repeated 't' parameter verbose. How can I make my assertions more readable? Show me an example with both assert and require.",
+    "trap": "Model may use generic variable names like 'a' and 'r', or 'assertions' and 'requirements' instead of the skill's recommended 'is' and 'must' convention",
+    "assertions": [
+      {"id": "2.1", "text": "Uses assert.New(t) to create a reusable assertion object"},
+      {"id": "2.2", "text": "Uses require.New(t) to create a reusable require object"},
+      {"id": "2.3", "text": "Names the assert.New(t) variable 'is'"},
+      {"id": "2.4", "text": "Names the require.New(t) variable 'must'"},
+      {"id": "2.5", "text": "Shows the 'is' and 'must' variables being used for different purposes (preconditions vs verifications)"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "error-chain-assertion",
+    "description": "Tests knowledge that is.Equal(ErrNotFound, err) fails on wrapped errors and ErrorIs should be used instead",
+    "prompt": "I have a Go function that returns wrapped errors using fmt.Errorf with %w. Write a test that checks whether the returned error is ErrNotFound. The function signature is: func FindUser(id string) (*User, error)",
+    "trap": "Model may use assert.Equal(ErrNotFound, err) which fails on wrapped errors instead of assert.ErrorIs",
+    "assertions": [
+      {"id": "3.1", "text": "Uses ErrorIs (not Equal) to check the error against ErrNotFound"},
+      {"id": "3.2", "text": "Does NOT use assert.Equal or is.Equal to compare errors directly"},
+      {"id": "3.3", "text": "Uses require for the initial error existence check if subsequent assertions depend on it"},
+      {"id": "3.4", "text": "Argument order for ErrorIs is (err, target) not (target, err)"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "mock-assert-expectations",
+    "description": "Tests whether AssertExpectations is called — without it, mock expectations silently pass",
+    "prompt": "Create a Go test using testify/mock for a NotificationService that calls a Sender.Send method. The test should verify that Send is called exactly once with the right email address.",
+    "trap": "Model may set up On().Return() expectations but forget to call AssertExpectations(t), making the test pass even if Send is never called",
+    "assertions": [
+      {"id": "4.1", "text": "Mock embeds mock.Mock"},
+      {"id": "4.2", "text": "Mock method uses m.Called() to forward arguments"},
+      {"id": "4.3", "text": "Test calls m.AssertExpectations(t) to verify all expectations were met"},
+      {"id": "4.4", "text": "Uses .Once() or equivalent call modifier to enforce exactly one call"},
+      {"id": "4.5", "text": "Uses mock.Anything for arguments that don't need specific matching (e.g., context)"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "mock-matched-by-predicate",
+    "description": "Tests knowledge of mock.MatchedBy for custom argument matching beyond exact equality",
+    "prompt": "I have a mock for a Logger interface with method Log(ctx context.Context, entry LogEntry). I need to verify that the LogEntry has Level='error' and Message contains 'timeout', but I don't care about the exact timestamp. How do I write the mock expectation?",
+    "trap": "Model may try to match the entire LogEntry struct exactly (which fails due to timestamp) instead of using mock.MatchedBy with a predicate function",
+    "assertions": [
+      {"id": "5.1", "text": "Uses mock.MatchedBy with a predicate function for the LogEntry argument"},
+      {"id": "5.2", "text": "The predicate checks Level == 'error'"},
+      {"id": "5.3", "text": "The predicate checks that Message contains 'timeout' (using strings.Contains or similar)"},
+      {"id": "5.4", "text": "Uses mock.Anything for the context argument"},
+      {"id": "5.5", "text": "Calls AssertExpectations at the end"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "mock-retry-different-returns",
+    "description": "Tests knowledge of chaining .Once() calls to return different values per call for retry testing",
+    "prompt": "I need to test that my Go HTTP client retries on failure. The client calls Fetcher.Fetch(url string) ([]byte, error). First call should return a timeout error, second call should succeed with some data. How do I set up this mock?",
+    "trap": "Model may not know how to return different values per call and instead use a single Return() that applies to all calls",
+    "assertions": [
+      {"id": "6.1", "text": "Sets up first On().Return() with an error and .Once()"},
+      {"id": "6.2", "text": "Sets up second On().Return() with success data and .Once()"},
+      {"id": "6.3", "text": "The two expectations are on the same method with the same arguments"},
+      {"id": "6.4", "text": "Calls AssertExpectations to verify both calls happened"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "suite-lifecycle-and-launcher",
+    "description": "Tests that suite requires a launcher function (TestXxxSuite) and understands the lifecycle order",
+    "prompt": "Convert these flat Go tests into a testify suite. The tests share a database connection setup and cleanup. There are 3 test functions that all need a fresh mock store before each test.\n\n```go\nfunc TestCreateUser(t *testing.T) { ... }\nfunc TestDeleteUser(t *testing.T) { ... }\nfunc TestListUsers(t *testing.T) { ... }\n```",
+    "trap": "Model may create the suite struct and test methods but forget the launcher function (func TestXxxSuite(t *testing.T) { suite.Run(t, new(Suite)) }), causing zero tests to run",
+    "assertions": [
+      {"id": "7.1", "text": "Creates a suite struct embedding suite.Suite"},
+      {"id": "7.2", "text": "Uses SetupTest (not SetupSuite) for per-test mock store initialization"},
+      {"id": "7.3", "text": "Includes a launcher function: func TestXxxSuite(t *testing.T) with suite.Run()"},
+      {"id": "7.4", "text": "Test methods are named TestXxx (starting with Test) on the suite receiver"},
+      {"id": "7.5", "text": "Uses SetupSuite or TearDownSuite for the shared database connection (one-time setup)"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "suite-require-syntax",
+    "description": "Tests that suite methods use s.Require().NotNil() syntax for require behavior, since s.NotNil() is assert-style",
+    "prompt": "In my testify suite test method, I need to check that a database connection is not nil before proceeding. If it's nil, the test should stop immediately. How do I do a require-style assertion inside a suite?",
+    "trap": "Model may use s.NotNil() thinking it acts like require, but suite methods default to assert behavior. Must use s.Require().NotNil() for fail-fast",
+    "assertions": [
+      {"id": "8.1", "text": "Uses s.Require().NotNil() (not just s.NotNil()) for fail-fast behavior"},
+      {"id": "8.2", "text": "Explains that s.NotNil() and similar suite methods behave like assert (continue on failure)"},
+      {"id": "8.3", "text": "Shows that s.Require() returns a require-style assertion object"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "pointer-comparison-trap",
+    "description": "Tests awareness that is.Equal(ptr1, ptr2) compares addresses, not values",
+    "prompt": "I have two *User pointers pointing to different structs with the same field values. My test `assert.Equal(t, user1, user2)` is failing. Both users have Name='Alice' and Age=30. What's wrong?",
+    "trap": "Model may suggest various debugging approaches without identifying the core issue: Equal on pointers compares addresses",
+    "assertions": [
+      {"id": "9.1", "text": "Identifies that assert.Equal on pointers compares memory addresses, not struct values"},
+      {"id": "9.2", "text": "Recommends dereferencing the pointers (e.g., assert.Equal(t, *user1, *user2)) or using EqualExportedValues"},
+      {"id": "9.3", "text": "Mentions EqualExportedValues as an alternative for comparing only exported fields"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "eventually-with-rich-assertions",
+    "description": "Tests knowledge of EventuallyWithT for async polling with multiple rich assertions (not just bool)",
+    "prompt": "I need to test an async job processor. After submitting a job, I need to poll until the job status is 'completed' AND the result count is greater than 0. The polling should timeout after 10 seconds. How do I write this test with testify?",
+    "trap": "Model may use Eventually with a simple bool function, which only checks one condition and loses assertion error messages. EventuallyWithT allows multiple rich assertions.",
+    "assertions": [
+      {"id": "10.1", "text": "Uses EventuallyWithT (not just Eventually) for rich assertions"},
+      {"id": "10.2", "text": "The callback receives *assert.CollectT (or similar collect parameter)"},
+      {"id": "10.3", "text": "Multiple assertions are made inside the callback (status check AND result count check)"},
+      {"id": "10.4", "text": "Uses assert.NoError/assert.Equal with the CollectT parameter inside the callback, not with t"},
+      {"id": "10.5", "text": "Specifies timeout (10s) and polling interval as separate parameters"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "testifylint-recommendation",
+    "description": "testifylint catches testify-specific mistakes that generic linters miss; model should recommend it over manual code review for testify patterns",
+    "prompt": "Our team's test code review keeps catching the same testify mistakes:\n\n1. `assert.Equal(t, err, ErrNotFound)` instead of `assert.ErrorIs(t, err, ErrNotFound)`\n2. `assert.Equal(t, got, want)` where expected/actual are swapped\n3. Using `assert.NoError(t, err)` instead of `require.NoError(t, err)` before dereferencing a pointer\n4. `assert.Equal(t, true, someCondition)` instead of `assert.True(t, someCondition)`\n\nOur lead says: 'These are all discipline issues — we should just review more carefully and add examples to our style guide.' Is there a better automated solution?",
+    "trap": "The lead's position (careful review + style guide) sounds reasonable for a small team. The model should recognize that testifylint catches all four of these patterns automatically, making manual review for them unnecessary. Without the skill, the model may agree with the lead or only suggest generic linters like staticcheck.",
+    "assertions": [
+      {"id": "11.1", "text": "Recommends testifylint specifically — explains that it is designed to catch exactly the patterns described (not just generic Go linters like staticcheck or golangci-lint defaults)"},
+      {"id": "11.2", "text": "Pushes back on the lead's 'review more carefully' approach — automated linting is more reliable than manual discipline for mechanical patterns"},
+      {"id": "11.3", "text": "Confirms testifylint catches at least two of the four described patterns: wrong argument order (expected/actual swap) and assert/require misuse (using assert before pointer dereference)"}
+    ]
+  }
+]

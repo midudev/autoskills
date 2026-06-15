@@ -1,0 +1,153 @@
+[
+  {
+    "id": 1,
+    "name": "interface-at-consumer-not-implementor",
+    "description": "Tests whether the model defines interfaces where they are consumed, not where they are implemented",
+    "prompt": "I'm writing a Go notification service that can send emails. I have an email package with a Client struct that has a Send method. I also have a notification package that needs to use this email client. Where should I define the interface?",
+    "trap": "Without the skill, the model often puts the interface in the email package (the implementor). The skill says interfaces MUST be defined where consumed, not where implemented.",
+    "assertions": [
+      {"id": "1.1", "text": "Interface is defined in the notification package (the consumer), NOT in the email package"},
+      {"id": "1.2", "text": "Interface has only the methods the notification package needs (not the full email.Client API)"},
+      {"id": "1.3", "text": "Email package exports a concrete Client struct, not an interface"},
+      {"id": "1.4", "text": "Explains WHY: keeps the consumer in control of the contract, avoids importing a package just for its interface"},
+      {"id": "1.5", "text": "Notification service depends on its own interface, not on email package types"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "return-structs-not-interfaces",
+    "description": "Tests whether the model returns concrete types from constructors, not interfaces",
+    "prompt": "I'm designing a Go package with a UserService that depends on a UserStore interface. Should my NewUserService constructor return *UserService or UserServiceInterface? Show me the constructor signature.",
+    "trap": "Without the skill, the model may suggest returning an interface for 'flexibility' or 'abstraction'. The skill says functions SHOULD return concrete types -- NEVER return interfaces from constructors.",
+    "assertions": [
+      {"id": "2.1", "text": "Constructor returns *UserService (concrete type), NOT an interface"},
+      {"id": "2.2", "text": "Constructor accepts UserStore as an interface parameter (accept interfaces)"},
+      {"id": "2.3", "text": "Explains WHY: callers get full access to the concrete type's fields/methods; consumers can assign to interface if needed"},
+      {"id": "2.4", "text": "Explicitly states that returning interfaces from constructors is bad practice"},
+      {"id": "2.5", "text": "The accept-interfaces-return-structs principle is stated or demonstrated"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "premature-interface-trap",
+    "description": "Tests whether the model avoids creating interfaces prematurely when there is only one implementation",
+    "prompt": "I'm writing a Go application with a UserRepository that talks to PostgreSQL. It's the only database we'll ever use. Should I create a UserRepository interface and a concrete postgresUserRepository struct, or just use a concrete struct directly?",
+    "trap": "Without the skill, the model almost always suggests creating an interface 'for testability' even with a single implementation. The skill says NEVER create interfaces prematurely -- wait for 2+ implementations or a testability requirement.",
+    "assertions": [
+      {"id": "3.1", "text": "Recommends starting with a concrete struct (not an interface) when there is only one implementation"},
+      {"id": "3.2", "text": "Mentions the principle: don't design with interfaces, discover them"},
+      {"id": "3.3", "text": "Suggests extracting an interface LATER when a second consumer or test mock demands it"},
+      {"id": "3.4", "text": "Acknowledges that testability IS a valid reason to add an interface, but it should be a deliberate choice"},
+      {"id": "3.5", "text": "Does NOT reflexively recommend creating an interface just because it is a repository"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "zero-value-useful-design",
+    "description": "Tests whether the model designs structs with useful zero values using lazy initialization",
+    "prompt": "I have a Go Registry struct that stores items in a map. Users are getting panics when they call Register without calling NewRegistry first. How should I fix this?",
+    "trap": "Without the skill, the model may just say 'always call the constructor' or add nil checks at every call site. The skill says to make the zero value useful with lazy initialization.",
+    "assertions": [
+      {"id": "4.1", "text": "Recommends lazy initialization in the Register method (if r.items == nil { r.items = make(...) })"},
+      {"id": "4.2", "text": "Mentions the Go principle: make the zero value useful"},
+      {"id": "4.3", "text": "The fix allows using var r Registry without calling a constructor"},
+      {"id": "4.4", "text": "Does NOT just say 'always use the constructor' as the primary fix"},
+      {"id": "4.5", "text": "References bytes.Buffer or sync.Mutex as stdlib examples of useful zero values"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "embedding-vs-named-field",
+    "description": "Tests whether the model correctly distinguishes when to embed vs use a named field",
+    "prompt": "I have a Go Server struct that uses a DataStore for persistence and an http.Handler for routing. Should I embed both, use named fields for both, or mix? The Server should expose the Handler's ServeHTTP method but should NOT expose DataStore's internal methods to callers.",
+    "trap": "Without the skill, the model may embed both or use named fields for both. The skill has a clear rule: embed when you want to promote the full API ('is a'), named field when you only need it internally ('has a').",
+    "assertions": [
+      {"id": "5.1", "text": "Embeds http.Handler (to promote ServeHTTP to the Server)"},
+      {"id": "5.2", "text": "Uses a named field for DataStore (not embedded, because its methods should not be exposed)"},
+      {"id": "5.3", "text": "Explains the embed vs named field rule: embed for 'is a' (promote full API), named field for 'has a' (internal use)"},
+      {"id": "5.4", "text": "Mentions that embedding promotes ALL methods of the inner type, which can be undesirable"},
+      {"id": "5.5", "text": "Notes that the receiver of promoted methods is the inner type, not the outer type"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "compile-time-interface-check",
+    "description": "Tests whether the model uses compile-time interface verification",
+    "prompt": "I have a Go type MyBuffer that should implement io.ReadWriter. How can I make sure the compiler catches it if I accidentally break the interface contract later?",
+    "trap": "Without the skill, the model may suggest writing a test or just relying on usage sites to catch it. The skill recommends the var _ Interface = (*Type)(nil) pattern.",
+    "assertions": [
+      {"id": "6.1", "text": "Uses var _ io.ReadWriter = (*MyBuffer)(nil) pattern"},
+      {"id": "6.2", "text": "Places the check near the type definition"},
+      {"id": "6.3", "text": "Explains that this costs nothing at runtime"},
+      {"id": "6.4", "text": "Explains that the build fails immediately if MyBuffer stops satisfying the interface"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "type-assertion-comma-ok",
+    "description": "Bare type assertions panic on wrong type; comma-ok is required even when the type 'should always' be correct",
+    "prompt": "Review this Go event dispatcher and fix any issues:\n\n```go\ntype Event struct {\n    Type    string\n    Payload any\n}\n\nfunc Dispatch(e Event) error {\n    switch e.Type {\n    case \"user.created\":\n        payload := e.Payload.(*UserCreated)\n        return handleUserCreated(payload)\n    case \"order.placed\":\n        payload := e.Payload.(*OrderPlaced)\n        return handleOrderPlaced(payload)\n    case \"payment.failed\":\n        payload := e.Payload.(*PaymentFailed)\n        return handlePaymentFailed(payload)\n    default:\n        return fmt.Errorf(\"unknown event type: %s\", e.Type)\n    }\n}\n```\n\nA teammate says: 'The bare type assertions are fine here — we always put the right payload type for each event type, and we control all the callers. The comma-ok form just adds noise and extra if-checks.' Is the teammate correct? Fix the code if needed.",
+    "trap": "The teammate's argument sounds reasonable — the caller controls event construction and should always set the correct payload type. But bare type assertions panic at runtime on any mismatch (future code, deserialized events, tests with wrong setup). The model should reject the teammate's argument and use comma-ok form.",
+    "assertions": [
+      {"id": "7.1", "text": "Rejects the teammate's argument — bare type assertions panic at runtime on any type mismatch, regardless of how controlled the callers seem"},
+      {"id": "7.2", "text": "Uses comma-ok form for all three type assertions: payload, ok := e.Payload.(*UserCreated)"},
+      {"id": "7.3", "text": "Handles the !ok case by returning an error (not panicking) — e.g., 'unexpected payload type for user.created'"},
+      {"id": "7.4", "text": "Explains the failure mode: future code, deserialized events from external sources, or tests with wrong fixture setup will cause unrecoverable panics with bare assertions"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "optional-behavior-type-assertion",
+    "description": "Tests whether the model uses type assertions for optional interface capabilities",
+    "prompt": "I'm writing a Go function that writes data to an io.Writer. Some writers support flushing (like bufio.Writer) but not all. I want to flush after writing IF the writer supports it, but not require all writers to implement Flush. How should I design this?",
+    "trap": "Without the skill, the model may create a WriteAndFlusher interface and require all callers to implement it. The skill shows the optional behavior pattern with type assertion.",
+    "assertions": [
+      {"id": "8.1", "text": "Defines a separate Flusher interface with just the Flush method"},
+      {"id": "8.2", "text": "Function parameter is io.Writer (not a combined interface)"},
+      {"id": "8.3", "text": "Uses type assertion (f, ok := w.(Flusher)) to check for flush capability"},
+      {"id": "8.4", "text": "Only calls Flush if the type assertion succeeds"},
+      {"id": "8.5", "text": "Mentions this pattern is used in the standard library (e.g. http.Flusher, io.ReaderFrom)"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "nocopy-sentinel-struct",
+    "description": "Tests whether the model uses the noCopy sentinel to prevent struct copying",
+    "prompt": "I have a Go struct ConnPool that contains a sync.Mutex and a slice of connections. A junior developer accidentally passed it by value to a function, which caused a data race. How can I prevent this struct from being copied?",
+    "trap": "Without the skill, the model may just say 'always use pointers' or rely on code review. The skill shows the noCopy sentinel pattern that makes go vet catch accidental copies.",
+    "assertions": [
+      {"id": "9.1", "text": "Recommends embedding a noCopy sentinel struct"},
+      {"id": "9.2", "text": "noCopy implements Lock() and Unlock() methods (empty bodies)"},
+      {"id": "9.3", "text": "Explains that go vet will flag copies of structs containing noCopy"},
+      {"id": "9.4", "text": "Mentions this is the same technique used by sync.WaitGroup, sync.Mutex, or strings.Builder in the stdlib"},
+      {"id": "9.5", "text": "Shows that the struct should be passed by pointer after adding noCopy"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "generics-over-any-interface",
+    "description": "Tests whether the model prefers generics over any/interface{} for type-safe operations",
+    "prompt": "I need to write a Go function that checks if a slice contains a given element. The function should work with any comparable type (ints, strings, etc.). What's the best approach?",
+    "trap": "Without the skill, the model may use []any and any parameters for compatibility. The skill says MUST prefer generics over any for type-safe operations (Go 1.18+).",
+    "assertions": [
+      {"id": "10.1", "text": "Uses generics with a type parameter: func Contains[T comparable](slice []T, target T) bool"},
+      {"id": "10.2", "text": "Does NOT use []any or interface{} parameters"},
+      {"id": "10.3", "text": "Uses the comparable constraint for the type parameter"},
+      {"id": "10.4", "text": "Explains WHY: generics preserve type safety, while any loses it"},
+      {"id": "10.5", "text": "Mentions that any should only be used at true boundaries where type is genuinely unknown (JSON decoding, reflection)"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "receiver-consistency-rule",
+    "description": "Tests whether the model enforces consistent receiver types across all methods of a type",
+    "prompt": "I have a Go struct with 5 methods. Four use value receivers and one uses a pointer receiver because it modifies the struct. Is this fine?",
+    "trap": "Without the skill, the model may accept the mixed receiver approach as valid for each method. The skill says receiver type MUST be consistent -- if one method uses pointer, all should.",
+    "assertions": [
+      {"id": "11.1", "text": "Says mixing pointer and value receivers on the same type is wrong or not recommended"},
+      {"id": "11.2", "text": "Recommends making ALL methods use pointer receivers since one needs to mutate"},
+      {"id": "11.3", "text": "Explains WHY: consistency rule -- if any method uses a pointer receiver, all should"},
+      {"id": "11.4", "text": "Mentions that method sets differ for T and *T which affects interface satisfaction"}
+    ]
+  }
+]

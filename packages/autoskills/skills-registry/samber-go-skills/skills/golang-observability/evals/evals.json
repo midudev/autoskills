@@ -1,0 +1,548 @@
+[
+  {
+    "id": 1,
+    "name": "histogram-bucket-misconfiguration-sub-millisecond",
+    "description": "Tests whether the model catches that prometheus.DefBuckets are wrong for sub-millisecond operations",
+    "prompt": "I'm adding a Prometheus histogram for an in-memory cache lookup that typically completes in 50-500 microseconds. Here's my declaration:\n\nvar cacheLookupDuration = promauto.NewHistogram(prometheus.HistogramOpts{\n    Namespace: \"myapp\",\n    Name:      \"cache_lookup_duration_seconds\",\n    Buckets:   prometheus.DefBuckets,\n})\n\nDefBuckets are the default so this should be fine, right?",
+    "trap": "Without the skill, the model validates the code since DefBuckets are the 'recommended default'. The skill teaches that DefBuckets start at 5ms — all sub-millisecond observations land in the first bucket, making P50/P99 meaningless.",
+    "assertions": [
+      {"id": "1.1", "text": "Identifies that prometheus.DefBuckets (.005, .01, .025, .05, .1, ... seconds) are wrong for sub-millisecond operations"},
+      {"id": "1.2", "text": "Explains that all 50-500µs observations would land in a single bucket, making histogram_quantile() return inaccurate or meaningless percentiles"},
+      {"id": "1.3", "text": "Recommends custom bucket boundaries in the microsecond range (e.g., 0.0001, 0.0002, 0.0005, 0.001, 0.002 seconds)"},
+      {"id": "1.4", "text": "Shows how to define custom buckets using prometheus.LinearBuckets, prometheus.ExponentialBuckets, or an explicit []float64 slice"},
+      {"id": "1.5", "text": "Explains the general rule: buckets should cover the expected range of values with sufficient resolution around the target percentiles"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "promql-comments-convention-discoverability",
+    "description": "Tests the PromQL-as-comments convention above metric variable declarations",
+    "prompt": "My team declares Prometheus metrics scattered across many files. When writing alerts or dashboards, engineers have to grep the codebase to find the metric name and then guess what PromQL to write. How do I make metrics more self-documenting without adding a wiki or external doc?",
+    "trap": "Without the skill, the model suggests external documentation, a README section, or godoc comments with metric descriptions — missing the PromQL-as-comments convention taught by the skill",
+    "assertions": [
+      {"id": "2.1", "text": "Recommends placing PromQL queries and alert expressions as comments directly above each metric variable declaration"},
+      {"id": "2.2", "text": "Shows example with Dashboard: and Alert: comment lines containing actual PromQL above the var block"},
+      {"id": "2.3", "text": "Explains that colocating PromQL with the metric declaration means queries are reviewed in PRs alongside metric changes"},
+      {"id": "2.4", "text": "Mentions that when the metric name or labels change, the PromQL comments change in the same commit — preventing stale queries"},
+      {"id": "2.5", "text": "Shows that this enables new team members to understand the metric's purpose and how to query it at a glance"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "high-cardinality-label-trap",
+    "description": "Tests whether the model catches high-cardinality label usage in Prometheus metrics",
+    "prompt": "I'm adding Prometheus metrics to my Go API. For tracking request counts, I'm using:\n\nhttpRequests.WithLabelValues(r.Method, r.URL.Path, userID).Inc()\n\nThis gives me per-user, per-endpoint visibility. Any concerns?",
+    "trap": "Without the skill, the model may praise the granularity or only mention minor concerns, missing the critical cardinality explosion problem",
+    "assertions": [
+      {"id": "3.1", "text": "Identifies userID as a high-cardinality label that will cause problems"},
+      {"id": "3.2", "text": "Identifies r.URL.Path as potentially high-cardinality (should use route template instead)"},
+      {"id": "3.3", "text": "Explains that each unique label combination creates a separate time series"},
+      {"id": "3.4", "text": "Warns about memory explosion on the Prometheus server from unbounded labels"},
+      {"id": "3.5", "text": "Recommends using route patterns/templates (e.g., /users/:id) instead of actual paths"},
+      {"id": "3.6", "text": "Suggests using traces (not metrics) for high-cardinality data like user IDs"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "production-json-logging",
+    "description": "Tests whether the model recommends JSON handler for production and explains why plain text is problematic",
+    "prompt": "I'm setting up slog for my Go production service. I like the TextHandler output because it's readable. Here's my setup:\n\nslog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))\n\nShould I use this in production?",
+    "trap": "Without the skill, the model may say TextHandler is fine since it produces structured key=value output",
+    "assertions": [
+      {"id": "4.1", "text": "Recommends JSONHandler for production, not TextHandler"},
+      {"id": "4.2", "text": "Explains that plain-text multiline logs (e.g., stack traces) get split into separate records by log collectors"},
+      {"id": "4.3", "text": "Suggests TextHandler is appropriate for development only"},
+      {"id": "4.4", "text": "Shows the correct JSONHandler setup with slog.LevelInfo for production"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "slog-context-variant-trace-correlation",
+    "description": "Tests whether the model insists on *Context variants of slog for trace correlation",
+    "prompt": "I'm adding logging to my Go service that already has OpenTelemetry tracing configured with otelslog bridge. Here's my logging code:\n\nfunc (s *OrderService) Create(ctx context.Context, req CreateOrderRequest) error {\n    slog.Info(\"creating order\", \"order_id\", req.ID)\n    // ... business logic ...\n    slog.Error(\"order creation failed\", \"error\", err)\n    return err\n}\n\nAnything wrong with my logging?",
+    "trap": "Without the skill, the model may not flag the missing context parameter since the logging looks correct",
+    "assertions": [
+      {"id": "5.1", "text": "Identifies that slog.Info and slog.Error should use their *Context variants (slog.InfoContext, slog.ErrorContext)"},
+      {"id": "5.2", "text": "Explains that without ctx, trace_id and span_id won't be injected into log records"},
+      {"id": "5.3", "text": "Shows the corrected code using slog.InfoContext(ctx, ...) and slog.ErrorContext(ctx, ...)"},
+      {"id": "5.4", "text": "Mentions that the otelslog bridge automatically injects trace correlation when context is passed"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "multi-window-burn-rate-slo-alerting",
+    "description": "Tests knowledge of multi-window burn-rate SLO alerting instead of simple threshold",
+    "prompt": "My Go API has a 99.9% availability SLO. I have this alert:\n\n- alert: HighErrorRate\n  expr: rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m]) > 0.001\n  for: 5m\n\nI get too many false positives from brief spikes but also miss slow degradation that stays just under 0.1%. How do I improve my alerting strategy?",
+    "trap": "Without the skill, the model suggests adjusting the threshold or the for: duration, missing the multi-window burn-rate approach that the skill specifically teaches",
+    "assertions": [
+      {"id": "6.1", "text": "Recommends multi-window burn-rate alerting to address both false positives and slow burn scenarios"},
+      {"id": "6.2", "text": "Explains error budget and burn rate concepts"},
+      {"id": "6.3", "text": "Shows a fast burn window (e.g., 5m + 1h, ~14x burn rate) for critical/page alerts"},
+      {"id": "6.4", "text": "Shows a slow burn window (e.g., 2h + 24h, 1-2x burn rate) for warning/ticket alerts"},
+      {"id": "6.5", "text": "Explains that ANDing short and long windows eliminates false positives from transient spikes"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "irate-vs-rate-for-alerts",
+    "description": "Tests whether the model catches irate() usage in alerting rules",
+    "prompt": "I'm writing a Prometheus alerting rule for my Go service to detect high error rates:\n\n- alert: HighErrorRate\n  expr: irate(http_requests_total{status=~\"5..\"}[5m]) > 0.01\n\nDoes this look correct?",
+    "trap": "Without the skill, the model may approve irate since it's a valid PromQL function, missing that irate is too volatile for alerting",
+    "assertions": [
+      {"id": "7.1", "text": "Identifies irate() as inappropriate for alerting rules"},
+      {"id": "7.2", "text": "Explains that irate reacts to a single scrape interval and is too volatile, causing false positives"},
+      {"id": "7.3", "text": "Recommends rate() instead of irate() for alerts"},
+      {"id": "7.4", "text": "Recommends adding a for: duration to avoid firing on transient spikes"},
+      {"id": "7.5", "text": "Shows the corrected alert rule using rate() with a for: clause"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "alert-missing-for-duration",
+    "description": "Tests whether the model catches alerts without a for: duration clause",
+    "prompt": "Here's my Prometheus alert for high P99 latency:\n\n- alert: HighLatency\n  expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 2\n\nShould I deploy this?",
+    "trap": "Without the skill, the model may approve it since the PromQL expression itself is correct",
+    "assertions": [
+      {"id": "8.1", "text": "Identifies the missing for: duration as a problem"},
+      {"id": "8.2", "text": "Explains that without for:, a single bad scrape triggers the alert (false positive)"},
+      {"id": "8.3", "text": "Recommends adding for: 5m or similar duration"},
+      {"id": "8.4", "text": "Distinguishes that binary alerts (service up/down) can use for: 0m, but non-binary alerts need a duration"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "promql-comments-convention",
+    "description": "Tests whether the model recommends documenting metrics with PromQL comments above declarations",
+    "prompt": "I'm declaring Prometheus metrics in my Go service. Here's my pattern:\n\nvar httpRequestsTotal = promauto.NewCounterVec(\n    prometheus.CounterOpts{\n        Namespace: \"myapp\",\n        Subsystem: \"http\",\n        Name:      \"requests_total\",\n        Help:      \"Total number of HTTP requests.\",\n    },\n    []string{\"method\", \"path\", \"status\"},\n)\n\nHow can I make my metrics more discoverable for my team?",
+    "trap": "Without the skill, the model may suggest external documentation or wiki pages, missing the PromQL-as-comments convention",
+    "assertions": [
+      {"id": "9.1", "text": "Recommends adding PromQL queries and alert rules as comments directly above the metric variable declaration"},
+      {"id": "9.2", "text": "Shows example Dashboard: and Alert: comment lines above the metric var"},
+      {"id": "9.3", "text": "Explains that this keeps PromQL queries reviewed in PRs alongside the metric"},
+      {"id": "9.4", "text": "Mentions that queries stay in sync with metric changes (label renames, bucket changes)"},
+      {"id": "9.5", "text": "Notes that new team members can understand the metric's purpose at a glance from the comments"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "otelslog-bridge-setup",
+    "description": "Tests log-trace correlation setup using otelslog bridge",
+    "prompt": "I have a Go service with both slog logging and OpenTelemetry tracing. I want to correlate them so that when I see a log line in Grafana Loki, I can jump to the trace in Tempo. How do I connect them?",
+    "trap": "Without the skill, the model may suggest manually extracting trace_id from span context and adding it as a slog attribute, missing the otelslog bridge",
+    "assertions": [
+      {"id": "10.1", "text": "Recommends using the otelslog bridge from go.opentelemetry.io/contrib/bridges/otelslog"},
+      {"id": "10.2", "text": "Shows creating a handler with otelslog.NewHandler()"},
+      {"id": "10.3", "text": "Shows setting it as default with slog.SetDefault()"},
+      {"id": "10.4", "text": "Explains that trace_id and span_id are automatically injected into log records"},
+      {"id": "10.5", "text": "Emphasizes using slog.*Context(ctx, ...) variants to enable the automatic injection"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "exemplars-metric-trace-link",
+    "description": "Tests metrics-to-traces correlation via Prometheus exemplars",
+    "prompt": "I have a Prometheus histogram tracking HTTP request latency and OpenTelemetry tracing. When I see a P99 latency spike in Grafana, I want to jump directly to the offending trace. How do I link metrics to traces?",
+    "trap": "Without the skill, the model may suggest using metric labels or manual correlation, missing the exemplar mechanism",
+    "assertions": [
+      {"id": "11.1", "text": "Recommends using Prometheus exemplars to link metrics to traces"},
+      {"id": "11.2", "text": "Shows attaching trace_id as an exemplar when recording histogram observations"},
+      {"id": "11.3", "text": "Explains that exemplars let you jump from a metric spike directly to the trace that caused it"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "span-error-recording-both-calls",
+    "description": "Tests that error recording on spans requires both RecordError() and SetStatus(Error)",
+    "prompt": "In my Go service using OpenTelemetry, when an operation fails, I do:\n\nif err != nil {\n    span.RecordError(err)\n    return err\n}\n\nIs this the correct way to record errors on spans?",
+    "trap": "Without the skill, the model may approve this since RecordError is called, missing that SetStatus must also be called",
+    "assertions": [
+      {"id": "12.1", "text": "Identifies that span.SetStatus(codes.Error, ...) is also needed alongside RecordError"},
+      {"id": "12.2", "text": "Explains that RecordError adds an event but does not mark the span as failed"},
+      {"id": "12.3", "text": "Shows the corrected pattern with both span.RecordError(err) and span.SetStatus(codes.Error, ...)"},
+      {"id": "12.4", "text": "Notes that on success, no status needs to be set (Unset is fine)"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "trace-context-lost-in-background-goroutine",
+    "description": "Tests that a new goroutine spawned inside a span loses trace context unless ctx is explicitly propagated",
+    "prompt": "My Go service sends a notification after processing an order. I want it to be non-blocking so I spawn a goroutine:\n\nfunc (s *OrderService) Process(ctx context.Context, order Order) error {\n    ctx, span := tracer.Start(ctx, \"process-order\")\n    defer span.End()\n\n    // business logic...\n\n    go func() {\n        s.notifier.Send(context.Background(), order.UserID, \"Order confirmed\")\n    }()\n\n    return nil\n}\n\nI have OpenTelemetry configured. Why doesn't the notification span appear as a child of process-order in my traces?",
+    "trap": "Without the skill, the model may suggest the span setup is fine or focus on goroutine lifecycle, missing that context.Background() discards the parent trace context",
+    "assertions": [
+      {"id": "13.1", "text": "Identifies that context.Background() discards the trace context — the notification has no parent span"},
+      {"id": "13.2", "text": "Explains that the trace context (trace_id, span_id) travels only inside the ctx variable"},
+      {"id": "13.3", "text": "Shows the fix: capture ctx before the goroutine and pass it in (not context.Background())"},
+      {"id": "13.4", "text": "Notes that the notification goroutine may outlive the parent span, but trace propagation still requires passing the original ctx"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "db-query-context-propagation",
+    "description": "Tests that database calls must use *Context variants for trace propagation",
+    "prompt": "My Go service has OpenTelemetry tracing, but I notice my database queries don't appear as spans in traces. Here's my code:\n\nresult, err := db.Query(\"SELECT * FROM users WHERE id = $1\", userID)\n\nWhat am I missing?",
+    "trap": "Without the skill, the model may suggest adding manual spans around the query, missing the fundamental issue of not passing context",
+    "assertions": [
+      {"id": "14.1", "text": "Identifies that db.Query should be db.QueryContext(ctx, ...) to propagate trace context"},
+      {"id": "14.2", "text": "Explains that without context, the trace is broken — child spans cannot be created"},
+      {"id": "14.3", "text": "Shows the corrected code using db.QueryContext(ctx, ...)"},
+      {"id": "14.4", "text": "States that context is the vehicle that carries trace_id and span_id across boundaries"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "trace-sampling-cost-control",
+    "description": "Tests awareness of trace sampling strategies and cost implications",
+    "prompt": "My Go microservice handles 50,000 requests per second. I enabled OpenTelemetry tracing at 100% sampling and my tracing backend costs tripled. How should I control tracing costs without losing visibility?",
+    "trap": "Without the skill, the model may suggest only reducing sampling ratio, missing the nuances of ParentBased sampling and the specific recommendation to start at 10%",
+    "assertions": [
+      {"id": "15.1", "text": "Recommends TraceIDRatioBased sampling with a specific ratio (e.g., 0.1 for 10%)"},
+      {"id": "15.2", "text": "Mentions ParentBased sampler to respect parent's sampling decision and keep traces complete across services"},
+      {"id": "15.3", "text": "Discusses head-based vs tail-based sampling tradeoffs"},
+      {"id": "15.4", "text": "Recommends avoiding large payloads as span attributes — log them instead and correlate via trace_id"},
+      {"id": "15.5", "text": "Explains the cost factors: span volume, span attributes, storage and indexing"}
+    ]
+  },
+  {
+    "id": 16,
+    "name": "where-to-add-spans",
+    "description": "Tests knowledge of which operations must have spans in OpenTelemetry",
+    "prompt": "I'm adding OpenTelemetry tracing to my existing Go service. Which functions should I add spans to? I don't want to instrument everything unnecessarily.",
+    "trap": "Without the skill, the model may give vague guidance like 'important functions', missing the specific categories the skill defines",
+    "assertions": [
+      {"id": "16.1", "text": "Lists service methods (business logic layer) as requiring spans"},
+      {"id": "16.2", "text": "Lists database queries as requiring spans"},
+      {"id": "16.3", "text": "Lists external API calls as requiring spans"},
+      {"id": "16.4", "text": "Lists message queue publish/consume operations as requiring spans"},
+      {"id": "16.5", "text": "States any operation that takes measurable time or could fail should have a span"}
+    ]
+  },
+  {
+    "id": 17,
+    "name": "four-golden-signals-alerting",
+    "description": "Tests knowledge of the four golden signals for service alerting",
+    "prompt": "I'm setting up alerting for my new Go API service from scratch. I have Prometheus metrics. What should I alert on? Give me the essential alerts.",
+    "trap": "Without the skill, the model may list ad-hoc alerts, missing the structured four golden signals framework",
+    "assertions": [
+      {"id": "17.1", "text": "References the four golden signals (from Google SRE): latency, traffic, errors, saturation"},
+      {"id": "17.2", "text": "Includes a latency alert (e.g., P99 > threshold)"},
+      {"id": "17.3", "text": "Includes a traffic alert (e.g., zero requests detection)"},
+      {"id": "17.4", "text": "Includes an error rate alert (e.g., 5xx ratio > threshold)"},
+      {"id": "17.5", "text": "Includes a saturation alert (e.g., connection pool > 90%)"}
+    ]
+  },
+  {
+    "id": 18,
+    "name": "awesome-prometheus-alerts-resource",
+    "description": "Tests whether the model recommends awesome-prometheus-alerts as a starting point for infrastructure alerting",
+    "prompt": "I'm adding PostgreSQL and Redis to my Go service and need alerting rules. Should I write Prometheus alert rules from scratch for each dependency?",
+    "trap": "Without the skill, the model will likely suggest writing rules from scratch or generic examples",
+    "assertions": [
+      {"id": "18.1", "text": "Recommends awesome-prometheus-alerts (samber.github.io/awesome-prometheus-alerts/) as a starting point"},
+      {"id": "18.2", "text": "Mentions it contains ~500 ready-to-use Prometheus alerting rules organized by technology"},
+      {"id": "18.3", "text": "Suggests the workflow: browse by technology, copy rules, customize thresholds"},
+      {"id": "18.4", "text": "Mentions verifying that exporters (postgres_exporter, redis_exporter) are deployed"}
+    ]
+  },
+  {
+    "id": 19,
+    "name": "go-runtime-alerts",
+    "description": "Tests knowledge of Go runtime-specific alerts using default Prometheus client metrics",
+    "prompt": "My Go service occasionally becomes unresponsive. I suspect goroutine leaks or GC pressure. What Go runtime-specific Prometheus alerts should I set up?",
+    "trap": "Without the skill, the model may suggest only basic goroutine count alerts, missing the full set of runtime alerts",
+    "assertions": [
+      {"id": "19.1", "text": "Suggests alerting on go_goroutines exceeding a threshold (e.g., > 1000) for goroutine leaks"},
+      {"id": "19.2", "text": "Suggests alerting on go_gc_duration_seconds for GC pressure"},
+      {"id": "19.3", "text": "Suggests alerting on go_memstats_alloc_bytes / go_memstats_sys_bytes for memory leaks"},
+      {"id": "19.4", "text": "Suggests alerting on go_threads for high OS thread count"},
+      {"id": "19.5", "text": "Uses for: duration on all non-binary alerts to avoid false positives"}
+    ]
+  },
+  {
+    "id": 20,
+    "name": "alert-severity-levels",
+    "description": "Tests correct severity classification and for: durations",
+    "prompt": "I'm categorizing my Prometheus alerts. Should goroutine leaks be critical? What about service down? What for: durations should I use for each severity?",
+    "trap": "Without the skill, the model may assign arbitrary severity levels, missing the two-level system with specific for: duration guidance",
+    "assertions": [
+      {"id": "20.1", "text": "Uses two severity levels: critical (page on-call) and warning (create ticket)"},
+      {"id": "20.2", "text": "Critical alerts: for: 2m to 5m for fast detection"},
+      {"id": "20.3", "text": "Warning alerts: for: 10m to 30m for confirmed trends"},
+      {"id": "20.4", "text": "Classifies service down as critical with short for: duration"},
+      {"id": "20.5", "text": "Classifies goroutine leak as warning (not critical)"},
+      {"id": "20.6", "text": "States that for: 0m should never be used on non-binary alerts"}
+    ]
+  },
+  {
+    "id": 21,
+    "name": "multi-window-burn-rate-slo",
+    "description": "Tests knowledge of multi-window burn-rate SLO alerting over simple threshold alerts",
+    "prompt": "My Go API has a 99.9% availability SLO. I currently alert when error rate exceeds 1%. But I get false positives from brief spikes and miss slow degradation. How should I improve my alerting?",
+    "trap": "Without the skill, the model may suggest tuning the threshold or adding for: duration, missing the multi-window burn-rate approach",
+    "assertions": [
+      {"id": "21.1", "text": "Recommends multi-window burn-rate alerting instead of simple threshold alerts"},
+      {"id": "21.2", "text": "Explains the concept of error budget and burn rate"},
+      {"id": "21.3", "text": "Includes fast burn window (e.g., 5m + 1h, 14.4x burn rate) as critical/page"},
+      {"id": "21.4", "text": "Includes slow burn window (e.g., 2h + 24h, 1x burn rate) as warning/ticket"},
+      {"id": "21.5", "text": "Shows PromQL using AND of short and long windows to eliminate false positives from transient blips"}
+    ]
+  },
+  {
+    "id": 22,
+    "name": "slog-migration-from-zap",
+    "description": "Tests the incremental migration strategy from zap to slog using bridge handlers",
+    "prompt": "My Go codebase has 500+ files using zap for logging. We want to migrate to slog. How do we do this without a big-bang rewrite?",
+    "trap": "Without the skill, the model may suggest a gradual replacement without the bridge handler step, or suggest running both loggers in parallel",
+    "assertions": [
+      {"id": "22.1", "text": "Recommends a three-step migration: bridge, replace call sites, remove bridge"},
+      {"id": "22.2", "text": "Step 1: Use samber/slog-zap bridge handler to route slog output through zap"},
+      {"id": "22.3", "text": "Step 2: Gradually replace zap.L().Info(...) calls with slog.Info(...)"},
+      {"id": "22.4", "text": "Step 3: Once fully migrated, replace the bridge with native slog JSONHandler and remove zap dependency"},
+      {"id": "22.5", "text": "Mentions using parallel sub-agents for large codebase migration (assigning independent packages to each)"}
+    ]
+  },
+  {
+    "id": 23,
+    "name": "slog-migration-from-logrus",
+    "description": "Tests the bridge handler approach for logrus migration",
+    "prompt": "We use logrus throughout our Go project and want to standardize on slog. Is there a way to migrate incrementally?",
+    "trap": "Without the skill, the model may not know about samber/slog-logrus bridge",
+    "assertions": [
+      {"id": "23.1", "text": "Recommends using samber/slog-logrus bridge handler for incremental migration"},
+      {"id": "23.2", "text": "Explains that slog is the standard library logger since Go 1.21"},
+      {"id": "23.3", "text": "Shows the bridge step: route slog output through the existing logrus logger"},
+      {"id": "23.4", "text": "Shows the replacement: logrus.WithField(\"key\", val).Info(\"msg\") becomes slog.Info(\"msg\", \"key\", val)"}
+    ]
+  },
+  {
+    "id": 24,
+    "name": "debug-level-production-cost",
+    "description": "Tests awareness of log level cost implications in production",
+    "prompt": "I'm setting up slog for my Go production service. To maximize debugging ability, I'm considering setting the log level to Debug so we always have full visibility. What log level should I use?",
+    "trap": "Without the skill, the model may suggest Debug with a generic caveat about volume, missing the specific cost analysis",
+    "assertions": [
+      {"id": "24.1", "text": "Recommends slog.LevelInfo for production, NOT Debug"},
+      {"id": "24.2", "text": "Explains that Debug level can generate millions of log lines per minute in busy services"},
+      {"id": "24.3", "text": "Mentions cost: CPU for serialization, I/O for disk/network, money for log ingestion/storage"},
+      {"id": "24.4", "text": "Mentions Debug can inflate costs by 10-100x"},
+      {"id": "24.5", "text": "Suggests samber/slog-sampling as an alternative to sample verbose logs rather than dropping entirely"}
+    ]
+  },
+  {
+    "id": 25,
+    "name": "ip-address-pii-in-logs",
+    "description": "Tests whether the model recognizes IP address as PII that requires care in logs",
+    "prompt": "I'm adding observability to my Go authentication service. Here's my access log:\n\nslog.Info(\"login attempt\",\n    \"user_id\", req.UserID,\n    \"ip\", r.RemoteAddr,\n    \"user_agent\", r.UserAgent(),\n    \"success\", success,\n)\n\nThis looks useful for detecting brute-force attacks. Is there a compliance concern?",
+    "trap": "Without the skill, the model validates this as good observability practice since IP addresses are legitimately useful for security. The model knows email/SSN are PII but commonly misses that IP address is also regulated PII under GDPR.",
+    "assertions": [
+      {"id": "25.1", "text": "Identifies IP address (r.RemoteAddr) as PII under GDPR and CCPA"},
+      {"id": "25.2", "text": "Notes that user_agent can also be a fingerprinting vector that combines to uniquely identify a user"},
+      {"id": "25.3", "text": "Recommends a legal/privacy review before logging IP addresses in European services"},
+      {"id": "25.4", "text": "Suggests using hashed, truncated, or anonymized IPs if full IP is not required by the security use case"}
+    ]
+  },
+  {
+    "id": 26,
+    "name": "gauge-should-not-have-total-suffix",
+    "description": "Tests that Gauge metrics must NOT use _total suffix, and counters MUST",
+    "prompt": "I'm declaring Prometheus metrics for my Go service. Review these declarations:\n\nvar activeConnections = promauto.NewGauge(prometheus.GaugeOpts{\n    Namespace: \"myapp\",\n    Name:      \"connections_active_total\",\n})\n\nvar requestsProcessed = promauto.NewCounter(prometheus.CounterOpts{\n    Namespace: \"myapp\",\n    Name:      \"requests_processed\",\n})\n\nAre these names correct?",
+    "trap": "Without the skill, the model may only flag one issue or swap the corrections. Gauges must NOT use _total; counters MUST use _total. Using _total on a gauge implies it is cumulative when it is not.",
+    "assertions": [
+      {"id": "26.1", "text": "Flags connections_active_total as incorrect — Gauges must NOT use _total suffix because _total implies a counter (monotonically increasing cumulative value)"},
+      {"id": "26.2", "text": "Recommends renaming the gauge to myapp_connections_active (no _total)"},
+      {"id": "26.3", "text": "Flags requests_processed as incorrect — Counters MUST end with _total"},
+      {"id": "26.4", "text": "Recommends renaming the counter to myapp_requests_processed_total"}
+    ]
+  },
+  {
+    "id": 27,
+    "name": "pprof-exposed-on-public-mux",
+    "description": "Tests that importing net/http/pprof registers on the default mux which may serve public traffic",
+    "prompt": "I want to enable pprof for my Go production service. I see that just adding `import _ \"net/http/pprof\"` is enough. My service uses http.ListenAndServe(\":8080\", nil) for its API. Is this safe?",
+    "trap": "Without the skill, the model may warn generically about security but miss the specific mechanism: the blank import registers handlers on http.DefaultServeMux which is the nil mux used by ListenAndServe — pprof is served publicly on port 8080",
+    "assertions": [
+      {"id": "27.1", "text": "Identifies that import _ \"net/http/pprof\" registers /debug/pprof/ routes on http.DefaultServeMux"},
+      {"id": "27.2", "text": "Explains that http.ListenAndServe(\":8080\", nil) uses http.DefaultServeMux as its handler — pprof is publicly accessible on port 8080"},
+      {"id": "27.3", "text": "Recommends serving pprof on a separate internal port (e.g., :6060) using a dedicated ServeMux or http.Server"},
+      {"id": "27.4", "text": "Warns that pprof leaks sensitive runtime information (goroutine stacks, heap profiles, environment) and should never be publicly accessible"}
+    ]
+  },
+  {
+    "id": 28,
+    "name": "continuous-profiling-env-toggle",
+    "description": "Tests the recommendation to toggle continuous profiling via environment variables",
+    "prompt": "I want to set up Pyroscope continuous profiling for my Go production service. Should I always have it enabled on all instances?",
+    "trap": "Without the skill, the model may recommend always-on profiling on all instances",
+    "assertions": [
+      {"id": "28.1", "text": "Recommends toggling via environment variable (e.g., PROFILING_ENABLED)"},
+      {"id": "28.2", "text": "Mentions ~2-5% CPU overhead for continuous profiling"},
+      {"id": "28.3", "text": "Suggests starting with CPU + heap profiles only, adding mutex/block when needed"},
+      {"id": "28.4", "text": "For large deployments, recommends enabling on a fraction of replicas (e.g., 1 in 10)"},
+      {"id": "28.5", "text": "Shows code that checks the environment variable before starting Pyroscope"}
+    ]
+  },
+  {
+    "id": 29,
+    "name": "rum-identity-key-email-trap",
+    "description": "Tests that RUM distinct_id must be user_id, not email",
+    "prompt": "I'm integrating PostHog server-side tracking in my Go service. For the DistinctId, I'm using the user's email since it's a natural identifier users know. Here's my code:\n\nposthogClient.Enqueue(posthog.Capture{\n    DistinctId: user.Email,\n    Event: \"order_completed\",\n})\n\nIs this correct?",
+    "trap": "Without the skill, the model may accept email as a valid identifier since it's unique",
+    "assertions": [
+      {"id": "29.1", "text": "Rejects email as the DistinctId — must use user_id instead"},
+      {"id": "29.2", "text": "Explains that email is mutable — users change it, splitting events into two users"},
+      {"id": "29.3", "text": "Explains that email is PII, complicating GDPR/CCPA compliance"},
+      {"id": "29.4", "text": "Notes that email leaks into third-party analytics systems as the identity key"},
+      {"id": "29.5", "text": "Shows corrected code using user.ID (immutable internal identifier)"}
+    ]
+  },
+  {
+    "id": 30,
+    "name": "gdpr-consent-before-tracking",
+    "description": "Tests that GDPR consent must be checked before sending analytics events",
+    "prompt": "I'm adding PostHog server-side event tracking to my Go e-commerce service for European users. Here's my order completion handler — it tracks the event after business logic:\n\nfunc (s *OrderService) Complete(ctx context.Context, order Order) error {\n    // ... business logic ...\n    posthogClient.Enqueue(posthog.Capture{\n        DistinctId: order.UserID,\n        Event: \"order_completed\",\n    })\n    return nil\n}\n\nAnything I'm missing for EU compliance?",
+    "trap": "Without the skill, the model may suggest a privacy policy or cookie consent without the server-side consent check pattern",
+    "assertions": [
+      {"id": "30.1", "text": "Identifies that consent must be checked before sending the tracking event"},
+      {"id": "30.2", "text": "Shows extracting consent from context and conditionally tracking"},
+      {"id": "30.3", "text": "Mentions GDPR fines (up to 4% of global revenue) or CCPA penalties"},
+      {"id": "30.4", "text": "References data minimization — only collect what you need"},
+      {"id": "30.5", "text": "Mentions data subject rights endpoints (data export and deletion)"}
+    ]
+  },
+  {
+    "id": 31,
+    "name": "data-subject-rights-endpoints",
+    "description": "Tests that GDPR requires data deletion and export endpoints that propagate to all systems",
+    "prompt": "A user of my Go SaaS service (with PostHog analytics and Segment CDP) requests deletion of all their data under GDPR. My current implementation just deletes from the database. Is that sufficient?",
+    "trap": "Without the skill, the model may say database deletion is sufficient or only mention one additional system",
+    "assertions": [
+      {"id": "31.1", "text": "States that deletion must propagate to ALL systems holding user data, not just the database"},
+      {"id": "31.2", "text": "Lists the analytics platform (PostHog) as needing deletion"},
+      {"id": "31.3", "text": "Lists the CDP (Segment) as needing deletion"},
+      {"id": "31.4", "text": "References GDPR Article 17 Right to Erasure"},
+      {"id": "31.5", "text": "Also mentions the Right of Access (data export endpoint) as a requirement"}
+    ]
+  },
+  {
+    "id": 32,
+    "name": "five-signals-completeness",
+    "description": "Tests knowledge of the five observability signals and their distinct roles",
+    "prompt": "I'm building a new Go microservice. What observability signals should I implement for production readiness?",
+    "trap": "Without the skill, the model typically covers logs, metrics, traces but misses profiles and RUM",
+    "assertions": [
+      {"id": "32.1", "text": "Lists all five signals: logs, metrics, traces, profiles, and RUM"},
+      {"id": "32.2", "text": "Associates logs with 'what happened' (discrete events, audit trails)"},
+      {"id": "32.3", "text": "Associates metrics with 'how much/how fast' (aggregated measurements, alerting, SLOs)"},
+      {"id": "32.4", "text": "Associates traces with 'where did time go' (request flow across services)"},
+      {"id": "32.5", "text": "Associates profiles with 'why is it slow/using memory' (CPU hotspots, memory leaks)"},
+      {"id": "32.6", "text": "Associates RUM with 'how do users experience it' (product analytics, funnels)"}
+    ]
+  },
+  {
+    "id": 33,
+    "name": "definition-of-done-observability",
+    "description": "Tests the observability definition of done checklist before shipping a feature",
+    "prompt": "I'm about to ship a new payment processing feature in my Go service. My code works, tests pass, and it's been code-reviewed. Am I ready to deploy?",
+    "trap": "Without the skill, the model may say yes or mention generic deployment checks, missing the observability-specific definition of done",
+    "assertions": [
+      {"id": "33.1", "text": "States that a feature is not production-ready until it is observable"},
+      {"id": "33.2", "text": "Checks for metric declarations (counters, histograms, gauges) with PromQL comments"},
+      {"id": "33.3", "text": "Checks for proper structured logging with slog and context variants"},
+      {"id": "33.4", "text": "Checks for OpenTelemetry spans on service methods, DB queries, and external calls"},
+      {"id": "33.5", "text": "Checks for dashboards and alerts being wired up"},
+      {"id": "33.6", "text": "Checks that errors are either logged OR returned, never both"}
+    ]
+  },
+  {
+    "id": 34,
+    "name": "grafana-dashboard-ids",
+    "description": "Tests knowledge of specific Grafana dashboard IDs for Go runtime monitoring",
+    "prompt": "I want to monitor my Go service's runtime metrics (goroutines, heap, GC) in Grafana. Are there prebuilt dashboards I can use?",
+    "trap": "Without the skill, the model will likely suggest building custom dashboards from scratch",
+    "assertions": [
+      {"id": "34.1", "text": "Recommends specific Grafana dashboard IDs (21221, 6671, or 10826)"},
+      {"id": "34.2", "text": "Mentions dashboard 21221 for host + runtime combined view (or similar description)"},
+      {"id": "34.3", "text": "Explains that these dashboards use default Go collector metrics from the Prometheus client library"},
+      {"id": "34.4", "text": "Shows how to import: Dashboards > New > Import, enter the dashboard ID"}
+    ]
+  },
+  {
+    "id": 35,
+    "name": "slog-error-as-attr-not-positional",
+    "description": "Tests whether the model uses slog.Any/slog.Attr correctly for error values vs positional args",
+    "prompt": "I'm logging errors in my Go service using slog. Review this code:\n\nif err != nil {\n    slog.ErrorContext(ctx, \"payment failed\", err, \"order_id\", orderID)\n    return err\n}\n\nDoes this look right?",
+    "trap": "Without the skill, the model may miss that passing err directly as a positional argument (not as a named key-value pair) is incorrect. slog expects alternating key-value pairs; err as a positional arg becomes the key with its string representation, losing structured error metadata.",
+    "assertions": [
+      {"id": "35.1", "text": "Identifies that err is passed as a positional argument without a key name, which is incorrect for slog"},
+      {"id": "35.2", "text": "Explains that slog expects alternating key-value pairs — passing err without a key makes slog treat it as a mismatched argument or key"},
+      {"id": "35.3", "text": "Shows the corrected form using a named key: slog.ErrorContext(ctx, \"payment failed\", \"error\", err, \"order_id\", orderID)"},
+      {"id": "35.4", "text": "Notes that the correct form preserves the error's structured information (message, type) in the log record"}
+    ]
+  },
+  {
+    "id": 36,
+    "name": "slog-ecosystem-handlers",
+    "description": "Tests awareness of the slog handler ecosystem beyond stdlib",
+    "prompt": "I need my Go service logs to go to multiple destinations: JSON to stdout, errors to Sentry, and all logs to Datadog. Can slog do this?",
+    "trap": "Without the skill, the model may suggest writing custom handlers from scratch",
+    "assertions": [
+      {"id": "36.1", "text": "Recommends stdlib slog.NewMultiHandler for simple fan-out on Go 1.26+, or samber/slog-multi when stdlib composition is insufficient"},
+      {"id": "36.2", "text": "Mentions samber/slog-sentry for sending errors to Sentry"},
+      {"id": "36.3", "text": "Mentions samber/slog-datadog for sending logs to Datadog"},
+      {"id": "36.4", "text": "Explains that slog supports pluggable handlers"},
+      {"id": "36.5", "text": "References the slog ecosystem (go.dev/wiki/Resources-for-slog or similar)"}
+    ]
+  },
+  {
+    "id": 37,
+    "name": "parallel-observability-audit",
+    "description": "Tests the recommendation to use parallel sub-agents for observability audits in large codebases",
+    "prompt": "I need to audit observability across a Go monolith with 200+ packages. How should I approach this efficiently?",
+    "trap": "Without the skill, the model may suggest a linear, package-by-package approach",
+    "assertions": [
+      {"id": "37.1", "text": "Recommends using up to 5 parallel sub-agents (via the Agent tool)"},
+      {"id": "37.2", "text": "Assigns one sub-agent per signal: metrics, logging, tracing, profiling, RUM"},
+      {"id": "37.3", "text": "Sub-agent for metrics: verify metric declarations and PromQL comments"},
+      {"id": "37.4", "text": "Sub-agent for logging: check structured logging, PII in logs, error logging patterns"},
+      {"id": "37.5", "text": "Sub-agent for tracing: verify span creation in service methods, DB calls, API calls"}
+    ]
+  },
+  {
+    "id": 38,
+    "name": "predict-linear-for-saturation",
+    "description": "Tests knowledge of predict_linear PromQL function for anticipating resource exhaustion",
+    "prompt": "My Go service's database connection pool occasionally hits the maximum and requests start failing. I want to be alerted BEFORE it reaches the limit, not after. How can I set up predictive alerting?",
+    "trap": "Without the skill, the model may suggest a simple threshold alert at 90%, missing the predict_linear approach",
+    "assertions": [
+      {"id": "38.1", "text": "Recommends using predict_linear() PromQL function to extrapolate trends"},
+      {"id": "38.2", "text": "Shows an expression like: predict_linear(db_connections_active[15m], 600) > db_connections_max"},
+      {"id": "38.3", "text": "Explains that predict_linear extrapolates from recent trend to predict future value"},
+      {"id": "38.4", "text": "Also suggests a threshold alert (e.g., > 90%) as a complementary alert"}
+    ]
+  },
+  {
+    "id": 39,
+    "name": "self-hosted-rum-gdpr",
+    "description": "Tests the recommendation of self-hosted analytics for GDPR compliance simplification",
+    "prompt": "We're building a Go SaaS product targeting EU customers. We need product analytics (funnels, user behavior) but our legal team is concerned about sending user data to US-based analytics vendors. What should we do?",
+    "trap": "Without the skill, the model may suggest DPAs and SCCs with SaaS vendors, missing the self-hosted option",
+    "assertions": [
+      {"id": "39.1", "text": "Recommends self-hosted analytics (PostHog or Matomo) for EU data residency"},
+      {"id": "39.2", "text": "Explains that self-hosting eliminates cross-border data transfer concerns"},
+      {"id": "39.3", "text": "Compares self-hosted vs SaaS tradeoffs (data residency, cost, maintenance, features)"},
+      {"id": "39.4", "text": "Mentions that PostHog can be self-hosted to keep data in your own infrastructure"}
+    ]
+  },
+  {
+    "id": 40,
+    "name": "oops-structured-errors-tracing",
+    "description": "Tests awareness of samber/oops for structured errors in tracing context",
+    "prompt": "My Go service records errors on OpenTelemetry spans using span.RecordError(err). But the error messages are generic like 'connection refused' with no stack trace or request context. How can I get richer error information in my traces?",
+    "trap": "Without the skill, the model may suggest manually adding attributes to spans or using fmt.Errorf with more context",
+    "assertions": [
+      {"id": "40.1", "text": "Recommends samber/oops for structured errors with stack traces"},
+      {"id": "40.2", "text": "Shows using oops to wrap errors with domain (.In()), error code (.Code()), and structured attributes (.With())"},
+      {"id": "40.3", "text": "Explains that oops errors carry stack trace, structured context, and work with span.RecordError()"},
+      {"id": "40.4", "text": "Mentions compatibility with errors.Is/errors.As and slog"}
+    ]
+  }
+]

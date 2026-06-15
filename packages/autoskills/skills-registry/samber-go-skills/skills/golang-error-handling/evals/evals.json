@@ -1,0 +1,161 @@
+{
+  "skill_name": "golang-error-handling",
+  "evals": [
+    {
+      "id": 1,
+      "name": "middleware-log-chain",
+      "prompt": "Write a Go HTTP middleware chain with 3 middlewares: LoggingMiddleware, AuthMiddleware, RateLimitMiddleware. Each wraps the next handler. Each middleware should log what it's doing at each step and propagate errors properly up the chain. The final handler processes a request. Include detailed logging at each layer so we can trace the request flow.",
+      "trap": "\"log at each step\" tempts log+return violations and high-cardinality error messages with interpolated IPs/limits",
+      "assertions": [
+        { "id": "1.1", "text": "Uses slog (not log.Printf)" },
+        { "id": "1.2", "text": "Low-cardinality error messages (no IPs/limits interpolated)" },
+        { "id": "1.3", "text": "Structured error context (oops.With, not in error string)" },
+        { "id": "1.4", "text": "Structured slog key-value log entries" },
+        { "id": "1.5", "text": "Error strings lowercase" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "order-processor",
+      "prompt": "Write a Go function ProcessOrders(ctx context.Context, orders []Order) error that validates and processes each order. Order has ID, UserID, Amount, Currency fields. When validation fails (amount <= 0, empty currency, empty user ID), the error message should clearly indicate which order failed and why, so operators can debug issues in production. Return all errors, not just the first.",
+      "trap": "\"indicate which order failed\" tempts interpolating order IDs into error strings",
+      "assertions": [
+        { "id": "2.1", "text": "Log/APM grouping messages are low-cardinality; IDs and paths are attached as structured attributes rather than baked into the stable log message" },
+        { "id": "2.2", "text": "Variable data as structured attributes (oops/slog)" },
+        { "id": "2.3", "text": "Uses errors.Join to collect all order errors" },
+        { "id": "2.4", "text": "Error strings lowercase" },
+        { "id": "2.5", "text": "Validates ALL fields per order (no short-circuit)" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "batch-csv-importer",
+      "prompt": "Write a Go function ImportCSV(r io.Reader) (int, error) that reads a CSV with columns: name, email, phone. It validates each row (name not empty, email contains '@', phone is digits only). It should return the count of successfully imported rows and a detailed failure report showing every invalid row with its row number and which column failed, so operators can fix the CSV and retry. Process ALL rows even if early ones fail.",
+      "trap": "\"detailed failure report with row numbers\" tempts interpolating row/col into error strings",
+      "assertions": [
+        { "id": "3.1", "text": "Error messages static (no row numbers in error string)" },
+        { "id": "3.2", "text": "Row/column data as structured attributes (oops/slog)" },
+        { "id": "3.3", "text": "Collects all row errors (doesn't stop on first)" },
+        { "id": "3.4", "text": "Error strings lowercase" },
+        { "id": "3.5", "text": "Uses errors.Join for combining errors" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "wrapped-error-compare",
+      "prompt": "Fix the error handling in this Go code. All errors may be wrapped by middleware before reaching these handlers:\n\n```go\npackage storage\n\nimport (\n    \"database/sql\"\n    \"fmt\"\n    \"net\"\n)\n\nvar ErrNotFound = fmt.Errorf(\"Not Found.\")\nvar ErrConflict = fmt.Errorf(\"Conflict: resource already exists.\")\n\ntype TimeoutError struct {\n    Operation string\n    Duration  int\n}\nfunc (e *TimeoutError) Error() string {\n    return fmt.Sprintf(\"Timeout after %ds on %s.\", e.Duration, e.Operation)\n}\n\nfunc HandleDBError(err error) string {\n    if err == sql.ErrNoRows { return \"not found\" }\n    if err == sql.ErrTxDone { return \"transaction completed\" }\n    if te, ok := err.(*TimeoutError); ok { return fmt.Sprintf(\"timeout on %s\", te.Operation) }\n    if ne, ok := err.(*net.OpError); ok { return fmt.Sprintf(\"network error: %s\", ne.Op) }\n    return \"unknown error\"\n}\n```",
+      "trap": "Pre-existing fmt.Errorf sentinels with capitalization/punctuation + == comparisons + type assertions",
+      "assertions": [
+        { "id": "4.1", "text": "Sentinel errors use errors.New (not fmt.Errorf)" },
+        { "id": "4.2", "text": "Sentinel strings lowercase, no punctuation" },
+        { "id": "4.3", "text": "TimeoutError.Error() lowercase, no punctuation" },
+        { "id": "4.4", "text": "errors.Is for sentinel matching" },
+        { "id": "4.5", "text": "errors.As for type extraction" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "multi-service-fetch",
+      "prompt": "Write a Go function GetUserDashboard(ctx context.Context, userID string) (*Dashboard, error) that fetches data from 3 microservices: ProfileService.GetProfile(ctx, userID), PreferencesService.GetPreferences(ctx, userID), and ActivityService.GetRecentActivity(ctx, userID, 10). Combine the results into a Dashboard struct. Each service can fail independently.",
+      "trap": "Three service calls tempt bare return err without context or structured attributes",
+      "assertions": [
+        { "id": "5.1", "text": "Errors wrapped with service context" },
+        { "id": "5.2", "text": "Low-cardinality error messages" },
+        { "id": "5.3", "text": "Uses structured attributes (oops/slog)" },
+        { "id": "5.4", "text": "Error strings lowercase" },
+        { "id": "5.5", "text": "Each service identifiable by context prefix" }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "config-validation",
+      "prompt": "Write a Go function ValidateServerConfig(cfg ServerConfig) error. ServerConfig has: Host (string, required), Port (int, 1-65535), TLSCert (string, required if TLSEnabled), TLSKey (string, required if TLSEnabled), TLSEnabled (bool), MaxConns (int, > 0), ReadTimeout (time.Duration, > 0), WriteTimeout (time.Duration, > 0). Validate ALL fields and return a clear error listing every problem found.",
+      "trap": "Many fields tempts early return, custom error type with capitalized field prefixes, or []string instead of errors.Join",
+      "assertions": [
+        { "id": "6.1", "text": "Uses errors.Join for combining validation errors" },
+        { "id": "6.2", "text": "Error strings lowercase" },
+        { "id": "6.3", "text": "Validates ALL fields" },
+        { "id": "6.4", "text": "Conditional TLS validation" },
+        { "id": "6.5", "text": "No panic for validation" }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "modernize-logging",
+      "prompt": "Modernize the logging in this Go code. Keep all the logging but make it production-ready:\n\n```go\npackage worker\n\nimport (\n    \"fmt\"\n    \"log\"\n    \"time\"\n)\n\nfunc ProcessJob(jobID string, payload []byte) error {\n    log.Printf(\"INFO: Starting job %s with %d bytes payload\", jobID, len(payload))\n    start := time.Now()\n    result, err := executeJob(jobID, payload)\n    if err != nil {\n        log.Printf(\"ERROR: Job %s failed after %v: %v\", jobID, time.Since(start), err)\n        return fmt.Errorf(\"processing job %s: %w\", jobID, err)\n    }\n    if result.Warnings > 0 {\n        log.Printf(\"WARNING: Job %s completed with %d warnings\", jobID, result.Warnings)\n    }\n    log.Printf(\"INFO: Job %s completed in %v, processed %d items\", jobID, time.Since(start), result.ItemCount)\n    return nil\n}\n```\n\nA teammate reviewing your modernization says: 'Good, but you removed the error log — when executeJob fails, nothing gets logged. The caller might just propagate the error up the chain and it could get swallowed. We MUST log the error here so it's visible in production.'",
+      "trap": "The teammate's argument sounds reasonable — callers might swallow errors. The skill teaches that each error must be handled once: either log it OR return it, never both. If every function logs-and-returns, the same error gets logged multiple times at every layer, making logs noisy and hard to correlate. The model should push back on the teammate and keep only the return.",
+      "assertions": [
+        { "id": "7.1", "text": "Does not log AND return the same error — the modernized code must choose: either log (and not return) or return (and not log). Both is the anti-pattern." },
+        { "id": "7.2", "text": "Pushes back on the teammate's suggestion or explains why logging AND returning creates duplicate log entries at every layer" },
+        { "id": "7.3", "text": "Uses slog (not log.Printf) with structured key-value attributes" },
+        { "id": "7.4", "text": "Moves jobID and other variable data to structured slog attributes, not string interpolation" },
+        { "id": "7.5", "text": "Low-cardinality log messages — log messages are static strings, variable data is in attributes" }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "graceful-shutdown",
+      "prompt": "Write a Go Application struct with: HTTPServer (*http.Server), DB (*sql.DB), Cache (redis.Client), MessageQueue (amqp.Connection), MetricsServer (*http.Server). Implement GracefulShutdown(ctx context.Context) error that closes ALL of them. Each must be attempted regardless of others failing. Shutdown order: HTTP first, then MQ, then DB+Cache, then Metrics last.",
+      "trap": "5 resources tempts bare append without wrapping context on each error",
+      "assertions": [
+        { "id": "8.1", "text": "Uses errors.Join" },
+        { "id": "8.2", "text": "Each error wrapped with resource context" },
+        { "id": "8.3", "text": "Error strings lowercase" },
+        { "id": "8.4", "text": "Attempts ALL resources even if earlier fail" },
+        { "id": "8.5", "text": "Correct shutdown order" }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "todo-CRUD-repo",
+      "prompt": "Write a Go TodoRepository backed by *sql.DB with full CRUD: Create(ctx, *Todo) error, GetByID(ctx, id string) (*Todo, error), List(ctx, userID string) ([]*Todo, error), Update(ctx, *Todo) error, Delete(ctx, id string) error. Todo has ID, UserID, Title, Done, CreatedAt fields. Make it production-ready with proper error handling.",
+      "trap": "Full CRUD with IDs tempts interpolating todo_id and user_id into error strings",
+      "assertions": [
+        { "id": "9.1", "text": "Low-cardinality error messages (no ID interpolation)" },
+        { "id": "9.2", "text": "Errors wrapped with method context" },
+        { "id": "9.3", "text": "Uses errors.Is for sql.ErrNoRows" },
+        { "id": "9.4", "text": "Sentinel as package-level var" },
+        { "id": "9.5", "text": "Error strings lowercase" }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "retry-handler",
+      "prompt": "Write a Go function WithRetry(ctx context.Context, name string, maxAttempts int, fn func() error) error that retries fn up to maxAttempts times with exponential backoff (starting at 100ms, doubling each time). Log each retry attempt with the attempt number, delay, and error. On final failure, return the last error wrapped with context. Include the operation name and attempt info in logs so operators can diagnose intermittent failures.",
+      "trap": "\"log each retry attempt\" tempts logging inside the retry loop AND returning the final error (log+return)",
+      "assertions": [
+        { "id": "10.1", "text": "Does not log AND return final error (single handling rule)" },
+        { "id": "10.2", "text": "Structured slog attributes" },
+        { "id": "10.3", "text": "Uses slog (not log.Printf)" },
+        { "id": "10.4", "text": "Low-cardinality log messages" },
+        { "id": "10.5", "text": "Wraps final error with context" }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "event-processor",
+      "prompt": "Write a Go function ProcessEvents(ctx context.Context, events []Event) error that processes a batch of events. Event has ID, Type (string: \"user.created\", \"order.placed\", \"payment.failed\", etc.), Payload json.RawMessage, and Timestamp time.Time. Each event type dispatches to a different handler. When processing fails, the error should include the event type, ID, and timestamp so operators can identify which event failed. Collect all errors and return them.",
+      "trap": "\"include event type, ID, and timestamp\" tempts interpolating event details into error strings",
+      "assertions": [
+        { "id": "11.1", "text": "Error messages static (event type/ID not in error string)" },
+        { "id": "11.2", "text": "Event details as structured attributes (oops/slog)" },
+        { "id": "11.3", "text": "Uses errors.Join to collect all event errors" },
+        { "id": "11.4", "text": "Error strings lowercase" },
+        { "id": "11.5", "text": "No logging inside processor (returns to caller)" }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "api-gateway",
+      "prompt": "Write a Go API gateway package that proxies requests to a backend UserService. The gateway has a public GetUser(ctx, id) (*User, error) function. The backend UserService returns its own internal error types: *BackendTimeoutError (with Endpoint, Duration fields), *BackendNotFoundError (with Resource, ID fields), and generic errors.\n\nThe gateway must translate backend errors to clean public domain errors. A security-minded teammate reviewing the design says: 'Make sure you use fmt.Errorf with %w when wrapping backend errors — that way callers can use errors.As to inspect details if they need to debug. We should preserve the full error chain for observability.'\n\nIs the teammate's suggestion correct? Implement the gateway correctly.",
+      "trap": "The teammate's argument sounds compelling — preserving the error chain for observability is a real concern. But %w at an API boundary leaks internal implementation details: callers can use errors.As to inspect *BackendTimeoutError or *BackendNotFoundError, creating a hidden coupling to backend internals. The correct approach: use errors.As internally to extract details, translate to domain errors, and use %v (not %w) so the chain is broken at the boundary.",
+      "assertions": [
+        { "id": "12.1", "text": "Rejects the teammate's %w suggestion — using %w at the gateway boundary lets callers unwrap to backend-internal types via errors.As, creating hidden coupling to implementation details" },
+        { "id": "12.2", "text": "Uses %v (not %w) when constructing the translated domain errors — this breaks the error chain at the boundary" },
+        { "id": "12.3", "text": "Uses errors.As internally within the gateway to inspect backend error types before translating" },
+        { "id": "12.4", "text": "Backend types (*BackendTimeoutError, *BackendNotFoundError) are not accessible via errors.As from callers of the gateway" },
+        { "id": "12.5", "text": "Translates to clean public domain sentinels (ErrNotFound, ErrTimeout, ErrServiceUnavailable) with lowercase error strings" }
+      ]
+    }
+  ]
+}

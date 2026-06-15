@@ -1,0 +1,82 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  govulncheck:
+    name: Vulnerability Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+
+  gosec:
+    name: gosec
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run gosec
+        uses: securego/gosec@v2
+        with:
+          args: -no-fail -fmt sarif -out gosec-results.sarif ./...
+
+      - name: Upload gosec results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: gosec-results.sarif
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: go
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+
+  bearer:
+    name: Bearer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Bearer Security Scan
+        uses: bearer/bearer-action@v2
+        with:
+          format: sarif
+          output: bearer-results.sarif
+
+      - name: Upload Bearer results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: bearer-results.sarif

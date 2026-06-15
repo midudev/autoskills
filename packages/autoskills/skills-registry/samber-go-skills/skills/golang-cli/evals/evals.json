@@ -1,0 +1,342 @@
+[
+  {
+    "id": 1,
+    "name": "minimal-main-and-execute",
+    "description": "Tests that main.go is minimal and only calls Execute(), with os.Exit handled in main not inside commands",
+    "prompt": "Create the entry point for a Go CLI application called 'deploy' using Cobra. The app should have a root command and a 'push' subcommand. Write main.go and root.go.",
+    "trap": "Model puts configuration logic, flag parsing, or complex setup directly in main.go instead of keeping it minimal. May also call os.Exit inside RunE instead of returning errors.",
+    "assertions": [
+      {
+        "id": "1.1",
+        "text": "main.go only calls Execute() (or rootCmd.Execute()) and os.Exit on error — no configuration, flag setup, or business logic in main()"
+      },
+      {
+        "id": "1.2",
+        "text": "The root command sets SilenceUsage: true to prevent printing full usage text on every error"
+      },
+      {
+        "id": "1.3",
+        "text": "The root command sets SilenceErrors: true to control error output format"
+      },
+      {
+        "id": "1.4",
+        "text": "Subcommands do NOT call os.Exit() inside RunE — they return errors and let main() decide the exit code"
+      },
+      {
+        "id": "1.5",
+        "text": "The push subcommand is registered via rootCmd.AddCommand() in an init() function or setup function"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "viper-config-layering",
+    "description": "Tests proper Viper configuration precedence: flags > env > config file > defaults, with env prefix and config-file-not-required",
+    "prompt": "I'm building a Go CLI server tool with Cobra. It needs a --port flag (default 3000) that can also be set via the MYSERVER_PORT env var or a config file at ~/.myserver.yaml. Write the configuration setup code.",
+    "trap": "Model doesn't bind flags to Viper (so flags and env/config are disconnected), forgets SetEnvPrefix (causing env var collisions), or crashes when no config file exists instead of ignoring ConfigFileNotFoundError.",
+    "assertions": [
+      {
+        "id": "2.1",
+        "text": "Calls viper.BindPFlag to bind the port flag to Viper, ensuring viper.GetInt('port') returns the flag value when set"
+      },
+      {
+        "id": "2.2",
+        "text": "Sets an env prefix with viper.SetEnvPrefix('MYSERVER' or similar) to namespace env vars and avoid collisions"
+      },
+      {
+        "id": "2.3",
+        "text": "Calls viper.AutomaticEnv() to enable automatic env var binding"
+      },
+      {
+        "id": "2.4",
+        "text": "Handles viper.ConfigFileNotFoundError gracefully (ignores it) — config file is optional, not crashing when absent"
+      },
+      {
+        "id": "2.5",
+        "text": "The precedence order is correct: CLI flags > environment variables > config file > defaults"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "persistent-pre-run-config-init",
+    "description": "Tests that configuration initialization happens in PersistentPreRunE on the root command",
+    "prompt": "My Go CLI has a root command and three subcommands (serve, migrate, status). All of them need access to a database DSN from config. Where should I initialize the configuration so all subcommands have access? Write the code.",
+    "trap": "Model initializes config inside each subcommand's RunE (duplicating logic), or uses a global init() function instead of PersistentPreRunE, or puts it in cobra.OnInitialize without connecting it to the command tree properly.",
+    "assertions": [
+      {
+        "id": "3.1",
+        "text": "Configuration initialization happens in PersistentPreRunE on the root command — this ensures it runs before every subcommand"
+      },
+      {
+        "id": "3.2",
+        "text": "Config init is NOT duplicated inside each subcommand's RunE — it happens once in the root"
+      },
+      {
+        "id": "3.3",
+        "text": "The --config flag (or equivalent) is a persistent flag on the root command so all subcommands inherit it"
+      },
+      {
+        "id": "3.4",
+        "text": "Environment variables use a replacer (SetEnvKeyReplacer) to handle hyphens-to-underscores mapping (e.g., log-level becomes LOG_LEVEL)"
+      },
+      {
+        "id": "3.5",
+        "text": "Logging is configured to write to stderr, not stdout"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "stdout-vs-stderr-separation",
+    "description": "Tests that program output goes to stdout and diagnostics/errors/logs go to stderr",
+    "prompt": "Write a Go CLI command 'list-users' using Cobra that fetches users from a database and prints them. It should log progress messages, handle errors, and support being piped to other commands (e.g., `myapp list-users | grep admin`). Write the RunE function.",
+    "trap": "Model writes log messages, error messages, or progress indicators to stdout (using fmt.Println) instead of stderr, which would corrupt piped output. May also use os.Stdout directly instead of cmd.OutOrStdout().",
+    "assertions": [
+      {
+        "id": "4.1",
+        "text": "Program output (the user list) goes to stdout via cmd.OutOrStdout() or fmt.Fprint(cmd.OutOrStdout(), ...) — NOT os.Stdout directly"
+      },
+      {
+        "id": "4.2",
+        "text": "Log messages, progress indicators, or diagnostic output go to stderr (via slog, log, or fmt.Fprint(os.Stderr, ...)) — NOT stdout"
+      },
+      {
+        "id": "4.3",
+        "text": "Error messages go to stderr (via cmd.ErrOrStderr() or os.Stderr), not mixed with program output on stdout"
+      },
+      {
+        "id": "4.4",
+        "text": "Uses cmd.OutOrStdout() instead of os.Stdout directly, enabling test capture"
+      },
+      {
+        "id": "4.5",
+        "text": "The function returns an error from RunE rather than calling os.Exit() or log.Fatal() on failure"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "version-ldflags-injection",
+    "description": "Tests that version info is injected at build time via ldflags, not hardcoded",
+    "prompt": "Add a 'version' command to my Go CLI app that shows the version, git commit, and build date. How should I handle the version string?",
+    "trap": "Model hardcodes the version string as a constant (const version = \"1.0.0\") instead of using ldflags injection. May also not include the build command example.",
+    "assertions": [
+      {
+        "id": "5.1",
+        "text": "Version, commit, and date are package-level variables (var, not const) with placeholder defaults like 'dev' or 'unknown'"
+      },
+      {
+        "id": "5.2",
+        "text": "Shows or explains the -ldflags '-X ...' build command for injecting values at compile time"
+      },
+      {
+        "id": "5.3",
+        "text": "The version command uses cmd.OutOrStdout() for output, not fmt.Println or os.Stdout directly"
+      },
+      {
+        "id": "5.4",
+        "text": "Version is NOT hardcoded as a const string that would get out of sync with git tags"
+      },
+      {
+        "id": "5.5",
+        "text": "Optionally includes runtime/debug.ReadBuildInfo() as a fallback or supplement for Go module version info"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "exit-code-conventions",
+    "description": "Tests proper Unix exit code mapping — 0 for success, 1 for general error, 2 for usage errors",
+    "prompt": "My Go CLI tool needs to report different exit codes for different failure types: invalid arguments, missing config file, network timeout, and successful completion. Write the error handling and exit code logic in main.go.",
+    "trap": "Model uses the same exit code (1) for all errors, or calls os.Exit deep inside command handlers instead of in main(). May also use non-standard exit codes.",
+    "assertions": [
+      {
+        "id": "6.1",
+        "text": "Exit code 0 for success, exit code 1 for general runtime errors, exit code 2 for usage/argument errors — follows Unix conventions"
+      },
+      {
+        "id": "6.2",
+        "text": "os.Exit() is called only in main(), not inside RunE functions or command handlers"
+      },
+      {
+        "id": "6.3",
+        "text": "Uses a typed error or error wrapping pattern (like ExitError with a Code field) to propagate exit codes from commands to main"
+      },
+      {
+        "id": "6.4",
+        "text": "Errors are returned from commands, not swallowed with os.Exit() calls that skip deferred cleanup"
+      },
+      {
+        "id": "6.5",
+        "text": "Different error categories map to different exit codes, not all errors producing exit code 1"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "signal-handling-with-context",
+    "description": "Tests that signal handling uses signal.NotifyContext for context-based cancellation",
+    "prompt": "My Go CLI has a long-running 'serve' command that starts an HTTP server. I need graceful shutdown when the user presses Ctrl+C. Write the signal handling code.",
+    "trap": "Model uses a raw signal channel with signal.Notify instead of signal.NotifyContext, missing context propagation. May also not handle the shutdown timeout or forget SIGTERM.",
+    "assertions": [
+      {
+        "id": "7.1",
+        "text": "Uses signal.NotifyContext to propagate cancellation through context — NOT a raw channel with signal.Notify and manual select"
+      },
+      {
+        "id": "7.2",
+        "text": "Handles both os.Interrupt (Ctrl+C / SIGINT) and syscall.SIGTERM (container orchestrators)"
+      },
+      {
+        "id": "7.3",
+        "text": "Creates a shutdown timeout context (e.g., 10-30 seconds) for graceful shutdown, not blocking indefinitely"
+      },
+      {
+        "id": "7.4",
+        "text": "Calls srv.Shutdown(ctx) for graceful HTTP server shutdown, not srv.Close() which drops in-flight requests"
+      },
+      {
+        "id": "7.5",
+        "text": "Distinguishes http.ErrServerClosed (normal shutdown) from unexpected server errors"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "flag-binding-and-constraints",
+    "description": "Tests flag patterns: persistent vs local, required flags, mutual exclusion, and Viper binding",
+    "prompt": "My Go CLI 'deploy' command needs these flags:\n- --env (required, must be one of: dev, staging, prod)\n- --tag (required, the docker image tag)\n- --dry-run and --force (mutually exclusive)\n- --verbose (available on all commands, not just deploy)\n\nWrite the flag setup code using Cobra.",
+    "trap": "Model makes --verbose a local flag instead of persistent, doesn't use MarkFlagsMutuallyExclusive for dry-run/force, or forgets to bind flags to Viper.",
+    "assertions": [
+      {
+        "id": "8.1",
+        "text": "--verbose is a persistent flag (PersistentFlags) on the root command, not a local flag on deploy — it needs to be available on all commands"
+      },
+      {
+        "id": "8.2",
+        "text": "Uses MarkFlagRequired for --env and --tag flags"
+      },
+      {
+        "id": "8.3",
+        "text": "Uses MarkFlagsMutuallyExclusive for --dry-run and --force"
+      },
+      {
+        "id": "8.4",
+        "text": "Uses RegisterFlagCompletionFunc to provide completion values for --env (dev, staging, prod)"
+      },
+      {
+        "id": "8.5",
+        "text": "Binds configurable flags to Viper with viper.BindPFlag so they can be set via env vars or config file"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "argument-validation",
+    "description": "Tests use of Cobra's built-in argument validators instead of manual validation in RunE",
+    "prompt": "I have three Cobra commands:\n1. 'status' — takes no arguments\n2. 'deploy' — takes exactly one argument (the service name)\n3. 'scale' — takes 2-3 arguments (service, replica count, optional region)\n\nHow should I validate the arguments for each command?",
+    "trap": "Model manually validates len(args) inside RunE instead of using Cobra's declarative validators (cobra.NoArgs, cobra.ExactArgs, cobra.RangeArgs). May also use custom validation where built-in validators suffice.",
+    "assertions": [
+      {
+        "id": "9.1",
+        "text": "Uses cobra.NoArgs for the status command — not manual len(args) == 0 check"
+      },
+      {
+        "id": "9.2",
+        "text": "Uses cobra.ExactArgs(1) for the deploy command — not manual len(args) != 1 check"
+      },
+      {
+        "id": "9.3",
+        "text": "Uses cobra.RangeArgs(2, 3) for the scale command — not manual len(args) < 2 || len(args) > 3 check"
+      },
+      {
+        "id": "9.4",
+        "text": "Validators are set on the Args field of the command struct, not implemented inside RunE"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "cli-testing-pattern",
+    "description": "Tests that CLI commands are tested by executing programmatically with captured output",
+    "prompt": "Write tests for a Cobra CLI command 'greet' that takes a --name flag and prints a greeting. Test the default behavior and a custom name. Show the test helper and test function.",
+    "trap": "Model tests by running os.exec on the compiled binary instead of executing commands programmatically. May also not capture output via cmd.SetOut/cmd.SetErr buffers.",
+    "assertions": [
+      {
+        "id": "10.1",
+        "text": "Creates an executeCommand helper that sets up a buffer, calls cmd.SetOut(buf) and cmd.SetErr(buf), sets args, and executes"
+      },
+      {
+        "id": "10.2",
+        "text": "Tests are table-driven with multiple cases (at least default and custom name)"
+      },
+      {
+        "id": "10.3",
+        "text": "Uses cmd.SetArgs() to pass arguments programmatically — not os/exec.Command"
+      },
+      {
+        "id": "10.4",
+        "text": "Captures output via a bytes.Buffer set on the command — not by redirecting os.Stdout"
+      },
+      {
+        "id": "10.5",
+        "text": "Tests check both the output string and the error return value"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "machine-readable-output-format",
+    "description": "Tests support for --output flag with multiple formats (json/table/plain) for scriptability",
+    "prompt": "My Go CLI command 'list-services' shows running services. I need it to support both human-readable and machine-parseable output for scripting. What's the best approach?",
+    "trap": "Model only supports a single output format, or adds a --json boolean flag instead of a flexible --output format flag. May also not use tabwriter for table output.",
+    "assertions": [
+      {
+        "id": "11.1",
+        "text": "Supports an --output flag with at least json and table formats (not just a --json boolean toggle)"
+      },
+      {
+        "id": "11.2",
+        "text": "JSON output uses encoding/json encoder writing to cmd.OutOrStdout()"
+      },
+      {
+        "id": "11.3",
+        "text": "Table output uses text/tabwriter or similar for aligned columns — not ad-hoc spacing"
+      },
+      {
+        "id": "11.4",
+        "text": "The default format is human-readable (table), with JSON/plain as opt-in machine formats"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "shell-completion-setup",
+    "description": "Tests proper shell completion command and custom completions for flags",
+    "prompt": "Add shell completion support to my Go CLI built with Cobra. I want users to be able to run 'myapp completion bash' to generate a completion script. Also, the --env flag should suggest 'dev', 'staging', 'prod' during tab completion.",
+    "trap": "Model implements completion from scratch instead of using Cobra's built-in generators. May forget the ValidArgs field or RegisterFlagCompletionFunc for custom completions.",
+    "assertions": [
+      {
+        "id": "12.1",
+        "text": "Creates a 'completion' subcommand that supports bash, zsh, fish, and powershell as arguments"
+      },
+      {
+        "id": "12.2",
+        "text": "Uses Cobra's built-in completion generators (GenBashCompletionV2, GenZshCompletion, GenFishCompletion, GenPowerShellCompletionWithDesc) — not custom completion scripts"
+      },
+      {
+        "id": "12.3",
+        "text": "Uses RegisterFlagCompletionFunc for the --env flag to suggest dev/staging/prod values"
+      },
+      {
+        "id": "12.4",
+        "text": "Uses cobra.ExactValidArgs or ValidArgs to validate completion arguments for the completion command itself"
+      },
+      {
+        "id": "12.5",
+        "text": "Returns cobra.ShellCompDirectiveNoFileComp for flags that don't accept file paths"
+      }
+    ]
+  }
+]

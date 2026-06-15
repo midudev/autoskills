@@ -1,0 +1,53 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Run integration tests
+        run: go test -v -race -tags=integration -count=1 ./...
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/testdb?sslmode=disable
+          REDIS_URL: redis://localhost:6379

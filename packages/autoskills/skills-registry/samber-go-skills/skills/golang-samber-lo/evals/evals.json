@@ -1,0 +1,226 @@
+{
+  "skill_name": "golang-samber-lo",
+  "evals": [
+    {
+      "id": 1,
+      "name": "lop-for-io-trap",
+      "prompt": "I have a Go service that needs to fetch data from 50 different REST APIs concurrently and collect results. I'm using samber/lo already. Should I use lop.Map to parallelize the HTTP calls? Write the implementation.",
+      "expected_output": "Should recommend errgroup (or similar) for I/O-bound concurrency instead of lop. lop is for CPU-bound parallelism. Should explain why lop is wrong here (no context cancellation, no error handling, goroutine-per-element overhead for I/O).",
+      "assertions": [
+        {"text": "Recommends errgroup or similar I/O concurrency pattern instead of (or in addition to) lop for HTTP calls", "type": "semantic"},
+        {"text": "Explains that lop is designed for CPU-bound parallelism, not I/O-bound work", "type": "semantic"},
+        {"text": "Mentions lack of context cancellation as a limitation of lop for I/O", "type": "semantic"},
+        {"text": "Does NOT simply use lop.Map as the primary solution for HTTP fan-out", "type": "semantic"},
+        {"text": "Shows working Go code for the concurrent HTTP fetch pattern", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "premature-lom-optimization",
+      "prompt": "My Go API is a bit slow. I'm using lo.Filter and lo.Map in several places. I want to switch everything to lom.Filter and lom.Map for better performance. Can you help me refactor?",
+      "expected_output": "Should advise profiling first before switching to lom. Should warn about immutability loss. Should NOT blindly refactor everything to lom.",
+      "assertions": [
+        {"text": "Recommends profiling (pprof, alloc_objects) before switching to lom", "type": "semantic"},
+        {"text": "Warns that lom mutates the input slice (breaks immutability)", "type": "semantic"},
+        {"text": "Does NOT blindly refactor all lo calls to lom without questioning the premise", "type": "semantic"},
+        {"text": "Explains that the performance issue may not be caused by lo allocations", "type": "semantic"},
+        {"text": "Mentions that lom is only appropriate for hot paths confirmed by profiling", "type": "semantic"},
+        {"text": "Warns about concurrency safety implications of switching to mutable operations", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "stdlib-vs-lo-preference",
+      "prompt": "I'm writing a Go function that needs to check if a string slice contains a value, sort an int slice, and get all keys from a map. I already have samber/lo as a dependency. Should I use lo.Contains, and lo.Keys for these?",
+      "expected_output": "Should recommend stdlib slices.Contains and slices.Sort over lo equivalents when using Go 1.21+. For map keys, should gate maps.Keys to Go 1.23+ and use slices.Collect(maps.Keys(m)) when a slice is needed. Should explain that stdlib is preferred for operations it covers.",
+      "assertions": [
+        {"text": "Recommends slices.Contains from stdlib over lo.Contains", "type": "semantic"},
+        {"text": "Recommends slices.Sort or slices.SortFunc from stdlib", "type": "semantic"},
+        {"text": "Recommends slices.Collect(maps.Keys(m)) from stdlib over lo.Keys when the module targets Go 1.23+", "type": "semantic"},
+        {"text": "Mentions Go 1.21+ for slices helpers and Go 1.23+ for maps.Keys", "type": "semantic"},
+        {"text": "Explains the rationale: prefer stdlib when it covers the operation to avoid unnecessary dependency usage", "type": "semantic"},
+        {"text": "Acknowledges that lo is still useful for operations stdlib doesn't provide (Map, Filter, Reduce, GroupBy)", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "loi-go-version-constraint",
+      "prompt": "I'm building a data pipeline in Go 1.20 that chains multiple transformations on a large dataset (1M records). I want to use lo/it for lazy evaluation to avoid intermediate allocations. Show me how.",
+      "expected_output": "Should warn that lo/it requires Go 1.23+ and cannot be used with Go 1.20. Should suggest alternatives.",
+      "assertions": [
+        {"text": "Warns that lo/it (loi) requires Go 1.23+ and is not available in Go 1.20", "type": "semantic"},
+        {"text": "Suggests upgrading Go version to 1.23+ to use lo/it", "type": "semantic"},
+        {"text": "Provides alternative approaches for Go 1.20 (e.g., compose lo functions, manual pipeline, or accept intermediate allocations)", "type": "semantic"},
+        {"text": "Does NOT provide lo/it code that won't compile on Go 1.20", "type": "semantic"},
+        {"text": "Mentions that loi uses range-over-func which is a Go 1.23 feature", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "must-init-scope-boundary",
+      "prompt": "I'm setting up a Go application. I use lo.Must in two places: (1) in main() to parse a required config file at startup, and (2) in an HTTP handler to parse each incoming request body. A teammate says both uses are wrong. Is that right?",
+      "expected_output": "Should distinguish: lo.Must is acceptable in main()/init() for startup failures where panicking is appropriate (app can't run without valid config). It is NOT acceptable in HTTP handlers where panics crash the request and potentially the server. The teammate is wrong about the init use case.",
+      "assertions": [
+        {"text": "Correctly identifies that lo.Must in main() for startup config parsing IS acceptable", "type": "semantic"},
+        {"text": "Correctly identifies that lo.Must in the HTTP handler is NOT acceptable (panics on each bad request)", "type": "semantic"},
+        {"text": "Does NOT blanket-reject all uses of Must — init/startup usage is valid", "type": "semantic"},
+        {"text": "Explains the reasoning: startup panics are appropriate failure modes; request panics are not", "type": "semantic"},
+        {"text": "Shows proper error handling in the HTTP handler (if err != nil with http.Error response)", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 6,
+      "name": "import-aliases-knowledge",
+      "prompt": "I want to use the parallel, mutable, and iterator sub-packages of samber/lo in my Go project. What are the correct import paths and conventional aliases?",
+      "expected_output": "Should list all import paths with their conventional aliases: lop, lom, loi.",
+      "assertions": [
+        {"text": "Lists github.com/samber/lo/parallel with alias lop", "type": "semantic"},
+        {"text": "Lists github.com/samber/lo/mutable with alias lom", "type": "semantic"},
+        {"text": "Lists github.com/samber/lo/it with alias loi", "type": "semantic"},
+        {"text": "Mentions that lo/it requires Go 1.23+", "type": "semantic"},
+        {"text": "Lists the core package github.com/samber/lo with alias lo", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 7,
+      "name": "immutability-trap",
+      "prompt": "I have this Go code using samber/lo:\n\nusers := []User{{Name: \"Alice\", Active: true}, {Name: \"Bob\", Active: false}}\nlo.Filter(users, func(u User, _ int) bool { return u.Active })\nfmt.Println(len(users)) // What does this print?\n\nWill the users slice be modified after the Filter call?",
+      "expected_output": "Should clearly state that lo.Filter does NOT modify the input slice. The original users slice still has 2 elements. Must mention immutability-by-default.",
+      "assertions": [
+        {"text": "States that lo.Filter returns a NEW slice and does NOT modify the input", "type": "semantic"},
+        {"text": "Correctly says len(users) still prints 2", "type": "semantic"},
+        {"text": "Explains that lo is immutable by default — all core functions return new collections", "type": "semantic"},
+        {"text": "Points out the bug: the return value of lo.Filter is discarded and should be assigned", "type": "semantic"},
+        {"text": "Mentions lom.Filter as the alternative if in-place mutation is desired", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 8,
+      "name": "error-variant-awareness",
+      "prompt": "I'm using samber/lo to transform a slice of URLs into responses by making HTTP calls. Some calls might fail. Currently I'm using lo.Map and collecting errors manually in a separate slice. Is there a better way?",
+      "expected_output": "Should recommend lo.MapErr which stops on first error, or lo.FilterMap for skipping errors. Should explain error variant pattern.",
+      "assertions": [
+        {"text": "Recommends lo.MapErr as the error-aware variant of lo.Map", "type": "semantic"},
+        {"text": "Explains that MapErr stops processing on the first error and returns (result, error)", "type": "semantic"},
+        {"text": "Shows the MapErr function signature or usage example", "type": "semantic"},
+        {"text": "Mentions that most lo functions have Err suffixes (FilterErr, ReduceErr, etc.)", "type": "semantic"},
+        {"text": "Alternatively suggests lo.FilterMap if the goal is to skip errors rather than stop", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 9,
+      "name": "simd-production-stability",
+      "prompt": "I want to use lo/exp/simd for optimizing numeric array operations in my production Go service. It processes millions of float64 values. Is this a good idea?",
+      "expected_output": "Should warn that simd is experimental, API may break between versions, not covered by semver stability. Recommend benchmarking first.",
+      "assertions": [
+        {"text": "Warns that lo/exp/simd is experimental and API may break between versions", "type": "semantic"},
+        {"text": "States it is NOT covered by semver stability guarantees", "type": "semantic"},
+        {"text": "Recommends benchmarking to verify actual performance gains before adopting", "type": "semantic"},
+        {"text": "Suggests version pinning if used despite experimental status", "type": "semantic"},
+        {"text": "Does NOT unconditionally recommend simd for production use", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 10,
+      "name": "streaming-redirect-to-ro",
+      "prompt": "I need to build a reactive data pipeline in Go that processes an infinite stream of events from Kafka, applies transformations, and publishes results. I'm already using samber/lo for batch transforms. Can I use lo for this streaming use case?",
+      "expected_output": "Should redirect to samber/ro for reactive/streaming pipelines. Should explain that lo is for finite/batch transforms, not infinite streams.",
+      "assertions": [
+        {"text": "Recommends samber/ro for reactive/streaming pipelines over infinite event streams", "type": "semantic"},
+        {"text": "Explains that lo is designed for finite/batch collection transforms, not infinite streams", "type": "semantic"},
+        {"text": "Mentions the golang-samber-ro skill or samber/ro package by name", "type": "semantic"},
+        {"text": "Does NOT attempt to use lo.Map/lo.Filter for infinite stream processing", "type": "semantic"},
+        {"text": "Explains the conceptual difference: lo = batch/finite, ro = reactive/infinite", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 11,
+      "name": "lop-threshold-cpu-vs-io",
+      "prompt": "I have two use cases in my Go service both using samber/lo. (A) I'm resizing 20 images in memory — each resize takes ~200ms of CPU. (B) I'm extracting the 'name' field from 50 user structs in memory. My teammate says I should switch both to lop for better performance. What do you think?",
+      "expected_output": "Case A (image resizing): lop is appropriate — CPU-bound work, substantial per-item cost, enough items to justify goroutine overhead. Case B (field extraction): lop is wrong — trivially cheap operation on a small dataset; goroutine overhead exceeds benefit. The teammate is only right about case A.",
+      "assertions": [
+        {"text": "Approves lop.Map for case A (CPU-bound image resizing with ~200ms per item)", "type": "semantic"},
+        {"text": "Rejects lop.Map for case B (trivial field extraction on 50 items)", "type": "semantic"},
+        {"text": "Distinguishes CPU-bound work (lop appropriate) from trivial/cheap operations (lo sufficient)", "type": "semantic"},
+        {"text": "Mentions that lop overhead only pays off for CPU-bound work on datasets of ~1000+ items OR expensive per-item operations", "type": "semantic"},
+        {"text": "Does NOT recommend lop for both use cases indiscriminately", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 12,
+      "name": "filtermap-vs-maperr-for-partial-failures",
+      "prompt": "I have a []string of user-supplied date strings. I need to parse each one with time.Parse, keep the successfully parsed dates, and silently discard parse failures (not stop on first error). I'm using samber/lo. What's the right approach?",
+      "expected_output": "Should recommend lo.FilterMap (not lo.MapErr which stops on first error, and not lo.Filter+lo.Map which creates an intermediate slice). FilterMap maps and keeps only successful results in a single pass. The key trap is that MapErr stops on the first error, which is the opposite of what's wanted here.",
+      "assertions": [
+        {"text": "Recommends lo.FilterMap for map-and-discard-failures in a single pass", "type": "semantic"},
+        {"text": "Does NOT recommend lo.MapErr (which stops on first error, not what's wanted)", "type": "semantic"},
+        {"text": "Shows FilterMap with a (time.Time, bool) return where bool is false on parse failure", "type": "semantic"},
+        {"text": "Explains that FilterMap silently discards items where the bool is false", "type": "semantic"},
+        {"text": "Does NOT chain lo.Filter + lo.Map as the primary solution (creates intermediate slice)", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 13,
+      "name": "channel-dispatcher-load-balancing-strategy",
+      "prompt": "I have a Go service that distributes tasks to 4 worker goroutines via channels. Workers have different processing speeds — some tasks go to a fast worker (handles 3x more), others to slower workers. I'm using samber/lo and already know about lo.ChannelDispatcher. Which dispatch strategy should I use so that faster workers receive proportionally more tasks?",
+      "expected_output": "Should recommend WeightedRandom strategy. RoundRobin ignores worker speed. Random is uniform. WeightedRandom lets you assign relative weights matching worker capacity. Should show how to configure weights.",
+      "assertions": [
+        {"text": "Recommends the WeightedRandom dispatch strategy (not RoundRobin or Random)", "type": "semantic"},
+        {"text": "Explains that RoundRobin distributes evenly regardless of worker capacity", "type": "semantic"},
+        {"text": "Explains that WeightedRandom allows assigning proportional weights to each output channel", "type": "semantic"},
+        {"text": "Shows lo.ChannelDispatcher usage with the WeightedRandom strategy and weights", "type": "semantic"},
+        {"text": "Does NOT recommend RoundRobin as the primary solution for unequal-capacity workers", "type": "semantic"},
+        {"text": "Shows or describes setting weights where the fast worker gets 3x the weight of slow workers", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 14,
+      "name": "v2-version-trap",
+      "prompt": "I want to upgrade my project from samber/lo v1 to v2 for the latest features. What's the migration path? Are there breaking changes?",
+      "expected_output": "Should clarify that there is no v2 of samber/lo. The library is on v1 with semver stability guarantees.",
+      "assertions": [
+        {"text": "States that samber/lo v2 does not exist — the library is on v1", "type": "semantic"},
+        {"text": "Mentions that v1 follows semantic versioning with no breaking changes before v2", "type": "semantic"},
+        {"text": "Provides the correct install command: go get github.com/samber/lo@v1", "type": "semantic"},
+        {"text": "Does NOT fabricate v2 migration steps or breaking changes", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 15,
+      "name": "lazy-chain-intermediate-allocations",
+      "prompt": "I have a pipeline in Go that processes 1M records: filter by status, map to extract fields, group by category, then take the top 10 from each group. Using samber/lo, each step creates an intermediate slice. How can I avoid these intermediate allocations?",
+      "expected_output": "Should recommend lo/it (loi) for lazy evaluation to eliminate intermediate allocations. Should explain the lazy pipeline pattern.",
+      "assertions": [
+        {"text": "Recommends lo/it (loi) for lazy evaluation to avoid intermediate slice allocations", "type": "semantic"},
+        {"text": "Explains that loi pipelines process elements on-demand without buffering intermediate results", "type": "semantic"},
+        {"text": "Mentions Go 1.23+ requirement for loi", "type": "semantic"},
+        {"text": "Shows or describes a lazy pipeline using loi functions", "type": "semantic"},
+        {"text": "Contrasts eager (lo) vs lazy (loi) approach in terms of memory allocation", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 16,
+      "name": "lo-zero-dependencies",
+      "prompt": "My team is concerned about adding samber/lo as a dependency. They worry about transitive dependencies and supply chain risk. What dependencies does samber/lo pull in?",
+      "expected_output": "Should state that samber/lo has zero external runtime dependencies — it relies only on Go's standard library.",
+      "assertions": [
+        {"text": "States that samber/lo has zero external/runtime dependencies", "type": "semantic"},
+        {"text": "Mentions it relies only on Go's standard library", "type": "semantic"},
+        {"text": "Addresses the supply chain concern by noting minimal transitive dependency risk", "type": "semantic"},
+        {"text": "Does NOT claim lo has external dependencies", "type": "semantic"}
+      ]
+    },
+    {
+      "id": 17,
+      "name": "ternary-side-effect-ordering",
+      "prompt": "I'm refactoring a Go function to use samber/lo for conciseness. I have this code:\n\n```go\nvar label string\nif isAdmin {\n    label = formatAdminLabel(user) // calls DB, expensive\n} else {\n    label = user.Name\n}\n```\n\nI rewrote it as:\n\n```go\nlabel := lo.Ternary(isAdmin, formatAdminLabel(user), user.Name)\n```\n\nMy colleague says this is a bug. Are they right?",
+      "expected_output": "Yes, the colleague is right. lo.Ternary is a regular Go function call — both arguments are evaluated before the function is called. formatAdminLabel(user) runs unconditionally even when isAdmin is false. Should recommend lo.TernaryF with closures so only the winning branch executes.",
+      "assertions": [
+        {"text": "Confirms the colleague is correct — this is indeed a bug", "type": "semantic"},
+        {"text": "Explains that lo.Ternary evaluates BOTH branches before the function is called (Go's eager argument evaluation)", "type": "semantic"},
+        {"text": "Identifies that formatAdminLabel(user) runs even when isAdmin is false", "type": "semantic"},
+        {"text": "Recommends lo.TernaryF with closures: lo.TernaryF(isAdmin, func() string { return formatAdminLabel(user) }, func() string { return user.Name })", "type": "semantic"}
+      ]
+    }
+  ]
+}

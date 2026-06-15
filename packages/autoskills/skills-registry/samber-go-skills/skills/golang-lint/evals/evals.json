@@ -1,0 +1,305 @@
+[
+  {
+    "id": 1,
+    "name": "nolint-directive-specificity",
+    "description": "Tests that nolint directives specify the linter name and include a justification — never bare //nolint",
+    "prompt": "I have a Go function that triggers several lint warnings. I want to suppress them. Write the nolint directives for these cases:\n\n1. A logger.Sync() call where the error is intentionally ignored\n2. A type assertion that is guaranteed safe by a preceding type switch\n3. A function with cyclomatic complexity of 15 that orchestrates 6 subsystems\n4. A table-driven test function that is 200 lines long\n5. A deprecated API call that we can't migrate yet\n\nShow the code with proper suppression directives.",
+    "trap": "Model uses bare //nolint without specifying the linter name, or omits the justification comment. May also use //nolint at the file level instead of per-line.",
+    "assertions": [
+      {
+        "id": "1.1",
+        "text": "Every //nolint directive specifies the linter name (e.g., //nolint:errcheck, //nolint:gocyclo) — NO bare //nolint without a linter name"
+      },
+      {
+        "id": "1.2",
+        "text": "Every //nolint directive includes a justification comment after // (e.g., //nolint:errcheck // fire-and-forget logging)"
+      },
+      {
+        "id": "1.3",
+        "text": "The type assertion uses //nolint:forcetypeassert with an explanation referencing why the assertion is safe"
+      },
+      {
+        "id": "1.4",
+        "text": "The long test function uses //nolint:funlen with a justification like 'table-driven test, length proportional to case count'"
+      },
+      {
+        "id": "1.5",
+        "text": "The cyclomatic complexity suppression uses //nolint:gocyclo with a justification about orchestration"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "nolint-fix-vs-suppress-judgment",
+    "description": "Tests judgment about when to fix vs when to suppress — security and correctness linters should almost never be suppressed",
+    "prompt": "My Go codebase has these lint warnings. For each one, should I fix the code or suppress the warning? Explain.\n\n1. `bodyclose: response body not closed` on an HTTP client call\n2. `funlen: function too long (150 lines)` on a table-driven test\n3. `errcheck: error return not checked` on a database query in a request handler\n4. `dupl: duplicate code block` on two similar but intentionally parallel handler functions\n5. `sqlclosecheck: rows not closed` on a database query\n6. `goconst: string 'application/json' repeated 4 times` in test assertions",
+    "trap": "Model suppresses bodyclose, errcheck on production DB code, or sqlclosecheck — these are real bugs, not style issues. Should only suppress funlen, dupl, and goconst with justifications.",
+    "assertions": [
+      {
+        "id": "2.1",
+        "text": "Recommends FIXING bodyclose — unclosed HTTP response bodies leak connections, this is a real resource leak"
+      },
+      {
+        "id": "2.2",
+        "text": "Recommends SUPPRESSING funlen on the table-driven test — length is proportional to test case count, splitting would be worse"
+      },
+      {
+        "id": "2.3",
+        "text": "Recommends FIXING errcheck on the database query — unchecked errors in production request handlers cause silent failures"
+      },
+      {
+        "id": "2.4",
+        "text": "Recommends SUPPRESSING dupl on intentional parallel structure — with a justification that the parallel pattern is clearer than abstracting"
+      },
+      {
+        "id": "2.5",
+        "text": "Recommends FIXING sqlclosecheck — unclosed sql.Rows leak database connections"
+      },
+      {
+        "id": "2.6",
+        "text": "Recommends SUPPRESSING goconst in tests — extracting 'application/json' to a constant in tests would reduce clarity"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "golangci-yml-version-2-structure",
+    "description": "Tests knowledge of golangci-lint v2 config structure: version field, linters.enable/disable, formatters section",
+    "prompt": "Create a .golangci.yml configuration file for a Go project. Enable at least govet, staticcheck, errcheck, and gofumpt. Set the timeout to 5 minutes and configure errcheck to also check type assertions.",
+    "trap": "Model uses golangci-lint v1 config format (missing version: \"2\", using enable-all/disable-all, missing formatters section, putting gofumpt in linters instead of formatters).",
+    "assertions": [
+      {
+        "id": "3.1",
+        "text": "Config file has version: \"2\" at the top — golangci-lint v2 requires this field"
+      },
+      {
+        "id": "3.2",
+        "text": "Linters are listed under linters.enable (not enable-all with exclusions) — explicit listing is the recommended approach"
+      },
+      {
+        "id": "3.3",
+        "text": "gofumpt is configured under formatters.enable, NOT under linters.enable — formatters are a separate section in v2"
+      },
+      {
+        "id": "3.4",
+        "text": "errcheck has check-type-assertions: true in linters.settings.errcheck"
+      },
+      {
+        "id": "3.5",
+        "text": "Timeout is set under run.timeout: 5m"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "linter-categories-correctness-vs-style",
+    "description": "Tests understanding of linter domains — which linters catch bugs vs which catch style issues",
+    "prompt": "I'm setting up golangci-lint for a new Go project and can only enable 10 linters due to team constraints. Which 10 should I prioritize and why? Categorize them.",
+    "trap": "Model prioritizes style linters (revive, godot, misspell) over correctness linters (govet, staticcheck, errcheck, nilerr). May also include deprecated or redundant linters.",
+    "assertions": [
+      {
+        "id": "4.1",
+        "text": "Includes govet and staticcheck — these are the highest-value correctness linters that catch real bugs"
+      },
+      {
+        "id": "4.2",
+        "text": "Includes errcheck — unchecked errors are the most common source of silent failures in Go"
+      },
+      {
+        "id": "4.3",
+        "text": "Prioritizes correctness/safety linters over style linters — bug-finding tools provide more value than formatting preferences"
+      },
+      {
+        "id": "4.4",
+        "text": "Includes at least one security linter (bodyclose, gosec, or sqlclosecheck) for resource leak prevention"
+      },
+      {
+        "id": "4.5",
+        "text": "Does NOT include both gocyclo and cyclop (redundant) or both gocognit and gocyclo (overlapping complexity checkers)"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "legacy-codebase-incremental-adoption",
+    "description": "Tests the new-from-rev strategy for adopting linters on legacy code without drowning in warnings",
+    "prompt": "We have a large legacy Go codebase with 2000+ lint warnings. We want to adopt golangci-lint but can't fix everything at once. How should we approach this?",
+    "trap": "Model suggests suppressing all existing warnings with //nolint directives, or disabling linters until the code is clean. Doesn't know about new-from-rev for incremental adoption.",
+    "assertions": [
+      {
+        "id": "5.1",
+        "text": "Recommends setting issues.new-from-rev (e.g., HEAD~1 or main) in .golangci.yml to only lint new/changed code"
+      },
+      {
+        "id": "5.2",
+        "text": "Does NOT suggest adding //nolint directives to all 2000+ existing warnings — that's unmaintainable"
+      },
+      {
+        "id": "5.3",
+        "text": "Suggests gradually cleaning up old code over time while enforcing quality on new code"
+      },
+      {
+        "id": "5.4",
+        "text": "Suggests running golangci-lint run --fix for auto-fixable issues as a quick first pass"
+      },
+      {
+        "id": "5.5",
+        "text": "Mentions using parallel sub-agents or batching fixes by linter category (security, error handling, style) to tackle cleanup efficiently"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "interpreting-lint-output-format",
+    "description": "Tests ability to read lint output format and use the linter name for targeted investigation or suppression",
+    "prompt": "I ran golangci-lint and got this output:\n\n```\nserver/handler.go:42:10: Error return value of `(*DB).Close` is not checked (errcheck)\nserver/handler.go:55:2: response body must be closed (bodyclose)\nserver/auth.go:12:6: func `validateToken` is unused (unused)\nserver/auth.go:30:1: cyclomatic complexity 17 of func `processAuth` is high (> 13) (gocyclo)\nserver/model.go:5:2: exported type `Model` should have comment or be unexported (revive)\n```\n\nFor each warning, explain what it means and whether I should fix or suppress it.",
+    "trap": "Model doesn't use the linter name in parentheses to guide its response. May treat all warnings equally instead of recognizing that errcheck and bodyclose are critical while revive is style.",
+    "assertions": [
+      {
+        "id": "6.1",
+        "text": "Identifies errcheck on DB.Close as a real issue to fix — unchecked database close errors can mask connection problems"
+      },
+      {
+        "id": "6.2",
+        "text": "Identifies bodyclose as a critical resource leak to fix — not suppress"
+      },
+      {
+        "id": "6.3",
+        "text": "Identifies unused validateToken as dead code to either remove or fix — not suppress"
+      },
+      {
+        "id": "6.4",
+        "text": "For gocyclo, evaluates whether processAuth should be refactored or suppressed based on its nature (orchestration function vs genuinely complex logic)"
+      },
+      {
+        "id": "6.5",
+        "text": "For revive comment warning, correctly identifies it as a style issue that's lower priority than the correctness issues above"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "disabled-linters-with-rationale",
+    "description": "Tests understanding of which linters should be disabled and why — the recommended config explicitly disables several with reasons",
+    "prompt": "A colleague wants to enable these linters in our .golangci.yml: exhaustruct, gochecknoglobals, wrapcheck, mnd (magic number detector), and varnamelen. Should we? Explain your reasoning for each.",
+    "trap": "Model enables all of them without considering that they are intentionally excluded from the recommended config due to being too noisy, too opinionated, or breaking idiomatic Go patterns.",
+    "assertions": [
+      {
+        "id": "7.1",
+        "text": "Recommends AGAINST exhaustruct — it requires all struct fields to be set, which breaks Go's zero-value idiom and is extremely noisy"
+      },
+      {
+        "id": "7.2",
+        "text": "Recommends AGAINST gochecknoglobals — there are many valid uses for global variables in Go (loggers, registries, etc.) and a blanket ban is too strict"
+      },
+      {
+        "id": "7.3",
+        "text": "Recommends AGAINST wrapcheck as a default — it forces wrapping all external errors, which is too noisy and not always appropriate"
+      },
+      {
+        "id": "7.4",
+        "text": "Recommends AGAINST mnd — magic number detection is extremely noisy, flagging obvious constants like HTTP status codes"
+      },
+      {
+        "id": "7.5",
+        "text": "Recommends AGAINST varnamelen — Go idiomatically favors short variable names, and this linter conflicts with that philosophy"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "nolintlint-meta-linter",
+    "description": "Tests knowledge that nolintlint enforces proper nolint directive usage and should be enabled",
+    "prompt": "I see //nolint directives scattered throughout our Go codebase. Many are bare '//nolint' without specifying which linter or why. How can I enforce proper nolint hygiene automatically?",
+    "trap": "Model suggests a manual code review process or a custom script instead of enabling the nolintlint linter with require-explanation and require-specific settings.",
+    "assertions": [
+      {
+        "id": "8.1",
+        "text": "Recommends enabling the nolintlint linter — it automatically enforces nolint directive quality"
+      },
+      {
+        "id": "8.2",
+        "text": "Configures nolintlint with require-specific: true to require linter names (not bare //nolint)"
+      },
+      {
+        "id": "8.3",
+        "text": "Configures nolintlint with require-explanation: true to require justification comments"
+      },
+      {
+        "id": "8.4",
+        "text": "Shows the correct config location: linters.settings.nolintlint in .golangci.yml"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "multiple-nolint-comma-syntax",
+    "description": "Tests proper syntax for suppressing multiple linters on one line",
+    "prompt": "I have a line of Go code that triggers both errcheck and gosec warnings. I've confirmed both are false positives in this specific case. How do I suppress both on the same line?",
+    "trap": "Model uses two separate //nolint directives on the same line, or uses //nolint without comma separation, or stacks directives on consecutive lines for the same code line.",
+    "assertions": [
+      {
+        "id": "9.1",
+        "text": "Uses comma-separated linter names in a single directive: //nolint:errcheck,gosec — not two separate //nolint directives"
+      },
+      {
+        "id": "9.2",
+        "text": "Includes a justification comment after the directive explaining why both are false positives"
+      },
+      {
+        "id": "9.3",
+        "text": "The directive is placed on the same line as the flagged code or the line immediately above it"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "common-config-issues",
+    "description": "Tests troubleshooting knowledge for golangci-lint: timeout, v1-to-v2 migration, linter-not-found",
+    "prompt": "I'm getting these errors with golangci-lint:\n1. 'deadline exceeded' when running on our large monorepo\n2. After upgrading to golangci-lint v2, my .golangci.yml throws config errors\n3. 'linter modernize not found' even though I listed it in enable\n\nHow do I fix each?",
+    "trap": "Model doesn't know about the v2 config migration tool, suggests reinstalling for the linter-not-found issue instead of checking the golangci-lint version, or increases concurrency instead of timeout.",
+    "assertions": [
+      {
+        "id": "10.1",
+        "text": "For deadline exceeded: recommends increasing run.timeout in .golangci.yml (default is 5m, may need 10m+ for large repos)"
+      },
+      {
+        "id": "10.2",
+        "text": "For v1 config errors: recommends running golangci-lint migrate to convert the config format to v2"
+      },
+      {
+        "id": "10.3",
+        "text": "For linter not found: recommends checking the golangci-lint version — modernize requires v2.6.0+ or similar newer version"
+      },
+      {
+        "id": "10.4",
+        "text": "Mentions golangci-lint linters command to check available linters in the installed version"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "formatter-vs-linter-distinction",
+    "description": "Tests that formatters (gofumpt, gofmt) are configured in the formatters section, not the linters section, and use the fmt subcommand",
+    "prompt": "I want to enforce consistent code formatting in my Go project using golangci-lint. I want gofumpt with extra rules. How do I set it up?",
+    "trap": "Model puts gofumpt in the linters.enable section instead of formatters.enable (v2 distinction), or doesn't mention the golangci-lint fmt subcommand for formatting.",
+    "assertions": [
+      {
+        "id": "11.1",
+        "text": "Configures gofumpt under formatters.enable, NOT linters.enable — formatters are a separate section in golangci-lint v2"
+      },
+      {
+        "id": "11.2",
+        "text": "Sets gofumpt extra-rules: true under formatters.settings.gofumpt"
+      },
+      {
+        "id": "11.3",
+        "text": "Mentions the golangci-lint fmt ./... command for running formatters — separate from golangci-lint run"
+      },
+      {
+        "id": "11.4",
+        "text": "Notes that gci and goimports are redundant with gofumpt and can be disabled"
+      }
+    ]
+  }
+]

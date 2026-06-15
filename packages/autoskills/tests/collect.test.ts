@@ -77,8 +77,8 @@ describe("collectSkills", () => {
     deepStrictEqual(
       skills.slice(0, 2).map(({ skill, sources }) => ({ skill, sources })),
       [
-        { skill: "affaan-m/everything-claude-code/golang-patterns", sources: ["Go"] },
-        { skill: "affaan-m/everything-claude-code/golang-testing", sources: ["Go"] },
+        { skill: "samber/cc-skills-golang/golang-code-style", sources: ["Go"] },
+        { skill: "samber/cc-skills-golang/golang-concurrency", sources: ["Go"] },
       ],
     );
   });

@@ -1,0 +1,153 @@
+[
+  {
+    "id": 1,
+    "name": "ask-before-adding-dependency",
+    "description": "Tests whether the AI agent asks for user confirmation before adding a new dependency via go get",
+    "prompt": "I need to parse YAML configuration files in my Go project. Add the dependency and write the config parsing code.",
+    "trap": "Without the skill, the model immediately runs go get for a YAML library without asking the user for confirmation, presenting alternatives, or checking stdlib",
+    "assertions": [
+      {"id": "1.1", "text": "Asks the user for confirmation before running go get to add a new dependency"},
+      {"id": "1.2", "text": "Presents the package name and import path"},
+      {"id": "1.3", "text": "Mentions whether the standard library covers the use case (encoding/json does, but YAML does not have stdlib support)"},
+      {"id": "1.4", "text": "Lists known alternatives (e.g., gopkg.in/yaml.v3, github.com/goccy/go-yaml)"},
+      {"id": "1.5", "text": "Does NOT silently run go get without asking first"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "go-sum-must-be-committed",
+    "description": "Tests whether the model insists go.sum must be committed to version control",
+    "prompt": "I'm setting up a new Go project. My .gitignore currently includes go.sum because it's auto-generated and I don't want to clutter the repo with generated files. Is this okay?",
+    "trap": "Without the skill, the model might agree that auto-generated files can be gitignored, missing that go.sum is critical for supply-chain security",
+    "assertions": [
+      {"id": "2.1", "text": "Strongly advises against gitignoring go.sum"},
+      {"id": "2.2", "text": "Explains that go.sum contains cryptographic checksums for dependency verification"},
+      {"id": "2.3", "text": "Explains the supply-chain security risk: without go.sum, a compromised proxy could substitute malicious code"},
+      {"id": "2.4", "text": "Mentions go mod verify as the mechanism that uses go.sum for integrity checking"},
+      {"id": "2.5", "text": "Recommends removing go.sum from .gitignore"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "patch-only-upgrade-preference",
+    "description": "Tests whether the model prefers go get -u=patch over go get -u for routine updates",
+    "prompt": "I want to update all my Go dependencies to the latest versions. What command should I run?",
+    "trap": "Without the skill, the model suggests go get -u ./... which upgrades to latest minor/patch, potentially introducing breaking behavioral changes",
+    "assertions": [
+      {"id": "3.1", "text": "Recommends go get -u=patch ./... as the safer default for routine updates"},
+      {"id": "3.2", "text": "Explains that -u=patch only upgrades patch versions which have no API changes per semver"},
+      {"id": "3.3", "text": "Explains that -u (without =patch) upgrades minor versions too, which can change behavior"},
+      {"id": "3.4", "text": "Mentions running go mod tidy after upgrading"},
+      {"id": "3.5", "text": "Does NOT recommend go get -u ./... without warning about the risk of minor version upgrades"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "mvs-algorithm-understanding",
+    "description": "Tests understanding of Minimal Version Selection — Go selects the minimum satisfying version, not the latest",
+    "prompt": "In my Go project, module A requires pkg@v1.2.0 and module B requires pkg@v1.3.0. My go.mod does not mention pkg directly. Which version of pkg will Go select and why?",
+    "trap": "Without the skill, the model might say Go selects the latest available version of pkg (like npm/pip would), rather than the minimum required version (v1.3.0)",
+    "assertions": [
+      {"id": "4.1", "text": "Correctly states that Go selects v1.3.0 (not the latest available version)"},
+      {"id": "4.2", "text": "Explains Minimal Version Selection (MVS): Go picks the highest minimum required, not the latest available"},
+      {"id": "4.3", "text": "Distinguishes MVS from other package managers (npm, pip, cargo) that select the latest compatible"},
+      {"id": "4.4", "text": "Mentions that MVS provides deterministic builds without a lock file"},
+      {"id": "4.5", "text": "Explains that go.sum is integrity verification, not version locking"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "major-version-suffix-rule",
+    "description": "Tests knowledge of Go's major version suffix convention for v2+",
+    "prompt": "I'm publishing a Go library and need to release v2.0.0 with breaking changes. What do I need to change in my module path and imports?",
+    "trap": "Without the skill, the model might just change the git tag to v2.0.0 without updating the module path to include /v2, breaking the import compatibility rule",
+    "assertions": [
+      {"id": "5.1", "text": "States that the module path in go.mod must include /v2 suffix (e.g., github.com/example/pkg/v2)"},
+      {"id": "5.2", "text": "States that all import paths must be updated to include /v2"},
+      {"id": "5.3", "text": "Explains this is Go's import compatibility rule — different major versions are separate modules"},
+      {"id": "5.4", "text": "Mentions that v0 and v1 do NOT have a suffix"},
+      {"id": "5.5", "text": "Notes that this allows v1 and v2 to coexist in the same build"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "replace-directive-library-warning",
+    "description": "Tests that the model warns about replace directives being ignored when the module is used as a dependency",
+    "prompt": "I'm developing a Go library and I need to use a fork of one of my dependencies for a bug fix. I added a replace directive in my go.mod. Will consumers of my library use the fork too?",
+    "trap": "Without the skill, the model might say yes, missing that replace directives only apply in the main module and are ignored when used as a dependency",
+    "assertions": [
+      {"id": "6.1", "text": "Clearly states that replace directives only take effect in the main module's go.mod"},
+      {"id": "6.2", "text": "States that consumers of the library will NOT use the fork — replace is ignored when the module is consumed as a dependency"},
+      {"id": "6.3", "text": "Recommends removing replace directives before publishing a library"},
+      {"id": "6.4", "text": "Suggests alternative solutions (e.g., upstream the fix, publish the fork as a separate module)"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "tool-directives",
+    "description": "Tests whether the model knows Go 1.24+ tool directives for pinning CLI tool versions in go.mod",
+    "prompt": "My Go project uses golangci-lint and govulncheck. I want to ensure all developers and CI use the exact same versions of these tools. How do I pin them?",
+    "trap": "Without the skill, the model suggests go install @latest in CI, a Makefile, or the old tools.go blank-import workaround, missing Go 1.24+ tool directives that pin versions via go.mod",
+    "assertions": [
+      {"id": "7.1", "text": "Recommends Go 1.24+ go.mod tool directives"},
+      {"id": "7.2", "text": "Uses go get -tool to add golangci-lint and govulncheck"},
+      {"id": "7.3", "text": "Uses go tool to run the pinned tools reproducibly"},
+      {"id": "7.4", "text": "Mentions running go mod tidy and reviewing go.mod/go.sum after adding tools"},
+      {"id": "7.5", "text": "Does NOT create a new tools.go blank-import file unless the module targets Go <1.24"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "govulncheck-call-path-analysis",
+    "description": "Tests understanding that govulncheck does static analysis to find actually-called vulnerable functions, not just dependency presence",
+    "prompt": "My Go project has a dependency flagged by a CVE scanner. But I only use a small subset of the library's API. Is there a way to check if the vulnerability actually affects my code?",
+    "trap": "Without the skill, the model suggests just upgrading the dependency or manually reviewing the CVE, missing govulncheck's call-path analysis that filters by actual usage",
+    "assertions": [
+      {"id": "8.1", "text": "Recommends govulncheck as the tool to check if the vulnerability is actually reachable from your code"},
+      {"id": "8.2", "text": "Explains that govulncheck uses static analysis to trace call paths to vulnerable functions"},
+      {"id": "8.3", "text": "Explains that if your code never calls the affected function, govulncheck will NOT flag it"},
+      {"id": "8.4", "text": "Shows the govulncheck ./... command"},
+      {"id": "8.5", "text": "Distinguishes govulncheck from generic CVE scanners that flag any dependency presence regardless of usage"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "go-work-sum-gitignore",
+    "description": "Tests that go.work.sum should not be committed while go.sum should be committed",
+    "prompt": "I'm setting up a Go workspace with go.work for local multi-module development. Which workspace files should I commit to git?",
+    "trap": "Without the skill, the model might treat go.work.sum the same as go.sum (commit both), but go.work.sum should NOT be committed",
+    "assertions": [
+      {"id": "9.1", "text": "States that go.work.sum should NOT be committed to version control"},
+      {"id": "9.2", "text": "Recommends adding go.work.sum to .gitignore"},
+      {"id": "9.3", "text": "Explains that go.work is for development only and does not affect published module consumers"},
+      {"id": "9.4", "text": "Distinguishes this from go.sum which MUST be committed"},
+      {"id": "9.5", "text": "May mention that go.work itself can optionally be committed depending on team preference"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "exclude-vs-retract-distinction",
+    "description": "Tests understanding of the difference between exclude (consumer-side) and retract (author-side) directives",
+    "prompt": "I published a Go library version v1.3.0 that has a critical bug. How do I prevent users from downloading it? Also, one of my dependencies has a buggy version — how do I skip it in my project?",
+    "trap": "Without the skill, the model conflates exclude and retract, or uses them interchangeably",
+    "assertions": [
+      {"id": "10.1", "text": "Uses retract for the published library (author-side: marks own version as broken)"},
+      {"id": "10.2", "text": "Uses exclude for the buggy dependency (consumer-side: skips a specific version of someone else's module)"},
+      {"id": "10.3", "text": "Explains that retract goes in the library's own go.mod and warns users via go list"},
+      {"id": "10.4", "text": "Explains that exclude redirects to the next higher available version"},
+      {"id": "10.5", "text": "Notes that retracted versions are still downloadable but not selected by default"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "test-dependency-upgrade-flag",
+    "description": "Tests knowledge of the -t flag for including test dependencies in upgrades",
+    "prompt": "I ran go get -u ./... to upgrade my Go dependencies, but my test dependencies (like testify) weren't upgraded. Why?",
+    "trap": "Without the skill, the model doesn't know about the -t flag and suggests upgrading test deps individually",
+    "assertions": [
+      {"id": "11.1", "text": "Explains that go get -u ./... excludes test-only dependencies by default"},
+      {"id": "11.2", "text": "Recommends go get -u -t ./... to include test dependencies in the upgrade"},
+      {"id": "11.3", "text": "Explains the difference between -u (production deps) and -u -t (production + test deps)"}
+    ]
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "id": 1,
+    "name": "build-constraint-on-injector",
+    "description": "Tests that the model adds //go:build wireinject to injector files to prevent duplicate-symbol compile errors",
+    "prompt": "I'm setting up google/wire in my Go project. Here's my injector file:\n\n```go\npackage main\n\nimport \"github.com/google/wire\"\n\nfunc InitApp() (*App, error) {\n    wire.Build(InfraSet, ServiceSet, NewApp)\n    return nil, nil\n}\n```\n\nWire generates wire_gen.go successfully, but when I run `go build`, I get a 'redeclared in this block' compile error for InitApp. What's wrong and how do I fix it?",
+    "trap": "Without the skill, the model may suggest renaming the function, reorganizing packages, or not identify that the missing //go:build wireinject tag is the cause — both the stub and wire_gen.go define InitApp, causing the duplicate.",
+    "assertions": [
+      {"id": "1.1", "text": "Identifies the missing //go:build wireinject build tag as the root cause"},
+      {"id": "1.2", "text": "Shows //go:build wireinject as the first line of the injector file"},
+      {"id": "1.3", "text": "Explains that the tag prevents the stub from being compiled into the binary (only wire_gen.go compiles)"},
+      {"id": "1.4", "text": "Does NOT suggest renaming the function or reorganizing packages as the fix"},
+      {"id": "1.5", "text": "Does NOT suggest deleting wire_gen.go as the fix"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "interface-binding-required",
+    "description": "Tests that wire.Bind is required for interface-to-concrete mappings and cannot be inferred",
+    "prompt": "I have this Go code using google/wire:\n\n```go\n// repo.go\ntype UserStore interface {\n    GetUser(id int64) (*User, error)\n}\n\ntype PostgresUserRepo struct{ db *sql.DB }\nfunc (r *PostgresUserRepo) GetUser(id int64) (*User, error) { ... }\nfunc NewUserRepo(db *sql.DB) *PostgresUserRepo { return &PostgresUserRepo{db: db} }\n\n// service.go\nfunc NewUserService(store UserStore) *UserService { return &UserService{store: store} }\n\n// wire_providers.go\nvar AppSet = wire.NewSet(NewDB, NewUserRepo, NewUserService)\n```\n\nWhen I run `wire ./...` I get: `no provider found for UserStore`. NewUserRepo returns *PostgresUserRepo which clearly implements UserStore. Why doesn't wire figure this out?",
+    "trap": "Without the skill, the model might suggest wire should automatically resolve the interface, or suggest wrapping NewUserRepo to return UserStore directly, missing the explicit wire.Bind requirement.",
+    "assertions": [
+      {"id": "2.1", "text": "Explains that wire never auto-resolves interface satisfaction — bindings must be explicit"},
+      {"id": "2.2", "text": "Shows wire.Bind(new(UserStore), new(*PostgresUserRepo)) added to the provider set"},
+      {"id": "2.3", "text": "Places wire.Bind inside the same wire.NewSet (or adds it to a set in wire.Build)"},
+      {"id": "2.4", "text": "Explains WHY wire requires explicit bindings (predictability — avoids surprise rebinding when new implementations are added)"},
+      {"id": "2.5", "text": "Does NOT suggest changing NewUserRepo to return UserStore directly as the primary fix"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "duplicate-type-named-wrapper",
+    "description": "Tests the named-type pattern to disambiguate multiple values of the same underlying type",
+    "prompt": "I'm building a Go service with google/wire. I need to inject two database connection strings — one for the primary database and one for a read replica. I tried this:\n\n```go\nfunc NewPrimaryDSN() string { return os.Getenv(\"PRIMARY_DSN\") }\nfunc NewReplicaDSN() string { return os.Getenv(\"REPLICA_DSN\") }\n\nvar DBSet = wire.NewSet(NewPrimaryDSN, NewReplicaDSN, NewPrimaryDB, NewReplicaDB)\n```\n\nWire complains about multiple bindings for string. How should I structure this?",
+    "trap": "Without the skill, the model might suggest using wire.Value or provider arguments, or use a config struct — missing the idiomatic named-type wrapper pattern that wire's own docs recommend.",
+    "assertions": [
+      {"id": "3.1", "text": "Introduces distinct named types (e.g., type PrimaryDSN string and type ReplicaDSN string)"},
+      {"id": "3.2", "text": "Updates NewPrimaryDSN to return PrimaryDSN and NewReplicaDSN to return ReplicaDSN"},
+      {"id": "3.3", "text": "Updates NewPrimaryDB and NewReplicaDB signatures to accept the named types"},
+      {"id": "3.4", "text": "Explains that wire enforces one provider per type, so distinct named types are the correct solution"},
+      {"id": "3.5", "text": "Does NOT suggest using a single Config struct with both DSNs as the primary fix (that avoids the problem rather than solving it with named types)"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "cleanup-signature",
+    "description": "Tests the (T, func(), error) cleanup provider pattern instead of manual defer in main",
+    "prompt": "I'm using google/wire to wire my Go service. I need my *sql.DB connection pool to be closed when the app shuts down. Currently I'm doing this in main:\n\n```go\nfunc main() {\n    app, err := InitApp()\n    if err != nil { log.Fatal(err) }\n    defer db.Close() // but I don't have access to db here!\n    app.Run()\n}\n```\n\nI realize I need the DB closed on shutdown, but InitApp() only returns *App. How should I wire cleanup with google/wire?",
+    "trap": "Without the skill, the model might suggest passing db out of InitApp as a second return value, or storing it as a global, missing the (T, func(), error) cleanup provider pattern.",
+    "assertions": [
+      {"id": "4.1", "text": "Changes NewDB to return (*sql.DB, func(), error) where the cleanup function calls db.Close()"},
+      {"id": "4.2", "text": "Changes the injector function to return (*App, func(), error) to propagate the cleanup chain"},
+      {"id": "4.3", "text": "Shows main calling defer cleanup() after the nil-check"},
+      {"id": "4.4", "text": "Explains that wire chains cleanup functions and calls them in reverse construction order"},
+      {"id": "4.5", "text": "Does NOT suggest passing db as an extra return value from InitApp alongside *App"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "no-edit-wire-gen",
+    "description": "Tests that the model never edits wire_gen.go and instructs re-running wire ./... instead",
+    "prompt": "I added a new *Logger parameter to my NewServer constructor in my google/wire project:\n\n```go\nfunc NewServer(db *sql.DB, log *zap.Logger) *Server { ... }\n```\n\nNow `go build` fails with 'too few arguments in call to NewServer'. The error is inside wire_gen.go on line 47. Should I edit wire_gen.go to add the logger argument there, or is there another way?",
+    "trap": "Without the skill, a model may suggest editing wire_gen.go directly to 'fix' the build error quickly, which would be overwritten on the next wire run.",
+    "assertions": [
+      {"id": "5.1", "text": "Explicitly says NOT to edit wire_gen.go (it is always overwritten)"},
+      {"id": "5.2", "text": "Instructs running wire ./... to regenerate wire_gen.go"},
+      {"id": "5.3", "text": "Explains that *zap.Logger must be provided in the graph (either via a provider or wire.Value)"},
+      {"id": "5.4", "text": "Shows how to add NewLogger (or wire.Value) to the appropriate wire.NewSet so the dependency is satisfied"},
+      {"id": "5.5", "text": "Does NOT present editing wire_gen.go as an option"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "provider-set-organization",
+    "description": "Tests per-package provider set organization instead of one giant set in main",
+    "prompt": "My Go service using google/wire is growing. I currently have everything in one place:\n\n```go\n// wire.go\n//go:build wireinject\n\nfunc InitApp() (*App, func(), error) {\n    wire.Build(\n        NewConfig, NewDB, NewCache, NewLogger,\n        NewUserRepo, NewOrderRepo, NewProductRepo,\n        wire.Bind(new(UserStore), new(*PostgresUserRepo)),\n        wire.Bind(new(OrderStore), new(*PostgresOrderRepo)),\n        wire.Bind(new(ProductStore), new(*PostgresProductRepo)),\n        NewUserService, NewOrderService, NewProductService,\n        NewHTTPServer, NewRouter,\n        NewApp,\n    )\n    return nil, nil, nil\n}\n```\n\nThis is getting unwieldy. How should I organize this with google/wire?",
+    "trap": "Without the skill, the model may just split the providers into helper variables in the same package, missing the idiomatic per-package wire.NewSet pattern.",
+    "assertions": [
+      {"id": "6.1", "text": "Introduces per-package wire.NewSet variables (e.g., InfraSet, RepoSet, ServiceSet, TransportSet)"},
+      {"id": "6.2", "text": "Each set lives in its own package's wire.go file (not all in main)"},
+      {"id": "6.3", "text": "The injector wire.Build references the set variables rather than individual providers"},
+      {"id": "6.4", "text": "wire.Bind declarations move into the relevant package's set (not into wire.Build directly)"},
+      {"id": "6.5", "text": "Explains the benefit: per-package sets are independently composable and keep the injector readable"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "injector-parameter-vs-value-provider",
+    "description": "Tests using wire.Value or injector parameters for pre-built values instead of wrapper constructors",
+    "prompt": "In my Go app using google/wire, I parse a *Config struct from command-line flags in main() before calling InitApp. I tried writing a no-op provider:\n\n```go\nvar parsedCfg *Config\n\nfunc ProvideConfig() *Config { return parsedCfg }\n\nvar AppSet = wire.NewSet(ProvideConfig, ...)\n```\n\nThis works but feels wrong — I'm using a global variable. Is there a cleaner way to pass a pre-built *Config into the wire graph?",
+    "trap": "Without the skill, the model might suggest keeping the global variable pattern or using init(), missing both wire.Value and the injector-parameter patterns.",
+    "assertions": [
+      {"id": "7.1", "text": "Shows the injector-parameter approach: func InitApp(cfg *Config) (*App, func(), error) with wire.Build"},
+      {"id": "7.2", "text": "OR shows wire.Value(cfg) inside wire.Build — both are valid answers"},
+      {"id": "7.3", "text": "Explains that injector parameters are treated as pre-built providers by wire"},
+      {"id": "7.4", "text": "Does NOT use a global variable as the recommended solution"},
+      {"id": "7.5", "text": "Does NOT suggest using init() to set the value"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "fields-of-struct",
+    "description": "Tests wire.FieldsOf to expose struct fields as individual graph nodes",
+    "prompt": "I have a single Config struct in my Go app with google/wire:\n\n```go\ntype Config struct {\n    DatabaseDSN  string\n    CacheAddress string\n    APIKey       string\n}\n\nfunc NewConfig() *Config { return loadFromEnv() }\n```\n\nNewDB needs a DatabaseDSN string, NewCache needs a CacheAddress string, NewExternalClient needs an APIKey string — but all three are plain strings. How do I make these available to the wire graph without creating three separate provider functions?",
+    "trap": "Without the skill, the model will suggest three named-type wrappers or three extraction functions, missing wire.FieldsOf which promotes struct fields directly.",
+    "assertions": [
+      {"id": "8.1", "text": "Uses wire.FieldsOf(new(Config), \"DatabaseDSN\", \"CacheAddress\", \"APIKey\") or a subset"},
+      {"id": "8.2", "text": "Places wire.FieldsOf inside the provider set or wire.Build"},
+      {"id": "8.3", "text": "Updates NewDB, NewCache, NewExternalClient to accept the string fields as parameters (or uses named types alongside FieldsOf)"},
+      {"id": "8.4", "text": "Explains that wire.FieldsOf promotes struct fields as individual graph nodes without manual extraction functions"},
+      {"id": "8.5", "text": "Does NOT suggest writing three separate func GetDatabaseDSN(c *Config) string extractor functions as the primary recommendation"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "test-injector-pattern",
+    "description": "Tests the test-injector pattern with wire.Bind for fake dependencies instead of runtime mocking hacks",
+    "prompt": "My Go service is wired with google/wire. I have a Mailer interface implemented by SMTPMailer in production. I want integration tests that use a FakeMailer instead — recording sent emails — without modifying the production provider sets. The test must wire the full graph (not just NewUserService in isolation). How should I approach this?",
+    "trap": "Without the skill, the model may suggest monkey-patching, a global variable for the mailer, or a runtime DI container for tests — missing the test-injector pattern with a test-only wire.NewSet and wire.Bind.",
+    "assertions": [
+      {"id": "9.1", "text": "Creates a test-only provider set (e.g., TestMailerSet) with NewFakeMailer and wire.Bind(new(Mailer), new(*FakeMailer))"},
+      {"id": "9.2", "text": "Creates a test injector function in a _test.go file with //go:build wireinject"},
+      {"id": "9.3", "text": "The test injector's wire.Build composes the production sets with the test-only set"},
+      {"id": "9.4", "text": "Does NOT suggest global variables, monkey-patching, or a runtime DI container for tests"},
+      {"id": "9.5", "text": "Mentions that wire ./... (or go generate) must be run to produce the test-injector generated code"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "wire-vs-fx-for-daemon",
+    "description": "Tests that the model recommends uber-go/fx over wire for long-running services that need lifecycle management",
+    "prompt": "I'm starting a new Go HTTP server project and evaluating DI options. A colleague suggested google/wire because 'it's simpler and type-safe at compile time.' The server needs graceful shutdown (drain in-flight requests), OnStart/OnStop hooks for the database pool and metrics exporter, and should handle SIGINT/SIGTERM. Should I use wire?",
+    "trap": "Without the skill, the model may agree that wire is suitable because it's simple and compile-time safe, not recognizing that lifecycle, signal handling, and hook ordering are exactly what fx provides and wire explicitly lacks.",
+    "assertions": [
+      {"id": "10.1", "text": "Identifies that wire has no built-in lifecycle management (no OnStart/OnStop hooks)"},
+      {"id": "10.2", "text": "Identifies that wire has no built-in signal handling (SIGINT/SIGTERM)"},
+      {"id": "10.3", "text": "Recommends uber-go/fx (or at minimum flags it as the better fit) for a long-running HTTP daemon with lifecycle needs"},
+      {"id": "10.4", "text": "Does NOT recommend wire as sufficient for a service requiring graceful shutdown and lifecycle hooks"},
+      {"id": "10.5", "text": "Mentions that with wire the developer must implement shutdown and signal handling manually"}
+    ]
+  }
+]

@@ -4548,44 +4548,212 @@
         "checkedAt": "2026-05-03T15:48:30.152Z"
       }
     },
-    "golang-patterns": {
-      "source": "affaan-m/everything-claude-code",
-      "skillPath": "affaan-m/everything-claude-code/golang-patterns",
-      "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
+    "golang-code-style": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-code-style",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
         "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
       },
-      "bundleHash": "669ccfb110e3a3932669684801fc8992cda87ec6d9c1fd72ff13ae9f5e7c748e",
+      "bundleHash": "golang-code-style-bundle-hash",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "Go code style guidelines",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:20.808Z"
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-concurrency": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-concurrency",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-concurrency-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go concurrency patterns guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-context": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-context",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-context-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go context propagation guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-database": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-database",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md",
+        "references/transactions.md",
+        "references/testing.md",
+        "references/performance.md",
+        "references/scanning.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c",
+        "references/transactions.md": "a311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d",
+        "references/testing.md": "b311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d",
+        "references/performance.md": "c311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d",
+        "references/scanning.md": "d311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d"
+      },
+      "bundleHash": "golang-database-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go database best practices and library choice guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-error-handling": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-error-handling",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-error-handling-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go error handling patterns",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-performance": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-performance",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-performance-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go performance and memory optimization guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
       }
     },
     "golang-testing": {
-      "source": "affaan-m/everything-claude-code",
-      "skillPath": "affaan-m/everything-claude-code/golang-testing",
-      "commitSha": "1a50145d39c0fa415311da62e7a018edd4e6d976",
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-testing",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
       "files": [
         "SKILL.md"
       ],
       "sha256": {
         "SKILL.md": "2da1afcd9df6529392653cd450edc40eb8bbc0b073f3eda17a510f4b89411c1b"
       },
-      "bundleHash": "4c1e0c6805760534d8fd1a9fa2e4b5eb700b402f054254383437bd679d341cbd",
+      "bundleHash": "golang-testing-bundle-hash",
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "Go testing structure and implementation guidelines",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:20.815Z"
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-observability": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-observability",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-observability-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go logging and telemetry guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-security": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-security",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-security-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go security standards and injection prevention",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
+      }
+    },
+    "golang-structs-interfaces": {
+      "source": "samber/cc-skills-golang",
+      "skillPath": "samber/cc-skills-golang/golang-structs-interfaces",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "f36a89926fab1e895e7e2e2522e4104e1d7b07452244f31ff09ef1eeb069495c"
+      },
+      "bundleHash": "golang-structs-interfaces-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Go structures and interface composition guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T22:06:00.000Z"
       }
     },
     "java-coding-standards": {

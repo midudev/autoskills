@@ -1,0 +1,251 @@
+[
+  {
+    "id": 1,
+    "name": "test-workflow-flags",
+    "description": "Tests whether CI test workflows include all required flags (-race, -shuffle, -coverprofile) and use fail-fast: false",
+    "prompt": "Create a GitHub Actions workflow file for running Go tests on a library that supports Go 1.25+. The project uses codecov for coverage. Just give me the YAML.",
+    "trap": "Model may omit -shuffle=on, forget fail-fast: false, or skip the go mod tidy check",
+    "assertions": [
+      {"id": "1.1", "text": "Workflow includes -race flag in the go test command"},
+      {"id": "1.2", "text": "Workflow includes -shuffle=on flag in the go test command"},
+      {"id": "1.3", "text": "Workflow includes -coverprofile flag in the go test command"},
+      {"id": "1.4", "text": "Strategy uses fail-fast: false"},
+      {"id": "1.5", "text": "Go version matrix includes at least 'stable' and one explicit version like '1.25' or '1.26'"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "go-mod-tidy-check",
+    "description": "Tests whether the workflow enforces go mod tidy consistency via git diff --exit-code",
+    "prompt": "I want to make sure our Go CI catches cases where someone forgot to run go mod tidy before pushing. How should I add this check to our GitHub Actions workflow?",
+    "trap": "Model may suggest running go mod tidy without the git diff --exit-code step to actually fail the build on changes",
+    "assertions": [
+      {"id": "2.1", "text": "Suggests running 'go mod tidy' as a CI step"},
+      {"id": "2.2", "text": "Includes 'git diff --exit-code' after go mod tidy to detect uncommitted changes"},
+      {"id": "2.3", "text": "The git diff checks go.mod and/or go.sum specifically, or uses a general git diff --exit-code"},
+      {"id": "2.4", "text": "Also includes 'go mod verify' or 'go mod download' step"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "integration-test-caching",
+    "description": "Tests knowledge that integration tests must use -count=1 to disable caching",
+    "prompt": "I have integration tests that interact with PostgreSQL and Redis via GitHub Actions service containers. Sometimes tests pass even when the services are broken because Go seems to cache test results. How do I set up the workflow?",
+    "trap": "Model may not know about -count=1 to disable test caching, or may suggest other workarounds",
+    "assertions": [
+      {"id": "3.1", "text": "Uses -count=1 flag to disable test result caching"},
+      {"id": "3.2", "text": "Includes -race flag for integration tests"},
+      {"id": "3.3", "text": "Uses build tags (e.g., -tags=integration) to separate integration tests"},
+      {"id": "3.4", "text": "Uses GitHub Actions 'services' block for PostgreSQL and/or Redis"},
+      {"id": "3.5", "text": "Includes health check options for service containers"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "security-scanning-pipeline",
+    "description": "Tests whether the model recommends the full security stack: govulncheck, gosec, CodeQL, and Bearer",
+    "prompt": "I want to add security scanning to my Go project's CI pipeline. What tools should I use and how do I set them up in GitHub Actions?",
+    "trap": "Model may only suggest one or two tools (e.g., just gosec) and miss govulncheck (call-path-aware), CodeQL (Security tab integration), or Bearer (sensitive data flow)",
+    "assertions": [
+      {"id": "4.1", "text": "Recommends govulncheck and explains it only reports vulnerabilities in actually-called code paths"},
+      {"id": "4.2", "text": "Recommends gosec for Go security scanning"},
+      {"id": "4.3", "text": "Recommends CodeQL and mentions the security-extended or security-and-quality query suite"},
+      {"id": "4.4", "text": "Recommends Bearer for sensitive data flow issues"},
+      {"id": "4.5", "text": "Workflow includes security-events: write permission for SARIF upload"},
+      {"id": "4.6", "text": "Suggests creating a CodeQL config file to use an extended query suite rather than just the default"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "dependabot-grouping-strategy",
+    "description": "Tests whether Dependabot config groups minor/patch updates but keeps major updates separate",
+    "prompt": "Set up Dependabot for my Go project on GitHub. I want automated dependency update PRs for Go modules, GitHub Actions, and Docker base images.",
+    "trap": "Model may not group minor/patch into a single PR, or may group all updates including majors which could have breaking changes",
+    "assertions": [
+      {"id": "5.1", "text": "Configures Dependabot for gomod package ecosystem"},
+      {"id": "5.2", "text": "Configures Dependabot for github-actions package ecosystem"},
+      {"id": "5.3", "text": "Configures Dependabot for docker package ecosystem"},
+      {"id": "5.4", "text": "Groups minor and patch Go module updates into a single PR"},
+      {"id": "5.5", "text": "Major updates are NOT grouped (individual PRs for breaking changes)"},
+      {"id": "5.6", "text": "Sets a weekly schedule"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "dependabot-auto-merge-security",
+    "description": "Tests awareness of security implications in auto-merge workflow (elevated permissions, actor guard, branch protection as safety net)",
+    "prompt": "I want Dependabot PRs to auto-merge when CI passes, but only for minor and patch updates. Create the workflow. What security concerns should I be aware of?",
+    "trap": "Model may create the workflow without the github.actor guard, without mentioning elevated permissions risk, or without recommending branch protection as the real safety net",
+    "assertions": [
+      {"id": "6.1", "text": "Workflow has 'if: github.actor == dependabot[bot]' guard to restrict execution"},
+      {"id": "6.2", "text": "Workflow checks metadata to exclude major updates from auto-merge"},
+      {"id": "6.3", "text": "Warns about contents: write and pull-requests: write being elevated/high-risk permissions"},
+      {"id": "6.4", "text": "Mentions branch protection rules as the real safety net (not just the actor guard)"},
+      {"id": "6.5", "text": "Notes that github.actor checks are not fully spoof-proof"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "renovate-vs-dependabot",
+    "description": "Tests knowledge of Renovate advantages over Dependabot",
+    "prompt": "I'm using Dependabot for my Go monorepo with multiple modules but it's creating too many PRs and doesn't run go mod tidy. What are my options?",
+    "trap": "Model may suggest workarounds for Dependabot rather than recommending Renovate with its gomodTidy, native automerge, and monorepo support",
+    "assertions": [
+      {"id": "7.1", "text": "Recommends Renovate as an alternative to Dependabot"},
+      {"id": "7.2", "text": "Mentions Renovate's gomodTidy feature (automatic go mod tidy after updates)"},
+      {"id": "7.3", "text": "Mentions Renovate's native automerge without needing a separate workflow"},
+      {"id": "7.4", "text": "Mentions Renovate's monorepo/workspace support"},
+      {"id": "7.5", "text": "Mentions Renovate's better grouping rules"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "goreleaser-library-vs-cli",
+    "description": "Tests knowledge that GoReleaser config differs significantly between libraries and CLI programs",
+    "prompt": "I need to set up GoReleaser for my Go project which is a library (no main package). How should I configure it?",
+    "trap": "Model may generate a full GoReleaser config with builds, archives, and cross-compilation that doesn't apply to libraries",
+    "assertions": [
+      {"id": "8.1", "text": "Uses 'skip: true' in the builds section since libraries don't produce binaries"},
+      {"id": "8.2", "text": "Keeps the config minimal (mainly changelog generation)"},
+      {"id": "8.3", "text": "Mentions that for libraries, a simple GitHub Release via gh release create may be sufficient without GoReleaser"},
+      {"id": "8.4", "text": "Does NOT include cross-compilation (goos/goarch) in the library config"},
+      {"id": "8.5", "text": "Includes changelog configuration"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "docker-workflow-security",
+    "description": "Tests awareness of Docker workflow security: push: false on PRs, per-job permissions, dual registry, provenance/SBOM",
+    "prompt": "Create a GitHub Actions workflow that builds a multi-platform Docker image and pushes it to GHCR. Include security best practices.",
+    "trap": "Model may push images on PRs (allowing untrusted code to publish), use overly broad permissions, or skip provenance/SBOM attestations",
+    "assertions": [
+      {"id": "9.1", "text": "Sets push to false on pull requests to prevent untrusted code from publishing images"},
+      {"id": "9.2", "text": "Uses per-job permissions scoping (not just top-level)"},
+      {"id": "9.3", "text": "Includes QEMU and Buildx setup for multi-platform builds"},
+      {"id": "9.4", "text": "Includes provenance and/or SBOM attestation configuration"},
+      {"id": "9.5", "text": "Includes packages: write permission for GHCR push"},
+      {"id": "9.6", "text": "Login step is conditional on non-PR events"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "permissions-least-privilege",
+    "description": "Tests whether the model follows least-privilege permissions principle and sets GITHUB_TOKEN to read-only by default",
+    "prompt": "I'm setting up CI for a new open-source Go project. What GitHub repository settings should I configure for security? I already have the workflow files.",
+    "trap": "Model may focus only on branch protection and miss workflow permissions, fork PR restrictions, and environment-based approval gates",
+    "assertions": [
+      {"id": "10.1", "text": "Recommends setting default GITHUB_TOKEN to read-only at the repository level"},
+      {"id": "10.2", "text": "Recommends branch protection with required status checks"},
+      {"id": "10.3", "text": "Recommends requiring PR approvals (at least 1)"},
+      {"id": "10.4", "text": "Recommends dismissing stale approvals when new commits are pushed"},
+      {"id": "10.5", "text": "Recommends restricting fork PR workflows for outside collaborators"},
+      {"id": "10.6", "text": "Warns against pull_request_target with untrusted code"},
+      {"id": "10.7", "text": "Recommends creating a release environment with required reviewers"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "release-workflow-fetch-depth",
+    "description": "Tests whether the release workflow uses fetch-depth: 0 for changelog generation",
+    "prompt": "Create a GitHub Actions release workflow that triggers on version tags and runs GoReleaser to produce binaries and a changelog.",
+    "trap": "Model may use default checkout which does a shallow clone, causing GoReleaser to generate an incomplete or empty changelog",
+    "assertions": [
+      {"id": "11.1", "text": "Checkout step uses fetch-depth: 0 for full git history"},
+      {"id": "11.2", "text": "Workflow triggers on tag push with a v* pattern"},
+      {"id": "11.3", "text": "Uses contents: write permission for creating releases"},
+      {"id": "11.4", "text": "Passes GITHUB_TOKEN to GoReleaser"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "action-version-pinning",
+    "description": "Tests whether actions are pinned to major versions not branches",
+    "prompt": "Review this GitHub Actions step and tell me if there are any issues:\n\n```yaml\nsteps:\n  - uses: actions/checkout@master\n  - uses: actions/setup-go@main\n    with:\n      go-version: stable\n```",
+    "trap": "Model may not notice the branch references (@master, @main) instead of pinned major versions",
+    "assertions": [
+      {"id": "12.1", "text": "Identifies that using @master and @main is wrong and insecure"},
+      {"id": "12.2", "text": "Recommends pinning to major versions like @v4, @v6"},
+      {"id": "12.3", "text": "Explains the risk: branch references can change unexpectedly or be compromised"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "coverage-threshold-configuration",
+    "description": "Tests knowledge of codecov.yml configuration with project and patch targets",
+    "prompt": "I want to enforce that our Go project maintains at least 80% code coverage and that each PR doesn't drop coverage by more than 2%. How do I configure this?",
+    "trap": "Model may only configure project-level thresholds and miss patch-level coverage targets",
+    "assertions": [
+      {"id": "13.1", "text": "Configures codecov.yml (not just CLI flags) for coverage thresholds"},
+      {"id": "13.2", "text": "Sets project target to 80%"},
+      {"id": "13.3", "text": "Sets a threshold value (e.g., 2%) to allow small drops"},
+      {"id": "13.4", "text": "Configures patch coverage target for new code in PRs"},
+      {"id": "13.5", "text": "Coverage upload is conditional on a single matrix entry (e.g., only on stable)"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "ai-review-workflow-setup",
+    "description": "Tests whether the model recommends Claude Code Action or Copilot with skills for AI-driven PR review, rather than generic tools or manual checklists",
+    "prompt": "I want to add AI-powered code review to my Go project's CI pipeline. How do I set it up?",
+    "trap": "Model may suggest generic tools (CodeRabbit, PR-Agent, Reviewdog) or manual checklists instead of Claude Code Action / Copilot with Go skills loaded",
+    "assertions": [
+      {"id": "14.1", "text": "Recommends using anthropics/claude-code-action or GitHub Copilot for AI review"},
+      {"id": "14.2", "text": "Mentions installing Go skills via 'npx skills add' so the agent loads skill-based review guidelines"},
+      {"id": "14.3", "text": "Workflow includes pull-requests: write permission for inline PR comments"},
+      {"id": "14.4", "text": "References review areas mapped to specific Go skills (golang-security, golang-concurrency, etc.)"},
+      {"id": "14.5", "text": "References the claude-code-review.yml or copilot-review-instructions.md asset"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "ai-review-vs-linting",
+    "description": "Tests whether the model explains that AI review complements linting by catching issues linters cannot detect",
+    "prompt": "I already have golangci-lint, govulncheck, and CodeQL in my CI. Why would I also need AI code review?",
+    "trap": "Model may say linting is sufficient or treat AI review as a luxury, failing to explain the complementary value",
+    "assertions": [
+      {"id": "15.1", "text": "Explains that AI review catches architectural drift and logic bugs that static analysis misses"},
+      {"id": "15.2", "text": "Mentions at least one concrete example: missing error context, goroutine leaks, broken contracts, or design issues"},
+      {"id": "15.3", "text": "Positions AI review as a complement to linting, not a replacement"},
+      {"id": "15.4", "text": "Notes that AI agents loaded with Go skills apply the same expertise as a senior Go reviewer"}
+    ]
+  },
+  {
+    "id": 16,
+    "name": "ai-review-prompt-customization",
+    "description": "Tests whether the model explains how to scope the review prompt and apply the priority guidance",
+    "prompt": "Our Go project CI is slow. We want AI review but only for security and correctness issues — not style or documentation. How do we configure this?",
+    "trap": "Model may keep all 12 review areas or not know about the 4-job structure that can be selectively disabled",
+    "assertions": [
+      {"id": "16.1", "text": "Suggests removing or disabling the 'quality' job (style, naming, documentation) from the workflow"},
+      {"id": "16.2", "text": "Recommends keeping the 'correctness' and 'security' jobs as blocking-first areas"},
+      {"id": "16.3", "text": "Mentions the depth vs. speed tradeoff: fewer jobs = faster feedback, lower API cost"},
+      {"id": "16.4", "text": "References the priority guidance: Security, Code safety, Error handling, Concurrency are blocking-first"}
+    ]
+  },
+  {
+    "id": 17,
+    "name": "ai-review-claude-vs-copilot",
+    "description": "Tests whether the model clearly differentiates Claude Code Action (GitHub Actions workflow) from Copilot (copilot-instructions.md) and their respective setups",
+    "prompt": "We use both GitHub Copilot and Claude Code in our team. Can we use both for CI code review? What's the difference?",
+    "trap": "Model may conflate the two setups, not know about copilot-instructions.md, or miss that Claude uses /golang-* syntax while Copilot uses golang-* without slash",
+    "assertions": [
+      {"id": "17.1", "text": "Explains Claude Code review runs as a GitHub Actions workflow using anthropics/claude-code-action"},
+      {"id": "17.2", "text": "Explains Copilot review uses .github/copilot-instructions.md to configure the review prompt"},
+      {"id": "17.3", "text": "Notes that both require installing Go skills so the AI loads skill-based guidelines"},
+      {"id": "17.4", "text": "Correctly describes that both can coexist — they run independently and complement each other"}
+    ]
+  },
+  {
+    "id": 18,
+    "name": "ai-review-permissions-security",
+    "description": "Tests whether the model correctly identifies required permissions and security implications of the AI review workflow",
+    "prompt": "Our security team is concerned about giving an AI workflow write access to pull requests. What permissions does the Claude Code review workflow actually need and why?",
+    "trap": "Model may not know the minimal permission set, may suggest contents: write (too broad), or may not warn about fork PR risks",
+    "assertions": [
+      {"id": "18.1", "text": "Identifies pull-requests: write as required for posting inline review comments"},
+      {"id": "18.2", "text": "Identifies contents: read as sufficient for reading the repository code"},
+      {"id": "18.3", "text": "Does NOT suggest contents: write (that would be excessive for a review-only workflow)"},
+      {"id": "18.4", "text": "Warns about fork PR security: untrusted code in forks can access the ANTHROPIC_API_KEY secret if the workflow triggers on pull_request_target without careful guards"}
+    ]
+  }
+]

@@ -1,0 +1,156 @@
+[
+  {
+    "id": 1,
+    "name": "raw-error-vs-status-error",
+    "description": "Tests that gRPC handlers return status.Errorf with specific codes, not raw errors",
+    "prompt": "Write a Go gRPC handler for GetUser that looks up a user from a repository. If the user is not found, return an appropriate error. If the repository returns an unexpected error, return that too.",
+    "trap": "Without the skill, the model may return fmt.Errorf or raw errors, which become codes.Unknown. The skill requires status.Errorf with specific codes.",
+    "assertions": [
+      {"id": "1.1", "text": "Uses status.Errorf (or status.Error) for the not-found case with codes.NotFound"},
+      {"id": "1.2", "text": "Uses status.Errorf with codes.Internal for unexpected errors"},
+      {"id": "1.3", "text": "Does NOT return a raw fmt.Errorf or errors.New as the gRPC error"},
+      {"id": "1.4", "text": "Imports google.golang.org/grpc/status and google.golang.org/grpc/codes"},
+      {"id": "1.5", "text": "Does NOT leak internal error details in the user-facing gRPC message for Internal errors"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "wrapper-messages-not-bare-types",
+    "description": "Tests that proto RPCs use Request/Response wrapper messages, not bare types",
+    "prompt": "Write a proto3 service definition for a product catalog with RPCs: GetProduct (takes product ID, returns product), DeleteProduct (takes product ID, returns nothing), SearchProducts (takes search query string, returns list of products).",
+    "trap": "Without the skill, the model may use bare types like string or google.protobuf.Empty. The skill requires Request/Response wrappers for backward-compatible evolution.",
+    "assertions": [
+      {"id": "2.1", "text": "Uses GetProductRequest/GetProductResponse wrapper messages, not bare string or Product"},
+      {"id": "2.2", "text": "Uses DeleteProductRequest/DeleteProductResponse wrapper messages, not bare string or google.protobuf.Empty"},
+      {"id": "2.3", "text": "Uses SearchProductsRequest/SearchProductsResponse wrapper messages"},
+      {"id": "2.4", "text": "Each wrapper message has properly named fields (not just a single unnamed field)"},
+      {"id": "2.5", "text": "Includes go_package option in the proto file"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "proto-directory-organization",
+    "description": "Tests proper proto file organization by domain with versioned directories",
+    "prompt": "I'm building a microservice with user management and order management. How should I organize my proto files? Show the directory layout and an example buf.gen.yaml.",
+    "trap": "Without the skill, the model may put all protos in a flat directory or skip versioning. The skill requires domain-based organization with v1 directories.",
+    "assertions": [
+      {"id": "3.1", "text": "Organizes proto files by domain (user/, order/ or similar domain grouping)"},
+      {"id": "3.2", "text": "Includes version directories (v1/ under each domain)"},
+      {"id": "3.3", "text": "Separates message definitions from service definitions (e.g. user.proto vs user_service.proto)"},
+      {"id": "3.4", "text": "Includes a shared/ or common/ directory for shared messages"},
+      {"id": "3.5", "text": "Shows buf.gen.yaml with go and go-grpc plugins configured"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "graceful-stop-with-timeout-fallback",
+    "description": "Tests proper gRPC server shutdown: GracefulStop with timeout fallback to Stop",
+    "prompt": "Write Go code for a gRPC server that handles shutdown signals properly. The server should try to drain in-flight requests before stopping.",
+    "trap": "Without the skill, the model may only call srv.Stop() or only srv.GracefulStop() without a timeout fallback. The skill requires GracefulStop with a timeout fallback to Stop.",
+    "assertions": [
+      {"id": "4.1", "text": "Calls srv.GracefulStop() first to drain in-flight RPCs"},
+      {"id": "4.2", "text": "Has a timeout mechanism that falls back to srv.Stop() if GracefulStop takes too long"},
+      {"id": "4.3", "text": "Uses a select statement or timer for the timeout"},
+      {"id": "4.4", "text": "Listens for OS signals (SIGINT, SIGTERM or os.Interrupt)"},
+      {"id": "4.5", "text": "The timeout is reasonable (5-30 seconds)"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "health-check-service-registration",
+    "description": "Tests that gRPC servers register the health check service for Kubernetes readiness probes",
+    "prompt": "Write a production-ready gRPC server setup in Go. Register a UserService and make it deployable to Kubernetes.",
+    "trap": "Without the skill, the model may not register the health check service. The skill says health check is required for Kubernetes probes.",
+    "assertions": [
+      {"id": "5.1", "text": "Registers grpc_health_v1.RegisterHealthServer (or equivalent health check service)"},
+      {"id": "5.2", "text": "Uses health.NewServer() to create the health service"},
+      {"id": "5.3", "text": "Registers interceptors using grpc.ChainUnaryInterceptor"},
+      {"id": "5.4", "text": "Does NOT enable reflection (or explicitly disables it for production)"},
+      {"id": "5.5", "text": "Includes graceful shutdown handling"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "client-connection-reuse-and-deadlines",
+    "description": "Tests that gRPC clients reuse connections and set deadlines on every call",
+    "prompt": "Write a Go gRPC client that calls a UserService. Create the client and make a GetUser call.",
+    "trap": "Without the skill, the model may create a new connection per request or not set a deadline. The skill requires connection reuse and context.WithTimeout on every call.",
+    "assertions": [
+      {"id": "6.1", "text": "Creates the connection once and reuses it (not creating a new connection per call)"},
+      {"id": "6.2", "text": "Uses context.WithTimeout (or context.WithDeadline) for the RPC call"},
+      {"id": "6.3", "text": "Uses grpc.NewClient (not the deprecated grpc.Dial)"},
+      {"id": "6.4", "text": "Includes transport credentials (TLS or explicitly insecure for dev)"},
+      {"id": "6.5", "text": "Properly defers cancel() from context.WithTimeout"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "bufconn-testing-pattern",
+    "description": "Tests that gRPC tests use bufconn for in-memory connections, not real network",
+    "prompt": "Write a test for a Go gRPC UserService that verifies GetUser returns the correct user and that requesting a non-existent user returns the proper error code.",
+    "trap": "Without the skill, the model may start a real TCP server for testing. The skill requires bufconn for in-memory connections.",
+    "assertions": [
+      {"id": "7.1", "text": "Uses bufconn.Listen for an in-memory listener"},
+      {"id": "7.2", "text": "Uses grpc.WithContextDialer with the bufconn dialer"},
+      {"id": "7.3", "text": "Verifies the gRPC status code for the not-found case using status.FromError"},
+      {"id": "7.4", "text": "Checks that the error code is codes.NotFound specifically"},
+      {"id": "7.5", "text": "Uses t.Cleanup or defer for cleaning up the server and connection"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "error-code-selection-judgment",
+    "description": "Tests correct gRPC error code selection across different scenarios",
+    "prompt": "Write a Go gRPC handler for CreateOrder that validates the request has a non-empty user_id and at least one item, checks the user exists, checks inventory availability, and creates the order. Return appropriate gRPC errors for each failure case.",
+    "trap": "Without the skill, the model may use codes.Internal for everything or pick wrong codes. The skill has a specific mapping table.",
+    "assertions": [
+      {"id": "8.1", "text": "Uses codes.InvalidArgument for missing user_id or empty items list"},
+      {"id": "8.2", "text": "Uses codes.NotFound for user not found"},
+      {"id": "8.3", "text": "Uses codes.FailedPrecondition for insufficient inventory (system not in required state)"},
+      {"id": "8.4", "text": "Uses codes.Internal only for truly unexpected errors"},
+      {"id": "8.5", "text": "Does NOT use codes.Unknown for any handled error case"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "unimplemented-server-embedding",
+    "description": "Tests that gRPC server implementations embed UnimplementedXxxServer, not UnsafeXxxServer",
+    "prompt": "Write a Go implementation of a gRPC server for an OrderService with CreateOrder and GetOrder RPCs. Show the struct definition and method signatures.",
+    "trap": "Without the skill, the model may embed UnsafeXxxServer or not embed any base server. The skill requires UnimplementedXxxServer for forward compatibility.",
+    "assertions": [
+      {"id": "9.1", "text": "Embeds UnimplementedOrderServiceServer in the server struct"},
+      {"id": "9.2", "text": "Does NOT embed UnsafeOrderServiceServer"},
+      {"id": "9.3", "text": "Implements the service methods with correct signatures (context, request pointer, response pointer and error return)"},
+      {"id": "9.4", "text": "Uses status.Errorf for error returns in the handler methods"},
+      {"id": "9.5", "text": "Registers the server with pb.RegisterOrderServiceServer"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "client-load-balancing-and-retry",
+    "description": "Tests knowledge of gRPC client-side load balancing and retry configuration",
+    "prompt": "I'm deploying a Go gRPC client in Kubernetes. The server has multiple replicas behind a headless service. How do I configure the client to distribute requests across all replicas and retry on transient failures?",
+    "trap": "Without the skill, the model may suggest a separate load balancer or basic round-robin without the dns:/// scheme. The skill shows the specific configuration.",
+    "assertions": [
+      {"id": "10.1", "text": "Uses the dns:/// scheme for service discovery with headless Kubernetes services"},
+      {"id": "10.2", "text": "Configures round_robin load balancing policy via service config"},
+      {"id": "10.3", "text": "Configures retry policy in the service config with retryableStatusCodes containing UNAVAILABLE"},
+      {"id": "10.4", "text": "Sets maxAttempts, initialBackoff, maxBackoff in the retry policy"},
+      {"id": "10.5", "text": "Does NOT suggest creating a new connection per request for load distribution"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "streaming-over-large-messages",
+    "description": "Tests preference for streaming over large single messages",
+    "prompt": "I need to send a result set of 50,000 records from a gRPC server to a client. Each record is about 1KB. What's the best approach?",
+    "trap": "Without the skill, the model may suggest increasing MaxRecvMsgSize and sending all records in one response. The skill recommends streaming to avoid per-message size limits and memory pressure.",
+    "assertions": [
+      {"id": "11.1", "text": "Recommends server streaming RPC to send records incrementally"},
+      {"id": "11.2", "text": "Explains why a single large message is problematic (size limits, memory pressure)"},
+      {"id": "11.3", "text": "Shows the server streaming pattern with stream.Send in a loop"},
+      {"id": "11.4", "text": "Client reads with stream.Recv in a loop, checking for io.EOF"},
+      {"id": "11.5", "text": "Does NOT just increase MaxRecvMsgSize as the primary solution"}
+    ]
+  }
+]

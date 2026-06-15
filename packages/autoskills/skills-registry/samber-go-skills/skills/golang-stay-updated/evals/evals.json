@@ -1,0 +1,142 @@
+[
+  {
+    "id": 1,
+    "name": "go-newsletters-recommendation",
+    "description": "Tests whether the model recommends specific Go newsletters for staying updated",
+    "prompt": "I want to stay updated with Go ecosystem news without spending hours browsing. What newsletters should I subscribe to?",
+    "trap": "Without the skill, the model may give generic advice like 'follow blogs' or only mention the official blog, missing curated newsletters",
+    "assertions": [
+      {"id": "1.1", "text": "Recommends Golang Weekly (golangweekly.com)"},
+      {"id": "1.2", "text": "Recommends Awesome Go Newsletter (go.libhunt.com)"},
+      {"id": "1.3", "text": "Advises subscribing to 1-2 newsletters to avoid overload"},
+      {"id": "1.4", "text": "Mentions these provide curated content, articles, and library updates"},
+      {"id": "1.5", "text": "Does not recommend more than 3-4 newsletters (quality over quantity)"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "go-community-channels",
+    "description": "Tests knowledge of specific Go community channels beyond Reddit",
+    "prompt": "I'm a Go developer looking to connect with other Gophers. Where can I find active Go communities for discussion and help?",
+    "trap": "Without the skill, the model may only mention r/golang and Stack Overflow, missing Slack, forums, and golang-nuts",
+    "assertions": [
+      {"id": "2.1", "text": "Mentions r/golang subreddit"},
+      {"id": "2.2", "text": "Mentions gophers.slack.com (official Go Slack)"},
+      {"id": "2.3", "text": "Mentions the Go Forum (forum.golangbridge.org)"},
+      {"id": "2.4", "text": "Mentions golang-nuts Google Group (groups.google.com/g/golang-nuts)"},
+      {"id": "2.5", "text": "Mentions the official Go wiki (go.dev/wiki)"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "go-youtube-channels",
+    "description": "Tests knowledge of specific Go YouTube channels for learning",
+    "prompt": "I prefer learning Go through video content. What YouTube channels should I follow for Go talks and tutorials?",
+    "trap": "Without the skill, the model may only suggest generic programming channels or just GopherCon",
+    "assertions": [
+      {"id": "3.1", "text": "Recommends the official Go YouTube channel (@golang)"},
+      {"id": "3.2", "text": "Recommends Gopher Academy"},
+      {"id": "3.3", "text": "Recommends GopherCon Europe or GopherCon UK channels"},
+      {"id": "3.4", "text": "Recommends Ardan Labs channel"},
+      {"id": "3.5", "text": "Lists at least 3 distinct Go-specific YouTube channels"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "famous-go-core-team-members",
+    "description": "Tests knowledge of Go core team members to follow",
+    "prompt": "Who are the key people behind the Go programming language that I should follow for insights on language direction?",
+    "trap": "Without the skill, the model may only name Rob Pike and Ken Thompson, missing active contributors",
+    "assertions": [
+      {"id": "4.1", "text": "Mentions Rob Pike as a co-creator"},
+      {"id": "4.2", "text": "Mentions Russ Cox and his role in Go"},
+      {"id": "4.3", "text": "Mentions Brad Fitzpatrick"},
+      {"id": "4.4", "text": "Mentions Dave Cheney as an influential Go community member"},
+      {"id": "4.5", "text": "Mentions Robert Griesemer as a co-creator"},
+      {"id": "4.6", "text": "Provides social media handles or GitHub usernames for at least 3 people"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "go-library-authors-to-follow",
+    "description": "Tests knowledge of influential Go library/framework authors",
+    "prompt": "I want to follow Go developers who create popular libraries and frameworks. Who should I follow on GitHub or X?",
+    "trap": "Without the skill, the model may list only a few well-known names, missing the breadth of the ecosystem",
+    "assertions": [
+      {"id": "5.1", "text": "Mentions Steve Francia (spf13) — Cobra, Viper, Hugo"},
+      {"id": "5.2", "text": "Mentions Mitchell Hashimoto (mitchellh) — Terraform, Consul, Vault"},
+      {"id": "5.3", "text": "Mentions Samuel Berthe (samber) — lo, do, oops"},
+      {"id": "5.4", "text": "Mentions Matt Holt (mholt) — Caddy"},
+      {"id": "5.5", "text": "Provides GitHub usernames or X handles for the recommended people"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "official-go-resources",
+    "description": "Tests knowledge of official Go resources and tools",
+    "prompt": "I'm new to Go. What are the essential official resources I should bookmark?",
+    "trap": "Without the skill, the model may only mention go.dev and the tour, missing pkg.go.dev and the playground",
+    "assertions": [
+      {"id": "6.1", "text": "Mentions go.dev as the official Go website"},
+      {"id": "6.2", "text": "Mentions pkg.go.dev for package discovery and documentation"},
+      {"id": "6.3", "text": "Mentions tour.golang.org (Go Tour) for interactive learning"},
+      {"id": "6.4", "text": "Mentions play.golang.org (Go Playground) for testing code"},
+      {"id": "6.5", "text": "Mentions go.dev/blog (official Go blog) for announcements"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "go-blogs-to-follow",
+    "description": "Tests knowledge of must-follow Go blogs beyond the official blog",
+    "prompt": "What Go-focused blogs should I read regularly for in-depth Go articles?",
+    "trap": "Without the skill, the model may only mention the official blog or random Medium posts",
+    "assertions": [
+      {"id": "7.1", "text": "Mentions The Go Blog (go.dev/blog)"},
+      {"id": "7.2", "text": "Mentions Dave Cheney's blog (dave.cheney.net)"},
+      {"id": "7.3", "text": "Mentions Ardan Labs Blog (ardanlabs.com/blog)"},
+      {"id": "7.4", "text": "Lists at least 3 specific blog names with URLs or authors"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "staying-updated-strategy",
+    "description": "Tests the curated strategy for staying updated without information overload",
+    "prompt": "I'm overwhelmed by the amount of Go content out there. Give me a practical plan for staying current with Go without spending all day reading.",
+    "trap": "Without the skill, the model may give generic advice without specific numbers or concrete recommendations",
+    "assertions": [
+      {"id": "8.1", "text": "Recommends subscribing to 1-2 newsletters specifically (not more)"},
+      {"id": "8.2", "text": "Recommends following 10-20 key people on social media"},
+      {"id": "8.3", "text": "Recommends checking go.dev/blog weekly for official announcements"},
+      {"id": "8.4", "text": "Recommends joining Go Slack for real-time discussions"},
+      {"id": "8.5", "text": "Recommends attending GopherCon (virtual or in-person) yearly"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "go-conference-speakers",
+    "description": "Tests knowledge of Go conference speakers and community leaders",
+    "prompt": "Who are notable Go conference speakers I should watch talks from?",
+    "trap": "Without the skill, the model may only name core team members, missing dedicated community speakers",
+    "assertions": [
+      {"id": "9.1", "text": "Mentions at least one of: Carlisia Campos, Erik St. Martin, Brian Ketelsen"},
+      {"id": "9.2", "text": "Mentions Mat Ryer or Johnny Boursiquot as Go educators/speakers"},
+      {"id": "9.3", "text": "Mentions GopherCon as the conference to follow"},
+      {"id": "9.4", "text": "Provides specific names with their social handles or GitHub profiles"},
+      {"id": "9.5", "text": "Lists at least 4 distinct speakers/community leaders"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "go-performance-experts",
+    "description": "Tests knowledge of Go performance and optimization experts to follow",
+    "prompt": "I'm interested in Go performance optimization. Who are the experts I should follow for deep Go performance content?",
+    "trap": "Without the skill, the model may suggest generic Go developers or only Dave Cheney",
+    "assertions": [
+      {"id": "10.1", "text": "Mentions Dmitry Vyukov as a Go performance expert"},
+      {"id": "10.2", "text": "Mentions Dave Cheney for performance-related Go content"},
+      {"id": "10.3", "text": "Provides GitHub usernames (e.g., dvyukov, davecheney)"},
+      {"id": "10.4", "text": "Mentions Bill Kennedy / Ardan Labs for Go performance training"},
+      {"id": "10.5", "text": "Mentions Jaana Dogan (rakyll) for Go internals/performance"}
+    ]
+  }
+]

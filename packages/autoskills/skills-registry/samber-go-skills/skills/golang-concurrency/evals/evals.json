@@ -1,0 +1,181 @@
+[
+  {
+    "id": 1,
+    "name": "time-after-in-select-loop",
+    "description": "Tests whether the model avoids time.After inside a select loop and uses time.NewTimer with Reset instead",
+    "prompt": "I have a Go worker that reads from a channel and needs a 5-second inactivity timeout. If nothing arrives for 5 seconds, it should log and continue waiting. Write the select loop.",
+    "trap": "Without the skill, the model uses time.After(5*time.Second) inside the for/select loop, creating repeated timer allocations/churn instead of reusing a timer",
+    "assertions": [
+      {"id": "1.1", "text": "Does NOT use time.After inside the loop body"},
+      {"id": "1.2", "text": "Creates time.NewTimer (or time.NewTicker) outside the loop"},
+      {"id": "1.3", "text": "Calls timer.Reset() after handling a message or timeout"},
+      {"id": "1.4", "text": "Calls timer.Stop() (or defers it) to clean up the timer"},
+      {"id": "1.5", "text": "For Go 1.23+, does not use the old stale-drain pattern; for Go <1.23 compatibility, drains before Reset when Stop reports a possible pending value"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "channel-closing-ownership",
+    "description": "Tests whether the model follows the rule that only the sender closes a channel, not the receiver",
+    "prompt": "I have a producer goroutine that sends items to a channel and a consumer goroutine that reads from it. The consumer knows when it has received enough items and wants to signal completion. How should I close the channel to stop the producer?",
+    "trap": "Without the skill, the model closes the channel from the consumer side, which panics if the producer writes after close",
+    "assertions": [
+      {"id": "2.1", "text": "Does NOT close the channel from the consumer/receiver side"},
+      {"id": "2.2", "text": "Uses a separate signaling mechanism (done channel, context cancellation, or similar) for the consumer to tell the producer to stop"},
+      {"id": "2.3", "text": "The producer is the one that closes the data channel (or it is closed by the channel creator/sender)"},
+      {"id": "2.4", "text": "Explains the panic risk of closing a channel from the receiver side"},
+      {"id": "2.5", "text": "The producer selects on the stop signal alongside its send operation"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "waitgroup-add-placement",
+    "description": "wg.Add before go statement; wg.Add(len(urls)) is preferred over per-goroutine Add(1) when count is known",
+    "prompt": "Review this Go code and identify all WaitGroup issues:\n\n```go\nfunc ProcessURLs(urls []string) []Result {\n    var wg sync.WaitGroup\n    results := make([]Result, len(urls))\n\n    for i, url := range urls {\n        go func(i int, url string) {\n            wg.Add(1)\n            defer wg.Done()\n            results[i] = fetch(url)\n        }(i, url)\n    }\n\n    wg.Wait()\n    return results\n}\n```\n\nFix all issues. Also, is there a more efficient way to add to the WaitGroup when the number of goroutines is known upfront?",
+    "trap": "The most obvious bug (wg.Add inside goroutine) is well-known. The model should also catch the second issue: wg.Add(len(urls)) before the loop is more efficient than N separate wg.Add(1) calls (single atomic update vs N atomic updates). The model likely fixes the placement but may not suggest the batch Add optimization.",
+    "assertions": [
+      {"id": "3.1", "text": "Moves wg.Add(1) BEFORE the go statement — wg.Add inside the goroutine races with wg.Wait(), which can return before all goroutines have registered"},
+      {"id": "3.2", "text": "Suggests using wg.Add(len(urls)) before the loop as a more efficient alternative — a single atomic operation instead of N separate wg.Add(1) calls in the loop"},
+      {"id": "3.3", "text": "Keeps defer wg.Done() inside the goroutine"},
+      {"id": "3.4", "text": "Notes the race condition: wg.Wait() could return before some goroutines have called wg.Add(1), causing ProcessURLs to return with goroutines still running"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "channel-direction-in-signatures",
+    "description": "Tests whether the model specifies channel direction (send-only, receive-only) in function signatures",
+    "prompt": "Write a Go pipeline with two functions: one that generates integers from a slice and sends them to a channel, and one that reads integers from a channel, doubles them, and sends to an output channel. Wire them together in main.",
+    "trap": "Without the skill, the model uses bidirectional chan int in function parameters instead of chan<- and <-chan",
+    "assertions": [
+      {"id": "4.1", "text": "The generator function returns <-chan int (receive-only for callers)"},
+      {"id": "4.2", "text": "The doubler function accepts <-chan int as input parameter"},
+      {"id": "4.3", "text": "The doubler function returns <-chan int (receive-only for callers)"},
+      {"id": "4.4", "text": "Internally, channels are created as bidirectional but exposed as directional through return types"},
+      {"id": "4.5", "text": "The producer (generator) closes its output channel with defer close(out)"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "unbuffered-channel-default",
+    "description": "Tests whether the model defaults to unbuffered channels and requires justification for buffered ones",
+    "prompt": "I need a channel to pass tasks from a dispatcher to a pool of workers in Go. Should I buffer it? If so, how large?",
+    "trap": "Without the skill, the model suggests an arbitrary large buffer (e.g., 100 or 1000) without justification or discussion of backpressure",
+    "assertions": [
+      {"id": "5.1", "text": "Recommends starting with unbuffered (or very small buffer like 0 or 1) as the default"},
+      {"id": "5.2", "text": "Explains that large buffers mask backpressure problems"},
+      {"id": "5.3", "text": "States that buffer size should be based on measured need, not arbitrary choice"},
+      {"id": "5.4", "text": "Does NOT suggest a large arbitrary buffer (e.g., 100, 1000) without explaining the tradeoffs"},
+      {"id": "5.5", "text": "Mentions that buffered channels hide the problem of slow consumers"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "send-copies-not-pointers",
+    "description": "Tests whether the model sends copies (not pointers) through channels to avoid shared memory",
+    "prompt": "I have a producer goroutine that creates Task structs and sends them to a channel for worker goroutines to process. The Task struct has fields like ID, Payload, and Status. Write the producer and consumer code.",
+    "trap": "Without the skill, the model sends *Task pointers through the channel, creating invisible shared memory that defeats the purpose of channels",
+    "assertions": [
+      {"id": "6.1", "text": "Sends Task values (not *Task pointers) through the channel, OR explicitly documents why pointers are safe in this case"},
+      {"id": "6.2", "text": "The channel type is chan Task (value type) rather than chan *Task"},
+      {"id": "6.3", "text": "Does not mutate the Task struct after sending it on the channel (or sends a copy)"},
+      {"id": "6.4", "text": "If pointers are used, explicitly acknowledges the shared-memory risk and explains the mitigation"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "errgroup-vs-waitgroup-decision",
+    "description": "Tests whether the model chooses errgroup over WaitGroup when error handling is needed, and uses SetLimit for bounded concurrency",
+    "prompt": "Write a Go function that fetches data from 50 URLs concurrently. At most 10 should run at once. If any fetch fails, stop all remaining work and return the error.",
+    "trap": "Without the skill, the model builds a hand-rolled worker pool with WaitGroup + semaphore channel, missing errgroup.SetLimit which handles this natively",
+    "assertions": [
+      {"id": "7.1", "text": "Uses errgroup (golang.org/x/sync/errgroup) instead of sync.WaitGroup for error propagation"},
+      {"id": "7.2", "text": "Uses errgroup.WithContext to cancel siblings on first error"},
+      {"id": "7.3", "text": "Uses g.SetLimit(10) for bounded concurrency instead of a hand-rolled semaphore"},
+      {"id": "7.4", "text": "Does NOT build a manual worker pool with channels and WaitGroup when errgroup suffices"},
+      {"id": "7.5", "text": "Each goroutine checks ctx.Done() or uses the context from errgroup.WithContext"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "ctx-done-in-select",
+    "description": "Tests whether every select statement includes a ctx.Done() case to prevent goroutine leaks",
+    "prompt": "Write a Go function that reads from an input channel, transforms each item, and writes to an output channel. It should run as a goroutine.",
+    "trap": "Without the skill, the model writes a select with only channel operations but no ctx.Done() case, causing goroutine leaks on cancellation",
+    "assertions": [
+      {"id": "8.1", "text": "The function accepts a context.Context parameter"},
+      {"id": "8.2", "text": "Every select statement includes a case <-ctx.Done(): return branch"},
+      {"id": "8.3", "text": "Both the read from input channel AND the write to output channel are wrapped in select with ctx.Done()"},
+      {"id": "8.4", "text": "The goroutine exits cleanly when context is cancelled"},
+      {"id": "8.5", "text": "The output channel is closed when the goroutine exits (defer close)"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "sync-map-vs-rwmutex-decision",
+    "description": "Tests whether the model correctly chooses between sync.Map and RWMutex+map based on access patterns",
+    "prompt": "I need a concurrent cache in Go. Keys are strings, values are structs. The cache will have frequent writes from many goroutines updating the same keys, and reads happen about as often as writes. Which synchronization approach should I use?",
+    "trap": "Without the skill, the model recommends sync.Map because it sounds like 'concurrent map', but sync.Map is slower for write-heavy overlapping-key patterns",
+    "assertions": [
+      {"id": "9.1", "text": "Recommends sync.RWMutex + plain map over sync.Map for this write-heavy, overlapping-key pattern"},
+      {"id": "9.2", "text": "Explains that sync.Map is optimized for write-once/read-many or disjoint key sets"},
+      {"id": "9.3", "text": "Explains that for frequent writes with overlapping keys, RWMutex+map is faster"},
+      {"id": "9.4", "text": "Does NOT unconditionally recommend sync.Map for any concurrent map scenario"},
+      {"id": "9.5", "text": "Mentions that concurrent map read/write without synchronization causes a hard crash (not just a data race)"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "sync-pool-reset-before-put",
+    "description": "Tests whether the model resets objects before returning them to sync.Pool",
+    "prompt": "Write a Go function that uses sync.Pool to reuse bytes.Buffer objects for encoding JSON responses in an HTTP handler. Show the pool setup and the handler.",
+    "trap": "Without the skill, the model returns the buffer to the pool without calling Reset(), leading to dirty objects and data corruption",
+    "assertions": [
+      {"id": "10.1", "text": "Calls buf.Reset() BEFORE bufPool.Put(buf), not after Get()"},
+      {"id": "10.2", "text": "Uses defer to ensure the buffer is returned to the pool even on error"},
+      {"id": "10.3", "text": "Does not assume the object from Get() is clean/zeroed"},
+      {"id": "10.4", "text": "The pool's New function creates a new buffer"},
+      {"id": "10.5", "text": "Does not store persistent state in pooled objects"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "goroutine-panic-recovery",
+    "description": "Tests whether the model adds panic recovery at goroutine boundaries in production code",
+    "prompt": "Write a Go HTTP server that spawns a background goroutine per request to do async processing (e.g., sending a notification email). The main handler returns 202 Accepted immediately.",
+    "trap": "Without the skill, the model spawns go func() without recover(), so a panic in the background goroutine crashes the entire server process",
+    "assertions": [
+      {"id": "11.1", "text": "Adds defer func() { recover() }() or equivalent panic recovery inside the goroutine"},
+      {"id": "11.2", "text": "Logs or handles the recovered panic (not just silently swallowed)"},
+      {"id": "11.3", "text": "The goroutine has a shutdown mechanism (context, done channel, or similar)"},
+      {"id": "11.4", "text": "Mentions that a panic in a goroutine crashes the entire process"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "singleflight-cache-stampede",
+    "description": "Tests whether the model uses singleflight to deduplicate concurrent requests for the same resource",
+    "prompt": "My Go service has an expensive database query for user profiles. Under load, hundreds of goroutines request the same user profile simultaneously, causing a thundering herd on the database. How should I solve this?",
+    "trap": "Without the skill, the model suggests only traditional caching (TTL-based) or a mutex, missing singleflight which deduplicates in-flight requests",
+    "assertions": [
+      {"id": "12.1", "text": "Recommends golang.org/x/sync/singleflight as the primary solution"},
+      {"id": "12.2", "text": "Shows usage of group.Do(key, func) where key identifies the deduplicated resource"},
+      {"id": "12.3", "text": "Explains that only one goroutine executes the function; others wait and share the result"},
+      {"id": "12.4", "text": "May combine singleflight with a cache layer for TTL-based caching, but singleflight is the deduplication mechanism"},
+      {"id": "12.5", "text": "Does NOT suggest only a plain mutex or only a TTL cache as the solution to thundering herd"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "iterator-vs-goroutine-pipeline",
+    "description": "Tests whether the model uses Go 1.23+ iterators for sequential CPU-bound transforms instead of goroutine+channel pipelines",
+    "prompt": "I have a Go 1.23+ project. I need to filter a slice of users to find active ones, then extract their email addresses. The slice is in-memory and processing is pure CPU. Should I use a goroutine pipeline with channels?",
+    "trap": "Without the skill, the model builds a goroutine+channel pipeline for a purely sequential, CPU-bound in-memory transformation where iterators are more appropriate",
+    "assertions": [
+      {"id": "13.1", "text": "Recommends against goroutine+channel pipeline for this purely sequential, in-memory transform"},
+      {"id": "13.2", "text": "Suggests Go 1.23+ iterators (iter.Seq) or simple slice operations instead"},
+      {"id": "13.3", "text": "Explains that goroutine+channel pipelines add overhead without benefit for sequential CPU-bound work"},
+      {"id": "13.4", "text": "Mentions that goroutine pipelines are appropriate when stages involve I/O or need true parallelism"},
+      {"id": "13.5", "text": "Does NOT build a multi-goroutine pipeline for this use case"}
+    ]
+  }
+]

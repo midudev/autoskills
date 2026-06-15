@@ -1,0 +1,28 @@
+name: Security scan skills
+
+on:
+  push:
+    branches: [main]
+    paths: ['skills/**']
+  pull_request:
+    paths: ['skills/**']
+  schedule:
+    - cron: '0 10 1 * *'  # 1st of every month at 10am UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  snyk-agent-scan:
+    if: github.event_name != 'schedule' || github.repository_owner == 'samber'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Run Snyk Agent Scan
+        run: uvx snyk-agent-scan@latest --ci --dangerously-run-mcp-servers --skills ./skills
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

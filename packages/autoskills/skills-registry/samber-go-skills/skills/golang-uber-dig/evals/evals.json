@@ -1,0 +1,154 @@
+[
+  {
+    "id": 1,
+    "name": "param-objects-many-deps",
+    "description": "Tests use of dig.In parameter objects when a constructor has many dependencies",
+    "prompt": "I'm wiring a Go service with uber-go/dig. I have a NewServer constructor that needs *zap.Logger, *sql.DB, *redis.Client, *Config, and *MetricsRegistry. The signature is getting unwieldy. How should I clean it up?",
+    "trap": "Without the skill, the model keeps the long signature or wraps args in an ad-hoc struct without dig.In, missing the parameter-object pattern that lets the container fill the fields.",
+    "assertions": [
+      {"id": "1.1", "text": "Embeds dig.In in the parameter struct"},
+      {"id": "1.2", "text": "Constructor takes the params struct as a single argument"},
+      {"id": "1.3", "text": "Does NOT just keep the long parameter list as the answer"},
+      {"id": "1.4", "text": "Does NOT use a plain struct without dig.In (which would not be filled by the container)"},
+      {"id": "1.5", "text": "Mentions readability/maintainability benefit (adding a new dep is a one-line change)"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "value-groups-for-handlers",
+    "description": "Tests value groups when many constructors must contribute to one slice",
+    "prompt": "In my Go HTTP server wired with uber-go/dig, I have several constructors (NewUserHandler, NewPostHandler, NewHealthHandler) and a NewRouter that should consume all of them. Each handler is registered independently. How do I wire this without the router knowing which handlers exist?",
+    "trap": "Without the skill, the model invokes each handler individually inside main() and passes a slice to NewRouter, missing the group:\"...\" tag that decouples producers from consumers.",
+    "assertions": [
+      {"id": "2.1", "text": "Each handler constructor returns a dig.Out struct (or uses dig.Group via Provide option) tagged with group:\"routes\" (or similar group name)"},
+      {"id": "2.2", "text": "NewRouter consumes a dig.In with a slice field tagged group:\"routes\""},
+      {"id": "2.3", "text": "Handlers are added with c.Provide — no manual slice assembly in main()"},
+      {"id": "2.4", "text": "Does NOT manually assemble the handler slice and pass it to NewRouter"},
+      {"id": "2.5", "text": "Mentions that group order is not guaranteed (or is silent on it; does NOT claim a specific order is guaranteed)"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "named-values-multiple-dbs",
+    "description": "Tests dig.Name for multiple instances of the same type",
+    "prompt": "My Go app needs two *sql.DB connections — one to the primary write database and one to a read replica. Both use the same *sql.DB type. Show me how to register and consume them with uber-go/dig.",
+    "trap": "Without the skill, the model wraps the two connections in different types (struct PrimaryDB / struct ReadOnlyDB) instead of using dig.Name on a single type.",
+    "assertions": [
+      {"id": "3.1", "text": "Uses dig.Name(\"...\") on c.Provide for at least one of the two databases (or uses dig.Out result tags name:\"...\")"},
+      {"id": "3.2", "text": "Both providers register the same *sql.DB type, distinguished by name"},
+      {"id": "3.3", "text": "Consumer uses dig.In with name:\"primary\" / name:\"readonly\" tags"},
+      {"id": "3.4", "text": "Does NOT introduce wrapper types like type PrimaryDB *sql.DB just to disambiguate"},
+      {"id": "3.5", "text": "Does NOT register both as plain *sql.DB without names (which dig rejects at Provide time)"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "as-to-hide-concrete",
+    "description": "Tests dig.As to expose only an interface to consumers",
+    "prompt": "I have a *PostgresDB concrete struct in my Go code that has many internal fields and methods. I want consumers to depend only on a Database interface (Query, Exec). How do I register it with uber-go/dig so consumers can never accidentally see the concrete type?",
+    "trap": "Without the skill, the model registers the constructor returning Database (interface) directly, which works but loses type info; or writes a separate adapter constructor — missing dig.As that does this in one line.",
+    "assertions": [
+      {"id": "4.1", "text": "Uses dig.As(new(Database)) as a Provide option on the *PostgresDB constructor"},
+      {"id": "4.2", "text": "The constructor itself returns the concrete *PostgresDB"},
+      {"id": "4.3", "text": "Consumers ask for the Database interface, not *PostgresDB"},
+      {"id": "4.4", "text": "Does NOT write a separate wrapper/adapter constructor that just returns the interface"},
+      {"id": "4.5", "text": "Mentions or demonstrates that only the interface is exposed in the graph"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "scopes-for-request-locals",
+    "description": "Tests scopes for per-request dependencies",
+    "prompt": "In my Go web app wired with uber-go/dig, I have global services (logger, database) and per-request data (current user, request ID). How do I keep request-scoped values from leaking across concurrent requests?",
+    "trap": "Without the skill, the model registers everything in the root container and uses context.Value for per-request data — missing dig.Scope which provides isolated child containers.",
+    "assertions": [
+      {"id": "5.1", "text": "Uses c.Scope(\"request\") (or root.Scope) to create a child container per request"},
+      {"id": "5.2", "text": "Global services (logger, database) stay registered on the root"},
+      {"id": "5.3", "text": "Per-request providers are registered on the request scope, not on the root"},
+      {"id": "5.4", "text": "Mentions that the child scope inherits root providers"},
+      {"id": "5.5", "text": "Does NOT register per-request providers globally where they would be shared across requests"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "container-not-passed-around",
+    "description": "Tests that the container stays at the composition root",
+    "prompt": "I'm using uber-go/dig in my Go service. My UserHandler depends on UserService and AuditLogger. Should I inject *dig.Container into UserHandler so it can resolve its own dependencies on demand?",
+    "trap": "Without the skill, the model agrees to pass the container, turning it into a service-locator anti-pattern that hides dependencies and breaks testability.",
+    "assertions": [
+      {"id": "6.1", "text": "Advises against passing *dig.Container into business code"},
+      {"id": "6.2", "text": "States that the container should only live at the composition root (main / startup)"},
+      {"id": "6.3", "text": "Recommends UserHandler take typed dependencies (UserService, AuditLogger) as constructor parameters"},
+      {"id": "6.4", "text": "Mentions service locator anti-pattern OR explains the testability/visibility downside"},
+      {"id": "6.5", "text": "Does NOT show example code that injects the container into a handler"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "graph-validation-dryrun",
+    "description": "Tests dig.DryRun for validating the graph in CI without running constructors",
+    "prompt": "I want a Go test that catches missing-provider errors and cycles in my uber-go/dig wiring without actually starting database connections, HTTP servers, or any real side effects. How do I write that test?",
+    "trap": "Without the skill, the model spins up a real container with real constructors, or skips validation entirely — missing dig.DryRun(true) which validates types without invocation.",
+    "assertions": [
+      {"id": "7.1", "text": "Uses dig.New(dig.DryRun(true)) to build the test container"},
+      {"id": "7.2", "text": "Registers the same Provides as the production binary"},
+      {"id": "7.3", "text": "Calls c.Invoke against the composition root (or top-level dependency) to trigger validation"},
+      {"id": "7.4", "text": "Asserts no error is returned"},
+      {"id": "7.5", "text": "Does NOT actually instantiate real services in the test"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "decorate-not-rewrite",
+    "description": "Tests Decorate to wrap an existing value (e.g., logger) instead of replacing the constructor",
+    "prompt": "In my Go app using uber-go/dig, I want every component in the 'worker' module to receive a *zap.Logger that is named 'worker' (i.e., adds a 'logger':'worker' field). Other modules should keep the unnamed logger. What's the cleanest way?",
+    "trap": "Without the skill, the model rewrites NewLogger or wraps every constructor manually — missing c.Decorate which transforms the value at the scope/module boundary.",
+    "assertions": [
+      {"id": "8.1", "text": "Uses Decorate (c.Decorate or scope.Decorate) on *zap.Logger"},
+      {"id": "8.2", "text": "The decorator returns log.Named(\"worker\") (or equivalent)"},
+      {"id": "8.3", "text": "Decorate is applied at the worker scope/module, not globally"},
+      {"id": "8.4", "text": "Does NOT modify or duplicate the original NewLogger constructor"},
+      {"id": "8.5", "text": "Mentions decorator scope semantics (applies to scope and descendants only) OR places Decorate inside a scope"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "panic-recovery-option",
+    "description": "Tests RecoverFromPanics container option",
+    "prompt": "Some third-party constructors I'm registering with uber-go/dig occasionally panic on invalid configuration. I want my Go app to convert those panics into error returns from c.Invoke instead of crashing the process. How do I configure the container?",
+    "trap": "Without the skill, the model wraps every constructor in defer/recover — missing dig.RecoverFromPanics() which does this at the container level.",
+    "assertions": [
+      {"id": "9.1", "text": "Uses dig.New(dig.RecoverFromPanics()) (or passes the option to dig.New)"},
+      {"id": "9.2", "text": "Mentions or shows that the panic surfaces as a typed dig.PanicError"},
+      {"id": "9.3", "text": "Does NOT recommend wrapping every constructor in defer recover() manually"},
+      {"id": "9.4", "text": "Uses errors.As(err, &dig.PanicError{}) or equivalent to detect the panic case"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "groups-flatten-tag",
+    "description": "Tests group:\",flatten\" tag when one constructor produces multiple group entries",
+    "prompt": "I have a NewMigrations constructor in my Go app (using uber-go/dig) that returns a slice of Migration values. I want every Migration in this slice to be visible to consumers that consume the 'migrations' group as []Migration. How do I do this without nesting?",
+    "trap": "Without the skill, the model registers []Migration as a single group entry, leaving consumers with [][]Migration. The right answer is the ',flatten' tag on the group.",
+    "assertions": [
+      {"id": "10.1", "text": "Uses group:\"migrations,flatten\" tag (with the flatten suffix)"},
+      {"id": "10.2", "text": "Result struct has a slice field []Migration with the tag"},
+      {"id": "10.3", "text": "Consumer receives []Migration (flat slice), not [][]Migration"},
+      {"id": "10.4", "text": "Does NOT silently produce a nested-slice consumer signature"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "fx-vs-dig-when-lifecycle",
+    "description": "Tests recommending fx (instead of raw dig) when the user needs lifecycle/signal handling",
+    "prompt": "I'm starting a new Go service with uber-go/dig. The service needs to gracefully shut down on SIGTERM, run startup migrations, and start a background worker. Should I implement signal handling and start/stop sequencing on top of dig myself?",
+    "trap": "Without the skill, the model writes custom signal handling code on top of raw dig — missing that uber-go/fx is built specifically for this and provides fx.Lifecycle, fx.Hook, and signal-aware Run().",
+    "assertions": [
+      {"id": "11.1", "text": "Recommends migrating to or considering uber-go/fx for the lifecycle requirements"},
+      {"id": "11.2", "text": "Mentions that fx is built on top of dig (so existing wiring patterns transfer)"},
+      {"id": "11.3", "text": "Mentions fx.Lifecycle / fx.Hook (OnStart/OnStop) for graceful boot/shutdown"},
+      {"id": "11.4", "text": "Mentions app.Run() handling SIGINT/SIGTERM"},
+      {"id": "11.5", "text": "Does NOT walk the user through writing custom signal handling on top of raw dig as the primary recommendation"}
+    ]
+  }
+]

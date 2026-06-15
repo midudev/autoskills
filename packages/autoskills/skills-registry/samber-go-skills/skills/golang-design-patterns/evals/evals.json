@@ -1,0 +1,251 @@
+[
+  {
+    "id": 1,
+    "name": "functional-options-over-builder",
+    "description": "Tests whether the model recommends functional options (not builder pattern) as the preferred constructor pattern in Go, and whether options return errors for validation",
+    "prompt": "I need to create a Go HTTP server struct with optional configuration: read timeout, write timeout, max connections, TLS config, and a logger. Design the constructor API. The config will grow over time as we add features.",
+    "trap": "Without the skill, the model may default to a builder pattern, config struct, or positional arguments instead of functional options. It may also forget that options should return errors when validation can fail.",
+    "assertions": [
+      {"id": "1.1", "text": "Uses functional options pattern (Option type as func that modifies the struct)"},
+      {"id": "1.2", "text": "Constructor accepts variadic ...Option parameter"},
+      {"id": "1.3", "text": "Each option is a With* function returning an Option"},
+      {"id": "1.4", "text": "Sets sensible defaults inside the constructor before applying options"},
+      {"id": "1.5", "text": "Mentions that functional options should return an error if validation can fail, or demonstrates error-returning option variant"}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "avoid-init-function",
+    "description": "Tests whether the model avoids init() for database initialization and uses explicit constructors instead",
+    "prompt": "I'm writing a Go web service. I want to set up the database connection pool when the application starts. Here's my approach:\n\n```go\nvar db *sql.DB\n\nfunc init() {\n    var err error\n    db, err = sql.Open(\"postgres\", os.Getenv(\"DATABASE_URL\"))\n    if err != nil {\n        log.Fatal(err)\n    }\n}\n```\n\nIs this a good pattern? How should I improve it?",
+    "trap": "Without the skill, the model may accept the init() pattern as fine or only suggest minor improvements. The skill explicitly warns against init() for hidden dependencies and testability issues.",
+    "assertions": [
+      {"id": "2.1", "text": "Explicitly recommends against using init() for database initialization"},
+      {"id": "2.2", "text": "Mentions that init() makes testing harder or unpredictable"},
+      {"id": "2.3", "text": "Mentions that init() cannot return errors (must panic or log.Fatal)"},
+      {"id": "2.4", "text": "Suggests explicit constructor or initialization function (e.g. NewUserRepository(db))"},
+      {"id": "2.5", "text": "Mentions that init() runs before main/tests creating hidden dependencies"}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "enum-start-at-one",
+    "description": "Tests whether the model starts Go enums at 1 or uses an Unknown/Invalid sentinel at 0",
+    "prompt": "I need to define a Go enum for order status with values: pending, processing, shipped, delivered, cancelled. Write the type and constants using iota.",
+    "trap": "Without the skill, the model often starts the first meaningful enum value at 0 (iota), making the zero value silently pass as a valid status. The skill says enums SHOULD start at 1 or use an Unknown sentinel at 0.",
+    "assertions": [
+      {"id": "3.1", "text": "Zero value (iota = 0) is either skipped, named Unknown, Invalid, or Unspecified -- not a meaningful business value"},
+      {"id": "3.2", "text": "First meaningful enum value starts at 1 or higher"},
+      {"id": "3.3", "text": "Explains WHY: Go's zero value would silently pass as the first enum member if it were meaningful"},
+      {"id": "3.4", "text": "Uses a custom type (not raw int or string)"}
+    ]
+  },
+  {
+    "id": 4,
+    "name": "panic-vs-error-judgment",
+    "description": "Tests whether the model correctly distinguishes when to panic vs return an error",
+    "prompt": "I'm implementing a configuration parser in Go. If the config file has an invalid format, should I panic or return an error? What about if a required field is missing? What about if a developer passes nil to a function that documents it must not be nil?",
+    "trap": "Without the skill, the model may be inconsistent about when to panic. The skill says panic is for bugs (violated invariants, impossible nil), not expected errors (invalid input, missing fields).",
+    "assertions": [
+      {"id": "4.1", "text": "Invalid config format: return error (caller can handle it)"},
+      {"id": "4.2", "text": "Missing required field: return error (expected validation failure)"},
+      {"id": "4.3", "text": "Nil passed to non-nil function: panic is acceptable (violated invariant, bug in caller)"},
+      {"id": "4.4", "text": "Articulates the principle: panic is for bugs/invariant violations, errors are for expected failures"},
+      {"id": "4.5", "text": "Mentions Must* constructor pattern as a valid panic use case (init-time convenience)"}
+    ]
+  },
+  {
+    "id": 5,
+    "name": "runtime-addcleanup-over-setfinalizer",
+    "description": "Tests whether the model recommends runtime.AddCleanup over runtime.SetFinalizer for Go 1.24+",
+    "prompt": "I have a Go struct that wraps a C resource handle (via cgo). When the Go object is garbage collected, I need to release the C handle. I'm using Go 1.24. What's the best approach for automatic cleanup?",
+    "trap": "Without the skill, the model almost always suggests runtime.SetFinalizer, which is the older and more well-known API. The skill specifically says to prefer runtime.AddCleanup (Go 1.24+).",
+    "assertions": [
+      {"id": "5.1", "text": "Recommends runtime.AddCleanup as the preferred approach"},
+      {"id": "5.2", "text": "Mentions that AddCleanup supports multiple cleanups on the same object"},
+      {"id": "5.3", "text": "Mentions that AddCleanup avoids object resurrection risk (cleanup receives a copy of the value, not the object)"},
+      {"id": "5.4", "text": "Mentions that AddCleanup works even with cyclic references"},
+      {"id": "5.5", "text": "Either warns against SetFinalizer or explains why AddCleanup is better"}
+    ]
+  },
+  {
+    "id": 6,
+    "name": "resource-pool-bounded-channel",
+    "description": "Tests whether the model uses bounded channel-based pools and emphasizes limiting resource pool sizes",
+    "prompt": "I need to implement a connection pool in Go for reusing database connections. I want it to be concurrent-safe and have a maximum size. Design the pool.",
+    "trap": "Without the skill, the model may use sync.Pool (wrong: not bounded, items can be evicted) or an unbounded slice with mutex. The skill says use channels with fixed capacity for bounded allocation.",
+    "assertions": [
+      {"id": "6.1", "text": "Uses a buffered channel (chan *Conn with fixed capacity) as the pool mechanism"},
+      {"id": "6.2", "text": "Pool has a maximum size / bounded capacity"},
+      {"id": "6.3", "text": "Get operation uses select with context for timeout/cancellation"},
+      {"id": "6.4", "text": "Put operation handles pool-full case (discards excess connections)"},
+      {"id": "6.5", "text": "Does NOT use sync.Pool as the primary pooling mechanism (sync.Pool has no size guarantee and items can be reclaimed)"}
+    ]
+  },
+  {
+    "id": 7,
+    "name": "graceful-shutdown-signal-notifycontext",
+    "description": "Tests whether the model uses signal.NotifyContext for graceful shutdown",
+    "prompt": "I'm building a Go HTTP server that needs to handle SIGINT and SIGTERM for graceful shutdown. Show me how to implement this properly.",
+    "trap": "Without the skill, the model may use a raw os.Signal channel with signal.Notify instead of signal.NotifyContext. The skill specifically says to use signal.NotifyContext.",
+    "assertions": [
+      {"id": "7.1", "text": "Uses signal.NotifyContext (not raw signal.Notify with a channel)"},
+      {"id": "7.2", "text": "Listens for both SIGINT and SIGTERM"},
+      {"id": "7.3", "text": "Starts the HTTP server in a goroutine"},
+      {"id": "7.4", "text": "Creates a separate timeout context for the shutdown phase (e.g. context.WithTimeout for draining)"},
+      {"id": "7.5", "text": "Closes other resources (DB, queues) after server shutdown"}
+    ]
+  },
+  {
+    "id": 8,
+    "name": "iterator-streaming-large-data",
+    "description": "Tests whether the model uses iterators/streaming instead of loading all data into memory for large datasets",
+    "prompt": "I need to export 2 million user records from a PostgreSQL database to a JSON HTTP response in Go. The users table has columns: id, name, email, created_at. Write the handler.",
+    "trap": "Without the skill, the model typically loads all rows into a []User slice, then json.Marshal the whole thing. The skill says to stream large transfers to prevent OOM.",
+    "assertions": [
+      {"id": "8.1", "text": "Does NOT load all 2M rows into a slice in memory"},
+      {"id": "8.2", "text": "Streams the JSON response (writes records one at a time to the ResponseWriter)"},
+      {"id": "8.3", "text": "Uses rows.Next() loop or iter.Seq2 iterator pattern"},
+      {"id": "8.4", "text": "Defers rows.Close() immediately after query"},
+      {"id": "8.5", "text": "Mentions OOM risk or memory concern as motivation for streaming"}
+    ]
+  },
+  {
+    "id": 9,
+    "name": "regexp-compile-once",
+    "description": "Tests whether the model compiles regexps at package level, not inside functions",
+    "prompt": "Write a Go function that validates email addresses using a regular expression. It will be called thousands of times per second in an HTTP handler.",
+    "trap": "Without the skill, the model often compiles the regexp inside the function on every call. The skill says regexp MUST be compiled once at package level.",
+    "assertions": [
+      {"id": "9.1", "text": "Compiles the regexp at package level (var emailRegex = regexp.MustCompile(...))"},
+      {"id": "9.2", "text": "Does NOT compile the regexp inside the validation function"},
+      {"id": "9.3", "text": "Uses regexp.MustCompile (not regexp.Compile) for package-level initialization"},
+      {"id": "9.4", "text": "Explains WHY: compilation is O(n) and allocates, so doing it per-call is wasteful"}
+    ]
+  },
+  {
+    "id": 10,
+    "name": "architecture-right-sizing",
+    "description": "Tests whether the model avoids over-architecting small projects and asks for preferences",
+    "prompt": "I'm starting a new Go project: a CLI tool that reads a CSV file, transforms the data, and writes it to stdout. It will be about 200 lines of code. What architecture and directory structure should I use?",
+    "trap": "Without the skill, the model may suggest clean architecture, hexagonal patterns, handler/service/repository layers, or DI frameworks for a 200-line CLI. The skill says don't impose complex architecture on small projects.",
+    "assertions": [
+      {"id": "10.1", "text": "Recommends a flat or minimal structure (no multi-layer architecture)"},
+      {"id": "10.2", "text": "Does NOT suggest clean architecture, hexagonal, DDD, or ports and adapters for a 200-line CLI"},
+      {"id": "10.3", "text": "Does NOT suggest dependency injection frameworks"},
+      {"id": "10.4", "text": "Structure has at most cmd/ and possibly internal/, not handler/service/repository layers"},
+      {"id": "10.5", "text": "Mentions that architecture complexity should match project scope"}
+    ]
+  },
+  {
+    "id": 11,
+    "name": "hexagonal-vs-clean-architecture",
+    "description": "Tests whether the model correctly distinguishes hexagonal from clean architecture and when each applies",
+    "prompt": "I'm building a Go service (about 8K lines) that processes orders. It needs HTTP and gRPC entry points, plus a message consumer for async events. It talks to PostgreSQL, Stripe, and Redis. Should I use clean architecture or hexagonal architecture? Explain the difference and recommend one.",
+    "trap": "Without the skill, the model may conflate the two architectures or fail to identify that hexagonal is better when multiple entry points are needed. The skill has distinct guides for each.",
+    "assertions": [
+      {"id": "11.1", "text": "Correctly explains that hexagonal uses ports (interfaces) and adapters (implementations) with primary (driving) and secondary (driven) distinction"},
+      {"id": "11.2", "text": "Correctly explains that clean architecture uses dependency rule (dependencies point inward) with entities/use-cases/adapters/frameworks layers"},
+      {"id": "11.3", "text": "Recommends hexagonal for this specific case (multiple entry points: HTTP, gRPC, message consumer)"},
+      {"id": "11.4", "text": "Mentions that both keep domain logic pure and free from infrastructure dependencies"},
+      {"id": "11.5", "text": "Provides a directory structure example with adapter/primary/ and adapter/secondary/ or equivalent hexagonal layout"}
+    ]
+  },
+  {
+    "id": 12,
+    "name": "ddd-aggregate-root-mutations",
+    "description": "Tests whether the model enforces that all mutations go through the aggregate root in DDD",
+    "prompt": "I'm implementing DDD in Go for an e-commerce system. I have an Order aggregate with OrderItems. A user wants to add an item to an existing order. Show me how to structure this. The order should only be editable when in Draft status.",
+    "trap": "Without the skill, the model may allow direct mutation of OrderItems from outside the aggregate, or may not enforce the aggregate root pattern. The skill says all mutations go through the root.",
+    "assertions": [
+      {"id": "12.1", "text": "AddItem is a method on the Order aggregate root (not on OrderItem or a service)"},
+      {"id": "12.2", "text": "Order fields (items, status) are unexported to prevent external mutation"},
+      {"id": "12.3", "text": "AddItem validates the status constraint (only Draft orders are editable)"},
+      {"id": "12.4", "text": "Repository interface is defined in the domain package, not in the infrastructure package"},
+      {"id": "12.5", "text": "Domain types have no infrastructure imports (no sql, no http, no framework dependencies)"}
+    ]
+  },
+  {
+    "id": 13,
+    "name": "ddd-bounded-context-communication",
+    "description": "Tests whether the model uses anti-corruption layers or domain events between bounded contexts, not direct imports",
+    "prompt": "I have two bounded contexts in my Go DDD project: Order and Billing. When an order is placed, the billing context needs to create an invoice. How should these contexts communicate?",
+    "trap": "Without the skill, the model may suggest billing directly importing order's internal types. The skill says contexts communicate through domain events or anti-corruption layers, never by importing each other's internal types.",
+    "assertions": [
+      {"id": "13.1", "text": "Uses domain events (e.g. OrderPlaced event) for cross-context communication"},
+      {"id": "13.2", "text": "Billing context does NOT directly import order's internal domain types"},
+      {"id": "13.3", "text": "Shows or describes an anti-corruption layer that translates order events to billing-specific types"},
+      {"id": "13.4", "text": "Each bounded context has its own domain, application, and adapter layers"},
+      {"id": "13.5", "text": "Mentions that direct type imports between contexts create tight coupling"}
+    ]
+  },
+  {
+    "id": 14,
+    "name": "make-illegal-states-unrepresentable",
+    "description": "Tests whether the model uses types to enforce invariants rather than runtime validation",
+    "prompt": "I have a Go function that sends notifications. It accepts an email address as a string parameter. Sometimes callers pass invalid emails and we only catch it at send time. How can I prevent invalid emails from reaching the send function?",
+    "trap": "Without the skill, the model typically adds validation at the top of the send function. The skill says to make illegal states unrepresentable using types.",
+    "assertions": [
+      {"id": "14.1", "text": "Creates a dedicated Email type (struct with unexported address field)"},
+      {"id": "14.2", "text": "Email can only be created via a constructor (NewEmail) that validates the address"},
+      {"id": "14.3", "text": "The send function accepts the Email type instead of a raw string"},
+      {"id": "14.4", "text": "Explains the principle: make illegal states unrepresentable through the type system"},
+      {"id": "14.5", "text": "The unexported field prevents creating an Email without validation (cannot set address from outside the package)"}
+    ]
+  },
+  {
+    "id": 15,
+    "name": "fail-fast-validate-at-boundaries",
+    "description": "Tests whether the model validates at system boundaries and trusts data internally, rather than re-validating at every layer",
+    "prompt": "I'm building a Go web service with three layers: HTTP handler, service, and repository. Should I validate the request body (user_id, email, age) in all three layers to be safe?",
+    "trap": "Without the skill, the model may suggest defensive validation at every layer for 'safety'. The skill says validate at boundaries, trust internally -- don't re-validate the same data at every layer.",
+    "assertions": [
+      {"id": "15.1", "text": "Recommends validating at the HTTP handler layer (the system boundary)"},
+      {"id": "15.2", "text": "Recommends that the service and repository layers trust the data is already valid"},
+      {"id": "15.3", "text": "Explains WHY: re-validating at every layer clutters code and violates DRY"},
+      {"id": "15.4", "text": "Does NOT suggest adding the same validation checks in all three layers"},
+      {"id": "15.5", "text": "May distinguish between input validation (at boundary) and business rule validation (in domain)"}
+    ]
+  },
+  {
+    "id": 16,
+    "name": "explicit-over-implicit-defaults",
+    "description": "Tests whether the model favors explicit defaults in code over implicit magic (struct tags, reflection)",
+    "prompt": "I want to provide default values for my Go configuration struct. I'm thinking of using struct tags like `default:\"8080\"` with a reflection-based library. Is this a good approach in Go?",
+    "trap": "Without the skill, the model may endorse the struct-tag default approach as convenient. The skill says Go favors explicitness -- explicit defaults visible in code over implicit behavior hidden in struct tags and reflection.",
+    "assertions": [
+      {"id": "16.1", "text": "Recommends against using struct tags + reflection for defaults"},
+      {"id": "16.2", "text": "Suggests explicit defaults in a constructor function (e.g. NewConfig())"},
+      {"id": "16.3", "text": "Explains WHY: Go favors explicitness, struct tags hide behavior that readers cannot see without knowing the library"},
+      {"id": "16.4", "text": "Shows a constructor that returns a Config with default values set explicitly"}
+    ]
+  },
+  {
+    "id": 17,
+    "name": "retry-context-check",
+    "description": "Tests whether retry logic checks context cancellation between attempts",
+    "prompt": "Write a Go retry function that retries a given operation up to 5 times with exponential backoff. The function should be production-ready.",
+    "trap": "Without the skill, the model may implement retry without checking ctx.Err() between attempts. The skill says retry logic MUST check context cancellation between attempts.",
+    "assertions": [
+      {"id": "17.1", "text": "Function accepts a context.Context parameter"},
+      {"id": "17.2", "text": "Checks ctx.Err() or ctx.Done() between retry attempts"},
+      {"id": "17.3", "text": "Uses select with ctx.Done() for the backoff delay (not time.Sleep)"},
+      {"id": "17.4", "text": "Implements exponential backoff"},
+      {"id": "17.5", "text": "Returns the context error if the context is cancelled during retry"}
+    ]
+  },
+  {
+    "id": 18,
+    "name": "ddd-value-object-money",
+    "description": "Tests whether the model implements money as a value object with cents (not float) and currency validation",
+    "prompt": "I'm implementing a pricing system in Go using DDD. I need to represent monetary amounts that support addition and comparison. Design the money type.",
+    "trap": "Without the skill, the model may use float64 for money (precision issues) or make it mutable. The skill shows Money as an immutable value object using int64 cents.",
+    "assertions": [
+      {"id": "18.1", "text": "Uses int64 (cents) not float64 for the amount -- avoids floating point precision issues"},
+      {"id": "18.2", "text": "Includes a currency field"},
+      {"id": "18.3", "text": "Fields are unexported (immutable value object, can only be created via constructor)"},
+      {"id": "18.4", "text": "Add method validates currency match before addition"},
+      {"id": "18.5", "text": "Constructor validates input (e.g. currency is required)"}
+    ]
+  }
+]
