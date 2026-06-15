@@ -682,8 +682,13 @@ export function collectSkills({
     }
   }
 
+  const hasSvelteShadcn = combos.some((c) => c.id === "svelte-shadcn");
+
   for (const tech of detected) {
     for (const skill of tech.skills) {
+      if (hasSvelteShadcn && skill === "shadcn/ui/shadcn") {
+        continue;
+      }
       addSkill(skill, tech.name);
     }
   }
