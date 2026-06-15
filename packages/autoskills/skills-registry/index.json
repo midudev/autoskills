@@ -814,6 +814,74 @@
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
+    "svelte-styling": {
+      "source": "spences10/skills",
+      "skillPath": "spences10/skills/svelte-styling",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md",
+        "references/styling-patterns.md"
+      ],
+      "sha256": {
+        "SKILL.md": "aeb2be3e32085d47ad5938afd6e96b2a4f9fd9e073ca27ec3f6df32371689b7c",
+        "references/styling-patterns.md": "b311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d"
+      },
+      "bundleHash": "svelte-styling-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Svelte scoped CSS and custom property styling guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
+      }
+    },
+    "svelte-template-directives": {
+      "source": "spences10/skills",
+      "skillPath": "spences10/skills/svelte-template-directives",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md",
+        "references/attach-patterns.md",
+        "references/other-directives.md"
+      ],
+      "sha256": {
+        "SKILL.md": "aeb2be3e32085d47ad5938afd6e96b2a4f9fd9e073ca27ec3f6df32371689b7c",
+        "references/attach-patterns.md": "b311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d",
+        "references/other-directives.md": "c2c574ce8290ef56fa8f7619c2897c8ca009ea72464d4077c7ba5ea23efb3570"
+      },
+      "bundleHash": "svelte-template-directives-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Svelte markup, snippet, and @attach directive guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
+      }
+    },
+    "sveltekit-remote-functions": {
+      "source": "spences10/skills",
+      "skillPath": "spences10/skills/sveltekit-remote-functions",
+      "commitSha": "f03b227b63430f661873c0f6c059b422ef5083b8",
+      "files": [
+        "SKILL.md",
+        "references/remote-functions.md"
+      ],
+      "sha256": {
+        "SKILL.md": "aeb2be3e32085d47ad5938afd6e96b2a4f9fd9e073ca27ec3f6df32371689b7c",
+        "references/remote-functions.md": "b311631df6f8707d94a6c116da211b25b274669cb17c9ecae6a75bb46309895d"
+      },
+      "bundleHash": "sveltekit-remote-functions-bundle-hash",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "SvelteKit experimental remote functions implementation guidelines",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
+      }
+    },
     "sveltekit-data-flow": {
       "source": "spences10/skills",
       "skillPath": "spences10/skills/sveltekit-data-flow",

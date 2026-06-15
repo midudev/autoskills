@@ -100,6 +100,9 @@ export const SKILLS_MAP: Technology[] = [
       "spences10/skills/sveltekit-data-flow",
       "spences10/skills/svelte-components",
       "spences10/skills/svelte-layerchart",
+      "spences10/skills/svelte-styling",
+      "spences10/skills/svelte-template-directives",
+      "spences10/skills/sveltekit-remote-functions",
     ],
   },
   {
