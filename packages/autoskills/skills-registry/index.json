@@ -13051,9 +13051,9 @@
       },
       "bundleHash": "6249e41a2601b9523614f4bf653fcc34f5f8a848cc960cf54d9c4ddc949332f2",
       "review": {
-        "status": "approved",
+        "status": "skipped",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "No review was performed because the sync process was executed with the --no-review flag.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T20:58:27.147Z"
@@ -13079,9 +13079,9 @@
       },
       "bundleHash": "2897990a74483e7015350b14e72bc2d44a86052d2960390b71057f67f5f3a58c",
       "review": {
-        "status": "approved",
+        "status": "skipped",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "No review was performed because the sync process was executed with the --no-review flag.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:07:32.664Z"
@@ -13105,9 +13105,9 @@
       },
       "bundleHash": "60cd76411c1aa29f5cb2f609c180a466c7c43e3552d086edd5d7f26b70beb68c",
       "review": {
-        "status": "approved",
+        "status": "skipped",
         "flags": [],
-        "summary": "review skipped (--no-review)",
+        "summary": "No review was performed because the sync process was executed with the --no-review flag.",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:08:44.639Z"

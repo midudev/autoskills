@@ -32,7 +32,7 @@ export interface RegistryEntry {
   sha256: Record<string, string>;
   bundleHash: string;
   review: {
-    status: "approved" | "flagged";
+    status: "approved" | "flagged" | "skipped";
     flags: string[];
     summary: string;
     model: string;
