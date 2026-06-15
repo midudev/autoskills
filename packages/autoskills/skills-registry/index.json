@@ -742,8 +742,8 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Svelte 5 reactivity runes implementation skill",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
@@ -762,8 +762,8 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "SvelteKit file structure and routing conventions",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
@@ -782,8 +782,8 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Svelte core best practices guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
@@ -808,8 +808,8 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Svelte LayerChart data visualization component guidelines for Svelte 5",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
@@ -828,8 +828,8 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "SvelteKit data flow and form actions",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
@@ -848,8 +848,8 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Svelte UI components and integration guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
         "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
@@ -4562,10 +4562,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go code style guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-concurrency": {
@@ -4582,10 +4582,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go concurrency patterns guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-context": {
@@ -4602,10 +4602,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go context propagation guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-database": {
@@ -4630,10 +4630,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go database best practices and library choice guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-error-handling": {
@@ -4650,10 +4650,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go error handling patterns",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-performance": {
@@ -4670,10 +4670,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go performance and memory optimization guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-testing": {
@@ -4690,10 +4690,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go testing structure and implementation guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-observability": {
@@ -4710,10 +4710,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go logging and telemetry guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-security": {
@@ -4730,10 +4730,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go security standards and injection prevention",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "golang-structs-interfaces": {
@@ -4750,10 +4750,10 @@
       "review": {
         "status": "approved",
         "flags": [],
-        "summary": "Go structures and interface composition guidelines",
-        "model": "gpt-5.4",
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T22:06:00.000Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "java-coding-standards": {
@@ -5253,9 +5253,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.549Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "java-springboot": {
@@ -5273,9 +5273,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.558Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "dotnet-best-practices": {
@@ -5293,9 +5293,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.567Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "dotnet-design-pattern-review": {
@@ -5313,9 +5313,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.576Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "dotnet-upgrade": {
@@ -5333,9 +5333,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.586Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "csharp-xunit": {
@@ -5353,9 +5353,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.595Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "csharp-async": {
@@ -5373,9 +5373,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.604Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "csharp-docs": {
@@ -5393,9 +5393,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.614Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "csharp-nunit": {
@@ -5413,9 +5413,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.623Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "csharp-mstest": {
@@ -5433,9 +5433,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.632Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "csharp-tunit": {
@@ -5453,9 +5453,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.641Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "containerize-aspnetcore": {
@@ -5473,9 +5473,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.650Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "fluentui-blazor": {
@@ -5501,9 +5501,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.660Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "aspnet-minimal-api-openapi": {
@@ -5521,9 +5521,9 @@
         "status": "approved",
         "flags": [],
         "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-17T22:43:41.669Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       }
     },
     "prisma-database-setup": {
@@ -13299,12 +13299,12 @@
       },
       "bundleHash": "6249e41a2601b9523614f4bf653fcc34f5f8a848cc960cf54d9c4ddc949332f2",
       "review": {
-        "status": "approved",
+        "status": "skipped",
         "flags": [],
-        "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "summary": "No review was performed because the sync process was executed with the --no-review flag.",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T20:58:27.147Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       },
       "securityCheck": {
         "status": "ok",
@@ -13327,12 +13327,12 @@
       },
       "bundleHash": "2897990a74483e7015350b14e72bc2d44a86052d2960390b71057f67f5f3a58c",
       "review": {
-        "status": "approved",
+        "status": "skipped",
         "flags": [],
-        "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "summary": "No review was performed because the sync process was executed with the --no-review flag.",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T21:07:32.664Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       },
       "securityCheck": {
         "status": "ok",
@@ -13353,12 +13353,12 @@
       },
       "bundleHash": "60cd76411c1aa29f5cb2f609c180a466c7c43e3552d086edd5d7f26b70beb68c",
       "review": {
-        "status": "approved",
+        "status": "skipped",
         "flags": [],
-        "summary": "review skipped (--no-review)",
-        "model": "gpt-5.4",
+        "summary": "No review was performed because the sync process was executed with the --no-review flag.",
+        "model": "gpt-4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-06-15T21:08:44.639Z"
+        "reviewedAt": "2026-06-15T21:49:00.000Z"
       },
       "securityCheck": {
         "status": "ok",

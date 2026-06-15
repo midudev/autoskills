@@ -940,7 +940,7 @@ export const SKILLS_MAP: Technology[] = [
     id: "postgresql",
     name: "PostgreSQL",
     detect: {
-      packages: ["pg", "postgres", "pg-promise", "sequelize", "typeorm", "mikro-orm"],
+      packages: ["pg", "postgres", "pg-promise"],
     },
     skills: [
       "neondatabase/postgres-skills/postgres-best-practices",
