@@ -916,11 +916,18 @@ export const SKILLS_MAP: Technology[] = [
     skills: ["redis/agent-skills/redis-development"],
   },
   {
+    id: "postgres-ruby",
+    name: "PostgreSQL (Ruby)",
+    detect: {
+      gems: ["pg"],
+    },
+    skills: [],
+  },
+  {
     id: "postgresql",
     name: "PostgreSQL",
     detect: {
       packages: ["pg", "postgres", "pg-promise", "sequelize", "typeorm", "mikro-orm"],
-      gems: ["pg"],
     },
     skills: [
       "neondatabase/postgres-skills/postgres-best-practices",
