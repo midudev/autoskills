@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-03T15:50:34.696Z",
+  "generatedAt": "2026-06-15T20:58:27.158Z",
   "reviewer": {
     "model": "gpt-5.4",
     "promptVersion": "1.0.0"
@@ -13017,6 +13017,52 @@
         "findings": [],
         "summary": "Official ElysiaJS skill with standard documentation",
         "checkedAt": "2026-05-13T21:40:00.000Z"
+      }
+    },
+    "shadcn-svelte": {
+      "source": "huntabyte/shadcn-svelte",
+      "skillPath": "huntabyte/shadcn-svelte/shadcn-svelte",
+      "commitSha": "57acd8baa862f3fa13cb7b7912fdd802f6366ab8",
+      "files": [
+        "SKILL.md",
+        "agents/openai.yml",
+        "assets/shadcn-svelte-small.png",
+        "assets/shadcn-svelte.png",
+        "cli.md",
+        "customization.md",
+        "evals/evals.json",
+        "rules/composition.md",
+        "rules/forms.md",
+        "rules/icons.md",
+        "rules/styling.md"
+      ],
+      "sha256": {
+        "SKILL.md": "0d4b071c02c895d53fd45e24e1bcb5e74bc70888a720b1465bafbc37799a7c76",
+        "agents/openai.yml": "8a19c76244f9f8171058dbe03d80b7a375b03021aabe98fbdfa9f6d1ad140c51",
+        "assets/shadcn-svelte-small.png": "ab571a7acd192a769531b5ea5e2105f40128b52e90fbdeb31e712d5fd18f6350",
+        "assets/shadcn-svelte.png": "256a06954d29e566b01695f0fa3574c0a6d69991098e756d8cc0704ee376ce3f",
+        "cli.md": "59563b6d10901607a5c5b702f9a470b2acb4d1c6be945e32da998a93d7ae3b65",
+        "customization.md": "6f3e3ddaacb28fd6a84ed643d721e1c712495aabdf6d67ada564a2a6b7a52fcd",
+        "evals/evals.json": "e656977db8221f55d10b46297a85aaf363b9911d7a0a70ab7408d84e1ddef02b",
+        "rules/composition.md": "73fde3d9ce43b5e62152cdc0a0719ef735889855f5cf7a39019bb603223a76b2",
+        "rules/forms.md": "68222eeb9a9671ef0e3261e48c78211c524da2d7adac3fe18362a725aa6013e0",
+        "rules/icons.md": "264f1316cafaeedf91cf830502381323db9310c23e8dc4e10faaf1b687bda20b",
+        "rules/styling.md": "35d9c99aa5fd3053d3846c9706151cb0b05915a659d03c0ceafc61c631772f0a"
+      },
+      "bundleHash": "6249e41a2601b9523614f4bf653fcc34f5f8a848cc960cf54d9c4ddc949332f2",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T20:58:27.147Z"
+      },
+      "securityCheck": {
+        "status": "ok",
+        "findings": [],
+        "summary": "review skipped (--no-review)",
+        "checkedAt": "2026-06-15T20:58:27.147Z"
       }
     }
   }

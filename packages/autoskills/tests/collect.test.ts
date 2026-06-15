@@ -305,6 +305,26 @@ describe("collectSkills", () => {
       true,
     );
   });
+
+  it("discriminates between React shadcn and Svelte shadcn", () => {
+    const detected = [
+      { id: "svelte", name: "Svelte", detect: {}, skills: ["ejirocodes/agent-skills/svelte5-best-practices"] },
+      { id: "shadcn", name: "shadcn/ui", detect: {}, skills: ["shadcn/ui/shadcn"] },
+    ];
+    const combos = [
+      {
+        id: "svelte-shadcn",
+        name: "Svelte + shadcn-svelte",
+        requires: ["svelte", "shadcn"],
+        skills: ["huntabyte/shadcn-svelte/shadcn-svelte"],
+      },
+    ];
+    const skills = collectSkills({ detected, isFrontend: false, combos });
+    // Should NOT contain React shadcn skill
+    ok(!skills.some((s) => s.skill === "shadcn/ui/shadcn"));
+    // Should contain Svelte shadcn skill
+    ok(skills.some((s) => s.skill === "huntabyte/shadcn-svelte/shadcn-svelte"));
+  });
 });
 
 describe("getInstalledSkillNames", () => {

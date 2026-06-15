@@ -1239,6 +1239,12 @@ export const COMBO_SKILLS_MAP: ComboSkill[] = [
     skills: ["shadcn/ui/shadcn", "vercel-labs/agent-skills/react-best-practices"],
   },
   {
+    id: "svelte-shadcn",
+    name: "Svelte + shadcn-svelte",
+    requires: ["svelte", "shadcn"],
+    skills: ["huntabyte/shadcn-svelte/shadcn-svelte"],
+  },
+  {
     id: "tailwind-shadcn",
     name: "Tailwind CSS + shadcn/ui",
     requires: ["tailwind", "shadcn"],
