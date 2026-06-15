@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-15T20:58:27.158Z",
+  "generatedAt": "2026-06-15T21:08:44.647Z",
   "reviewer": {
     "model": "gpt-5.4",
     "promptVersion": "1.0.0"
@@ -13063,6 +13063,60 @@
         "findings": [],
         "summary": "review skipped (--no-review)",
         "checkedAt": "2026-06-15T20:58:27.147Z"
+      }
+    },
+    "postgres-best-practices": {
+      "source": "neondatabase/postgres-skills",
+      "skillPath": "neondatabase/postgres-skills/postgres-best-practices",
+      "commitSha": "0d9a967085c3bc137ab39ff9e3191c2eb3129d8c",
+      "files": [
+        "SKILL.md",
+        "references/schema-design.md"
+      ],
+      "sha256": {
+        "SKILL.md": "0c09b15e9245f531728942518b93dec552c9d1637b848ae7a811bd0d26e74da4",
+        "references/schema-design.md": "9637105e3817677a30159e70a55cc5991a5a125834309739e9677aa874212cc8"
+      },
+      "bundleHash": "2897990a74483e7015350b14e72bc2d44a86052d2960390b71057f67f5f3a58c",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T21:07:32.664Z"
+      },
+      "securityCheck": {
+        "status": "ok",
+        "findings": [],
+        "summary": "review skipped (--no-review)",
+        "checkedAt": "2026-06-15T21:07:32.664Z"
+      }
+    },
+    "sql-optimization": {
+      "source": "github/awesome-copilot",
+      "skillPath": "github/awesome-copilot/sql-optimization",
+      "commitSha": "b4b9beb69d9e8b21c0dfcfd9c86a835997b6a83b",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "d87639dea8e0208e2161b78b22f6427b0fdf59e95e693b40d48b1226a0c35ccf"
+      },
+      "bundleHash": "60cd76411c1aa29f5cb2f609c180a466c7c43e3552d086edd5d7f26b70beb68c",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "review skipped (--no-review)",
+        "model": "gpt-5.4",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-06-15T21:08:44.639Z"
+      },
+      "securityCheck": {
+        "status": "ok",
+        "findings": [],
+        "summary": "review skipped (--no-review)",
+        "checkedAt": "2026-06-15T21:08:44.639Z"
       }
     }
   }

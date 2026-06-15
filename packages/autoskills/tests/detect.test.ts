@@ -1379,7 +1379,13 @@ describe("detectTechnologies (Ruby/Rails)", () => {
   it("detects PostgreSQL from pg gem", () => {
     writeFile(tmp.path, "Gemfile", "gem 'pg'\n");
     const { detected } = detectTechnologies(tmp.path);
-    ok(detected.some((t) => t.id === "postgres-ruby"));
+    ok(detected.some((t) => t.id === "postgresql"));
+  });
+
+  it("detects PostgreSQL from pg npm package", () => {
+    writePackageJson(tmp.path, { dependencies: { pg: "^8.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "postgresql"));
   });
 
   it("detects Redis from redis gem", () => {
@@ -1435,7 +1441,7 @@ describe("detectTechnologies (Ruby/Rails)", () => {
     const ids = detected.map((t) => t.id);
     ok(ids.includes("ruby"));
     ok(ids.includes("rails"));
-    ok(ids.includes("postgres-ruby"));
+    ok(ids.includes("postgresql"));
     ok(ids.includes("redis-ruby"));
     ok(ids.includes("sidekiq"));
     ok(ids.includes("devise"));
