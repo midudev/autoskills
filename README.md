@@ -59,9 +59,9 @@ Built to work across modern frontend, backend, mobile, cloud, and media stacks.
 - **Media & AI:** Remotion, ElevenLabs
 
 ## Requirements
-
+```
 Node.js >= 22
-
+```
 ## License
 
 [CC BY-NC 4.0](./LICENSE) — [midudev](https://midu.dev)
