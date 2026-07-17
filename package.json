@@ -22,7 +22,7 @@
     "tailwindcss": "4.3.2"
   },
   "devDependencies": {
-    "oxfmt": "0.54.0",
+    "oxfmt": "0.57.0",
     "oxlint": "1.72.0"
   },
   "engines": {
