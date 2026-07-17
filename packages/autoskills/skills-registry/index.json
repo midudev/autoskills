@@ -13018,6 +13018,186 @@
         "summary": "Official ElysiaJS skill with standard documentation",
         "checkedAt": "2026-05-13T21:40:00.000Z"
       }
+    },
+    "c": {
+      "source": "autoskills",
+      "skillPath": "autoskills/c",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "ec92be177e3a3b30edf86234fc56bf57390d48c6533fd908296ed4b94e48867e"
+      },
+      "bundleHash": "2d46da09b13dcd253a8f911c244576122fb7d027d61b0a9a43027eaf58fc306b",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "C programming skill covering compilation, memory management, POSIX, and debugging",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:41:00.000Z"
+      }
+    },
+    "cpp": {
+      "source": "autoskills",
+      "skillPath": "autoskills/cpp",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "1fb855c1583bcba3e923f853a4145f55a5ba2c8f6c0ca958e7406cd6ba0eb0e4"
+      },
+      "bundleHash": "67eaee4d89350fcb78316e0e11730f2356c22cb2f1e88340939577f596f6c1c3",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Modern C++ skill covering C++17/20/23, STL, smart pointers, concurrency, and templates",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:41:00.000Z"
+      }
+    },
+    "cmake": {
+      "source": "autoskills",
+      "skillPath": "autoskills/cmake",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "b626d6887833fb1fa97ff1bb8d4e5deb35f64d1891acafc6d0c99db9171ff017"
+      },
+      "bundleHash": "9ecd47b93f9faff35aeb54510fe7e72d7cf261a2875306016620220f4a78e131",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "CMake build system skill covering CMakeLists.txt, dependencies, testing, and packaging",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:41:00.000Z"
+      }
+    },
+    "qt": {
+      "source": "autoskills",
+      "skillPath": "autoskills/qt",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "d5790fd08b917e23fa39949cdac80083d54a1b0fc3c531f95a9fa171af0374d7"
+      },
+      "bundleHash": "42f2ad4b6f69b9993b6072d65f601330ee89733bd625ef3900282f8a1ccc74ef",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Qt 6 framework skill covering Widgets, QML, signals/slots, model/view, threading, and CMake integration",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:41:00.000Z"
+      }
+    },
+    "conan": {
+      "source": "autoskills",
+      "skillPath": "autoskills/conan",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "8f60c483cfc4edbc98dc6658f50afe846957d4841d768c4c026abc51d16885ac"
+      },
+      "bundleHash": "334af87f1c5022ba0f727ba4b20c0d3a7b6466d5caa9eabca7d5162e25637ad7",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Conan C++ package manager skill covering conanfile recipes, CMake integration, and dependency management",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:42:00.000Z"
+      }
+    },
+    "vcpkg": {
+      "source": "autoskills",
+      "skillPath": "autoskills/vcpkg",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "7afc2851a4f63161514d364f6f5ebea46a1826ef9fb975ade47e6c4de970f2fa"
+      },
+      "bundleHash": "956e6c2f2ec749b29dab5436a25a9504ff03e43823c34e541d7c05e813941ebe",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "vcpkg C++ package manager skill covering manifest mode, triplets, binary caching, and CMake integration",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:42:00.000Z"
+      }
+    },
+    "meson": {
+      "source": "autoskills",
+      "skillPath": "autoskills/meson",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "b2cbfcf8ec8a72097a3a7a710951769721ee6a55a86768049c42741f222ed3ba"
+      },
+      "bundleHash": "012ed83cd5ad9a5c9a8f80d6487b416eb8dba781b790e881a4d7f6c3b68c03fb",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Meson build system skill covering meson.build, dependencies, cross-compilation, and Ninja backend",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:42:00.000Z"
+      }
+    },
+    "googletest": {
+      "source": "autoskills",
+      "skillPath": "autoskills/googletest",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "503fe7f4fa8bcde6b617cdec84f33a02be39787177a5230c1968a5f0bf47df10"
+      },
+      "bundleHash": "5bbf5fdfd0e3307c2eed892ebc90609c20865f5215cabcb7a8cc8138a27648bf",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Google Test skill covering unit testing, mocking, fixtures, parameterized tests, and CMake integration",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:42:00.000Z"
+      }
+    },
+    "doxygen": {
+      "source": "autoskills",
+      "skillPath": "autoskills/doxygen",
+      "commitSha": "7ebf5ce92e8ed0521949111d8ff91ec5047d7c83",
+      "files": [
+        "SKILL.md"
+      ],
+      "sha256": {
+        "SKILL.md": "342857c064c479888594e9bacc19f351cd53701a67821de532b30f5c72f5b753"
+      },
+      "bundleHash": "eea7fd1df64c84b0345e55ca72020ebba5bc8806ed6499028693c67eccce7157",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "Doxygen documentation skill covering Doxyfile config, code comments, and HTML/PDF generation",
+        "model": "manual",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-07-12T15:42:00.000Z"
+      }
     }
   }
 }

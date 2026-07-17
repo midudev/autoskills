@@ -619,6 +619,86 @@ export const SKILLS_MAP: Technology[] = [
     skills: ["wshobson/agents/bash-defensive-patterns"],
   },
   {
+    id: "c",
+    name: "C",
+    detect: {
+      fileExtensions: [".c"],
+    },
+    skills: ["autoskills/c"],
+  },
+  {
+    id: "cpp",
+    name: "C++",
+    detect: {
+      fileExtensions: [".cpp", ".cxx", ".cc", ".hpp", ".hxx"],
+    },
+    skills: ["autoskills/cpp"],
+  },
+  {
+    id: "cmake",
+    name: "CMake",
+    detect: {
+      configFiles: ["CMakeLists.txt"],
+    },
+    skills: ["autoskills/cmake"],
+  },
+  {
+    id: "qt",
+    name: "Qt",
+    detect: {
+      fileExtensions: [".qml"],
+      configFileContent: {
+        patterns: ["find_package(Qt6", "find_package(Qt5", "QT +=", "qt_add_executable"],
+        files: ["CMakeLists.txt", "*.pro"],
+      },
+    },
+    skills: ["autoskills/qt"],
+  },
+  {
+    id: "conan",
+    name: "Conan",
+    detect: {
+      configFiles: ["conanfile.txt", "conanfile.py"],
+    },
+    skills: ["autoskills/conan"],
+  },
+  {
+    id: "vcpkg",
+    name: "vcpkg",
+    detect: {
+      configFiles: ["vcpkg.json"],
+    },
+    skills: ["autoskills/vcpkg"],
+  },
+  {
+    id: "meson",
+    name: "Meson",
+    detect: {
+      configFiles: ["meson.build"],
+    },
+    skills: ["autoskills/meson"],
+  },
+  {
+    id: "googletest",
+    name: "Google Test",
+    detect: {
+      configFiles: ["CMakeLists.txt"],
+      configFileContent: {
+        patterns: ["find_package(GTest", "GTest::gtest", "GTest::gmock", "FetchContent.*googletest"],
+        files: ["CMakeLists.txt"],
+      },
+    },
+    skills: ["autoskills/googletest"],
+  },
+  {
+    id: "doxygen",
+    name: "Doxygen",
+    detect: {
+      configFiles: ["Doxyfile", "Doxyfile.in"],
+    },
+    skills: ["autoskills/doxygen"],
+  },
+  {
     id: "express",
     name: "Express",
     detect: {
