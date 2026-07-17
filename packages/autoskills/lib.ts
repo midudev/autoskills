@@ -631,7 +631,7 @@ export function parseSkillPath(skill: string): ParsedSkillPath {
 export function getInstalledSkillNames(projectDir: string): Set<string> {
   try {
     const lock = JSON.parse(readFileSync(join(projectDir, "skills-lock.json"), "utf-8"));
-    if (lock?.skills && typeof lock.skills === "object") {
+    if (lock?.skills && typeof lock.skills === "object" && Object.keys(lock.skills).length > 0) {
       return new Set(Object.keys(lock.skills));
     }
   } catch {}
