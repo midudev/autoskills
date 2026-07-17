@@ -26,6 +26,7 @@ describe("CLI", () => {
     ok(output.includes("--clear-cache"));
     ok(output.includes("--yes"));
     ok(output.includes("--agent"));
+    ok(output.includes("--tech"));
   });
 
   it("shows help with -h", () => {
@@ -474,6 +475,78 @@ describe("CLI", () => {
       const output = run(["--dry-run", "-a", "cursor"], tmp.path);
       ok(output.includes("Agents: cursor"));
       ok(!output.includes("universal"));
+    });
+  });
+
+  describe("--tech", () => {
+    const tmp = useTmpDir();
+
+    it("forces specific technology and skips auto-detection", () => {
+      writePackageJson(tmp.path, { dependencies: { express: "^5" } });
+      const output = run(["--dry-run", "--tech", "react"], tmp.path);
+      ok(output.includes("Selected technologies"));
+      ok(output.includes("React"));
+      ok(!output.includes("Express"));
+      ok(!output.includes("No supported technologies"));
+    });
+
+    it("supports multiple values after one --tech flag", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech", "react", "nextjs"], tmp.path);
+      ok(output.includes("React"));
+      ok(output.includes("Next.js"));
+    });
+
+    it("supports multiple --tech flags", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech", "react", "--tech", "nextjs"], tmp.path);
+      ok(output.includes("React"));
+      ok(output.includes("Next.js"));
+    });
+
+    it("supports comma-separated technologies", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech", "react,nextjs"], tmp.path);
+      ok(output.includes("React"));
+      ok(output.includes("Next.js"));
+    });
+
+    it("supports equals-form comma-separated technologies", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech=react,nextjs"], tmp.path);
+      ok(output.includes("React"));
+      ok(output.includes("Next.js"));
+    });
+
+    it("adds web fundamentals for forced frontend technologies", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech", "nextjs"], tmp.path);
+      ok(output.includes("Next.js"));
+      ok(output.includes("frontend-design"));
+      ok(output.includes("accessibility"));
+      ok(output.includes("seo"));
+    });
+
+    it("warns about unknown technologies", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech", "unknown-tech"], tmp.path);
+      ok(output.includes("Unknown technology"));
+      ok(output.includes("No supported technologies"));
+    });
+
+    it("does not auto-detect when --tech is passed without values", () => {
+      writePackageJson(tmp.path, { dependencies: { react: "^19" } });
+      const output = run(["--dry-run", "--tech"], tmp.path);
+      ok(output.includes("No technology ids provided"));
+      ok(output.includes("No supported technologies"));
+      ok(!output.includes("React"));
+    });
+
+    it("combines --tech with -y", () => {
+      writePackageJson(tmp.path);
+      const output = run(["--dry-run", "--tech", "react", "-y"], tmp.path);
+      ok(output.includes("React"));
+      ok(output.includes("Skills to install"));
     });
   });
 });
