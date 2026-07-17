@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import '../styles/global.css';
+import cliPkg from '../../packages/autoskills/package.json';
 
 const iconFiles = import.meta.glob<string>('../icons/*.svg', { query: '?raw', import: 'default', eager: true });
 
@@ -74,7 +75,6 @@ try {
 }
 
 const { SKILLS_MAP } = await import('../../packages/autoskills/skills-map.ts');
-const { default: cliPkg } = await import('../../packages/autoskills/package.json', { with: { type: 'json' } });
 const cliVersion = cliPkg.version;
 
 const popularityOrder = [
