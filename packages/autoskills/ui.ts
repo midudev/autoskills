@@ -92,11 +92,27 @@ interface MultiSelectOptions<T> {
   groupFn?: (item: T) => string;
   initialSelected?: boolean[];
   shortcuts?: { key: string; label: string; fn: (items: T[]) => boolean[] }[];
+  /** Verb shown in the bottom help line. Defaults to "confirm". */
+  confirmLabel?: string;
+  /**
+   * Optional dynamic suffix after `[enter] ${confirmLabel}`. Recomputed on
+   * every render with the current selection. Return `null` to fall back to
+   * the default `(checked/total)` counter.
+   */
+  confirmHintFn?: (selected: boolean[]) => string | null;
 }
 
 export function multiSelect<T>(
   items: T[],
-  { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }: MultiSelectOptions<T>,
+  {
+    labelFn,
+    hintFn,
+    groupFn,
+    initialSelected,
+    shortcuts = [],
+    confirmLabel = "confirm",
+    confirmHintFn,
+  }: MultiSelectOptions<T>,
 ): Promise<T[]> {
   if (initialSelected && initialSelected.length !== items.length) {
     throw new Error(
@@ -171,6 +187,7 @@ export function multiSelect<T>(
         .map((s) => white(bold(`[${s.key}]`)) + dim(` ${s.label}`))
         .join(dim(" · "));
       const shortcutPart = shortcuts.length > 0 ? shortcutHints + dim(" · ") : "";
+      const confirmSuffix = confirmHintFn?.(selected) ?? `(${count}/${items.length})`;
       write(
         dim("   ") +
           white(bold("[↑↓]")) +
@@ -181,7 +198,7 @@ export function multiSelect<T>(
           dim(" all · ") +
           shortcutPart +
           white(bold("[enter]")) +
-          dim(` confirm (${count}/${items.length})`),
+          dim(` ${confirmLabel} ${confirmSuffix}`),
       );
     }
 

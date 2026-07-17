@@ -28,6 +28,8 @@ import {
 } from "./installer.ts";
 import type { InstallSecurityCheck } from "./installer.ts";
 import { cleanupClaudeMd } from "./claude.ts";
+import { listInstalledSkills, uninstallAll } from "./uninstaller.ts";
+import { computeChanges, confirmDestructive } from "./changes.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VERSION: string = (() => {
@@ -56,6 +58,7 @@ interface CliArgs {
   verbose: boolean;
   help: boolean;
   clearCache: boolean;
+  remove: boolean;
   agents: string[];
 }
 
@@ -75,6 +78,7 @@ function parseArgs(): CliArgs {
     verbose: args.includes("--verbose") || args.includes("-v"),
     help: args.includes("--help") || args.includes("-h"),
     clearCache: args.includes("--clear-cache"),
+    remove: args.includes("--remove") || args.includes("-r"),
     agents,
   };
 }
@@ -84,19 +88,24 @@ function showHelp(): void {
   ${bold("autoskills")} — Auto-install the best AI skills for your project
 
   ${bold("Usage:")}
-    npx autoskills                   Detect & install skills
+    npx autoskills                   Detect & install skills (uncheck installed to remove)
     npx autoskills ${dim("-y")}                   Skip confirmation
     npx autoskills ${dim("--dry-run")}            Show what would be installed
     npx autoskills ${dim("--clear-cache")}        Clear downloaded skills cache
+    npx autoskills ${dim("-r")}                   Remove-only mode (skip detection)
     npx autoskills ${dim("-a cursor claude-code")} Install for specific IDEs only
 
   ${bold("Options:")}
     -y, --yes       Skip confirmation prompt
     --dry-run       Show skills without installing
     --clear-cache   Clear downloaded skills cache
+    -r, --remove    Remove-only mode — list installed skills, no detection
     -v, --verbose   Show install trace and error details
     -a, --agent     Install for specific IDEs only (e.g. cursor, claude-code)
     -h, --help      Show this help message
+
+  ${dim("In the default picker, installed skills start checked. Unchecking marks")}
+  ${dim("them for removal — you'll be prompted before any removal happens.")}
 `);
 }
 
@@ -418,10 +427,12 @@ function printSummary({ installed, failed, errors, elapsed, verbose }: SummaryOp
 
 // ── Skill Selection ──────────────────────────────────────────
 
-async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<SkillEntry[]> {
+async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<boolean[]> {
   if (autoYes) {
     printSkillsList(skills);
-    return skills;
+    // Preserve legacy -y semantics: install everything detected (refresh).
+    // No removals happen in -y mode — use `-r -y` for that.
+    return skills.map(() => true);
   }
 
   const INSTALLED_TAG = " (installed)";
@@ -473,7 +484,8 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
       return techSources.length > 1 ? `← ${techSources.join(", ")}` : "";
     },
     groupFn: (s) => s.sources[0],
-    initialSelected: skills.map((s) => !s.installed),
+    // Symmetric: installed skills start checked too. Unchecking marks for removal.
+    initialSelected: skills.map(() => true),
     shortcuts:
       installedCount > 0
         ? [
@@ -485,22 +497,217 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
             },
           ]
         : [],
+    confirmHintFn: (sel) => {
+      let installsN = 0;
+      let removesN = 0;
+      for (let i = 0; i < skills.length; i++) {
+        const checked = sel[i];
+        if (!skills[i].installed && checked) installsN++;
+        else if (skills[i].installed && !checked) removesN++;
+      }
+      if (removesN === 0) return null;
+      if (installsN === 0) return `— remove ${removesN}`;
+      return `— install ${installsN}, remove ${removesN}`;
+    },
   });
 
-  if (selected.length === 0) {
+  // Build the boolean array from the resolved selection. multiSelect returns
+  // the items that ended up checked; reverse-map back to the per-index state.
+  const checkedSet = new Set(selected);
+  return skills.map((s) => checkedSet.has(s));
+}
+
+// ── Remove Flow ──────────────────────────────────────────────
+
+async function selectSkillsToRemove(installed: string[], autoYes: boolean): Promise<string[]> {
+  if (autoYes) {
+    log(
+      red("   ◆ ") +
+        bold(
+          `Removing all ${installed.length} installed skill${installed.length === 1 ? "" : "s"}`,
+        ),
+    );
+    log();
+    return installed;
+  }
+
+  const maxLabel = Math.max(...installed.map((s) => s.length));
+  log(red("   ◆ ") + bold(`Select skills to remove `) + dim(`(${installed.length} installed)`));
+  log();
+
+  const selected = await multiSelect(installed, {
+    labelFn: (name) => red(name) + " ".repeat(Math.max(0, maxLabel - name.length)),
+    // Start with everything unchecked — removal is destructive, opt-in only.
+    initialSelected: installed.map(() => false),
+    confirmLabel: "remove",
+  });
+
+  return selected;
+}
+
+function printRemoveSummary({
+  uninstalled,
+  failed,
+  errors,
+  elapsed,
+}: {
+  uninstalled: number;
+  failed: number;
+  errors: { name: string; output: string; stderr: string }[];
+  elapsed: number;
+}): void {
+  log();
+
+  if (failed === 0) {
+    log(
+      green(
+        bold(
+          `   ✔ Done! ${uninstalled} skill${uninstalled !== 1 ? "s" : ""} removed in ${formatTime(elapsed)}.`,
+        ),
+      ),
+    );
+  } else {
+    log(
+      yellow(
+        `   Done: ${green(`${uninstalled} removed`)}, ${red(`${failed} failed`)} in ${formatTime(elapsed)}.`,
+      ),
+    );
+
+    if (errors.length > 0) {
+      log();
+      log(bold(red("   Errors:")));
+      for (const { name, output } of errors) {
+        log(red(`     ✘ ${name}`));
+        log(dim(`       ${output}`));
+      }
+      log();
+      log(dim(`   If it looks like an autoskills bug, please create an issue: ${ISSUES_URL}`));
+    }
+  }
+  log();
+}
+
+function printCombinedSummary({
+  installed,
+  installFailed,
+  installErrors,
+  uninstalled,
+  removeFailed,
+  removeErrors,
+  elapsed,
+  verbose,
+}: {
+  installed: number;
+  installFailed: number;
+  installErrors: SummaryOptions["errors"];
+  uninstalled: number;
+  removeFailed: number;
+  removeErrors: { name: string; output: string; stderr: string }[];
+  elapsed: number;
+  verbose: boolean;
+}): void {
+  log();
+
+  const totalFailed = installFailed + removeFailed;
+  if (totalFailed === 0) {
+    log(
+      green(
+        bold(
+          `   ✔ Done! ${installed} installed, ${uninstalled} removed in ${formatTime(elapsed)}.`,
+        ),
+      ),
+    );
+  } else {
+    log(
+      yellow(
+        `   Done: ${green(`${installed} installed`)}, ${green(`${uninstalled} removed`)}, ${red(`${totalFailed} failed`)} in ${formatTime(elapsed)}.`,
+      ),
+    );
+    if (installErrors.length > 0 || removeErrors.length > 0) {
+      log();
+      log(bold(red("   Errors:")));
+      for (const { name, output } of installErrors) {
+        log(red(`     ✘ install ${name}`));
+        if (!verbose) log(dim(`       ${briefErrorReason(output, "")}`));
+      }
+      for (const { name, output } of removeErrors) {
+        log(red(`     ✘ remove ${name}`));
+        log(dim(`       ${output}`));
+      }
+      log();
+      if (!verbose) {
+        log(dim("   Run again with --verbose to see the full error details."));
+      }
+      log(dim(`   If it looks like an autoskills bug, please create an issue: ${ISSUES_URL}`));
+    }
+  }
+
+  log();
+  log(pink("   Enjoyed autoskills? Consider sponsoring → https://github.com/sponsors/midudev"));
+  log();
+}
+
+async function runRemoveFlow(
+  projectDir: string,
+  { autoYes, verbose }: { autoYes: boolean; verbose: boolean },
+): Promise<void> {
+  const installed = listInstalledSkills(projectDir);
+
+  if (installed.length === 0) {
+    log(yellow("   ⚠ No installed skills found in this project."));
+    log(dim("   Nothing to remove."));
+    log();
+    process.exit(0);
+  }
+
+  const toRemove = await selectSkillsToRemove(installed, autoYes);
+
+  if (toRemove.length === 0) {
     log();
     log(dim("   Nothing selected."));
     log();
     process.exit(0);
   }
 
-  return selected;
+  log();
+  log(red("   ◆ ") + bold("Removing skills..."));
+  log();
+
+  const startTime = Date.now();
+  const { uninstalled, failed, errors } = await uninstallAll(toRemove, {
+    projectDir,
+    verbose,
+  });
+  const elapsed = Date.now() - startTime;
+
+  // If every autoskills-installed skill is gone, clean up the CLAUDE.md
+  // section too so it doesn't reference skills that no longer exist.
+  const remaining = listInstalledSkills(projectDir);
+  if (remaining.length === 0) {
+    const claudeCleanup = cleanupClaudeMd(projectDir);
+    if (claudeCleanup.cleaned) {
+      if (claudeCleanup.deleted) {
+        log(dim("   Removed autoskills section from CLAUDE.md (file was empty, deleted)."));
+      } else {
+        log(dim("   Removed autoskills section from CLAUDE.md."));
+      }
+    }
+  } else if (existsSync(join(projectDir, "CLAUDE.md"))) {
+    log(
+      dim(
+        "   Note: CLAUDE.md may still reference removed skills. " +
+          "Re-run `npx autoskills` to refresh it.",
+      ),
+    );
+  }
+
+  printRemoveSummary({ uninstalled, failed, errors, elapsed });
 }
 
 // ── Main ─────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { autoYes, dryRun, verbose, help, clearCache, agents } = parseArgs();
+  const { autoYes, dryRun, verbose, help, clearCache, remove, agents } = parseArgs();
 
   if (help) {
     showHelp();
@@ -521,6 +728,11 @@ async function main(): Promise<void> {
   await printBanner(VERSION);
 
   const projectDir = resolve(".");
+
+  if (remove) {
+    await runRemoveFlow(projectDir, { autoYes, verbose });
+    return;
+  }
 
   write(dim("   Scanning project...\r"));
   const { detected, isFrontend, combos } = detectTechnologies(projectDir);
@@ -558,31 +770,74 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const selectedSkills = await selectSkills(skills, autoYes);
+  const selectedState = await selectSkills(skills, autoYes);
+  const { installs, removes, keeps } = computeChanges(skills, selectedState);
 
-  log();
+  // In autoYes mode we preserve today's "refresh everything detected"
+  // behaviour by sending installs ∪ keeps to installAll. In interactive mode
+  // keeps are left alone — the user didn't toggle them off.
+  const toInstall = autoYes ? [...installs, ...keeps] : installs;
 
-  log(cyan("   ◆ ") + bold("Installing skills..."));
-  log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
+  if (toInstall.length === 0 && removes.length === 0) {
+    log();
+    log(dim("   Nothing selected."));
+    log();
+    process.exit(0);
+  }
+
+  const confirmed = await confirmDestructive(toInstall.length, removes.length, { autoYes });
+  if (!confirmed) {
+    log();
+    log(dim("   Cancelled, no changes made."));
+    log();
+    process.exit(0);
+  }
+
   log();
 
   const startTime = Date.now();
-  const { installed, failed, errors, securityChecks } = await installAll(
-    selectedSkills,
-    resolvedAgents,
-    {
-      verbose,
-    },
-  );
+  let installResult = {
+    installed: 0,
+    failed: 0,
+    errors: [] as {
+      name: string;
+      output: string;
+      stderr: string;
+      exitCode: number | null;
+      command: string;
+    }[],
+    securityChecks: [] as InstallSecurityCheck[],
+  };
+  let removeResult = {
+    uninstalled: 0,
+    failed: 0,
+    errors: [] as { name: string; output: string; stderr: string }[],
+  };
+
+  if (toInstall.length > 0) {
+    log(cyan("   ◆ ") + bold("Installing skills..."));
+    log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
+    log();
+
+    installResult = await installAll(toInstall, resolvedAgents, { verbose });
+
+    if (process.stdout.isTTY && !verbose) {
+      const up = toInstall.length + 2;
+      write(`\x1b[${up}A\r\x1b[K`);
+      log(green("   ◆ ") + bold("Done!"));
+      write(`\x1b[${toInstall.length + 1}B`);
+    }
+  }
+
+  if (removes.length > 0) {
+    if (toInstall.length > 0) log();
+    log(red("   ◆ ") + bold("Removing skills..."));
+    log();
+    removeResult = await uninstallAll(removes, { projectDir, verbose });
+  }
+
   const elapsed = Date.now() - startTime;
   const claudeCleanup = cleanupClaudeMd(projectDir);
-
-  if (process.stdout.isTTY && !verbose) {
-    const up = selectedSkills.length + 2;
-    write(`\x1b[${up}A\r\x1b[K`);
-    log(green("   ◆ ") + bold("Done!"));
-    write(`\x1b[${selectedSkills.length + 1}B`);
-  }
 
   if (claudeCleanup.cleaned) {
     if (claudeCleanup.deleted) {
@@ -593,8 +848,35 @@ async function main(): Promise<void> {
     log();
   }
 
-  printSecurityChecks(securityChecks);
-  printSummary({ installed, failed, errors, elapsed, verbose });
+  printSecurityChecks(installResult.securityChecks);
+
+  if (removes.length === 0) {
+    printSummary({
+      installed: installResult.installed,
+      failed: installResult.failed,
+      errors: installResult.errors,
+      elapsed,
+      verbose,
+    });
+  } else if (toInstall.length === 0) {
+    printRemoveSummary({
+      uninstalled: removeResult.uninstalled,
+      failed: removeResult.failed,
+      errors: removeResult.errors,
+      elapsed,
+    });
+  } else {
+    printCombinedSummary({
+      installed: installResult.installed,
+      installFailed: installResult.failed,
+      installErrors: installResult.errors,
+      uninstalled: removeResult.uninstalled,
+      removeFailed: removeResult.failed,
+      removeErrors: removeResult.errors,
+      elapsed,
+      verbose,
+    });
+  }
 }
 
 main().catch((err: Error) => {

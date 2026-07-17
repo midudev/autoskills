@@ -40,8 +40,13 @@ This keeps the package small while avoiding live downloads from third-party skil
 ```
 -y, --yes       Skip confirmation prompt
 --dry-run       Show what would be installed without installing
+-r, --remove    Remove-only mode — skip detection, list installed skills
 -h, --help      Show help message
 ```
+
+The default `npx autoskills` picker also supports removal: installed skills start
+checked, and unchecking any of them queues a removal that runs after a y/N
+confirmation. Use `-r` when you want to skip detection entirely.
 
 ## Supported Technologies
 
