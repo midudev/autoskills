@@ -22,7 +22,10 @@ import { log, write, dim, green, cyan, red, HIDE_CURSOR, SHOW_CURSOR, SPINNER } 
 // ── Registry ─────────────────────────────────────────────────
 
 const DEFAULT_REGISTRY_RAW_BASE_URL_PREFIX = "https://raw.githubusercontent.com/midudev/autoskills";
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+
+function getGithubToken(): string {
+  return process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+}
 
 export interface RegistryEntry {
   source: string;
@@ -112,8 +115,33 @@ export function _setRegistryDir(dir: string | null): void {
 
 // ── Integrity ────────────────────────────────────────────────
 
-function sha256File(path: string): string {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
+/** Paths that should never be rewritten when normalizing line endings. */
+function isBinarySkillPath(rel: string): boolean {
+  return /\.(png|jpe?g|gif|webp|ico|pdf|zip|gz|tgz|woff2?|ttf|otf|eot|mp3|mp4|wasm|bin)$/i.test(
+    rel,
+  );
+}
+
+/**
+ * Registry manifests hash LF-only content. Windows checkouts with
+ * `core.autocrlf=true` rewrite text to CRLF and break SHA-256 verification.
+ * Normalize CRLF→LF for text files before hashing/copying so local installs work.
+ */
+function readRegistryFileBytes(absPath: string, rel: string): Buffer {
+  const buf = readFileSync(absPath);
+  if (isBinarySkillPath(rel) || !buf.includes(0x0d)) return buf;
+  // Strip CR that forms CRLF pairs; leave lone CR alone (rare binary-ish content).
+  const out: number[] = [];
+  for (let i = 0; i < buf.length; i++) {
+    const b = buf[i];
+    if (b === 0x0d && buf[i + 1] === 0x0a) continue;
+    out.push(b);
+  }
+  return Buffer.from(out);
+}
+
+function sha256File(path: string, rel: string = ""): string {
+  return createHash("sha256").update(readRegistryFileBytes(path, rel)).digest("hex");
 }
 
 export function verifyRegistryEntry(
@@ -135,7 +163,7 @@ export function verifyRegistryEntry(
     if (!expected) {
       return { ok: false, reason: `no recorded hash for ${normalizedRel}` };
     }
-    const actual = sha256File(abs);
+    const actual = sha256File(abs, normalizedRel);
     if (actual !== expected) {
       return { ok: false, reason: `hash mismatch for ${normalizedRel}` };
     }
@@ -259,8 +287,13 @@ function encodeRawPath(skillName: string, rel: string): string {
 function githubDownloadHeaders(url: string): HeadersInit {
   const headers: Record<string, string> = { "User-Agent": "autoskills" };
   const host = new URL(url).hostname;
-  if (GITHUB_TOKEN && /(^|\.)githubusercontent\.com$/i.test(host)) {
-    headers.Authorization = `Bearer ${GITHUB_TOKEN}`;
+  const token = getGithubToken();
+  // Only attach tokens to api.github.com. Sending an invalid/expired
+  // GITHUB_TOKEN/GH_TOKEN Bearer to raw.githubusercontent.com makes GitHub
+  // return 404 for public files (common on Windows when a stale User env
+  // token shadows anonymous access). See midudev/autoskills#124.
+  if (token && host.toLowerCase() === "api.github.com") {
+    headers.Authorization = `Bearer ${token}`;
   }
   return headers;
 }
@@ -299,7 +332,7 @@ async function downloadRegistryFile(
       const resetSuffix = resetAt ? ` (resets ${new Date(resetAt).toISOString()})` : "";
       if (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0") {
         throw new Error(
-          `GitHub rate limit exceeded${resetSuffix}. Set GITHUB_TOKEN or GH_TOKEN to increase the limit.`,
+          `GitHub rate limit exceeded${resetSuffix} while downloading ${url}. Retry after the limit resets.`,
         );
       }
       errors.push(`${res.status} ${res.statusText} from ${baseUrl}`);
@@ -371,7 +404,14 @@ function copyRegistryEntryFromLocal(
   }
 
   rmSync(destDir, { recursive: true, force: true });
-  copyDir(join(registryDir, skillName), destDir);
+  // Copy with LF-normalized text so installed skills match manifest hashes on Windows.
+  for (const rel of entry.files) {
+    const normalizedRel = normalizeRegistryRelPath(rel);
+    const src = join(registryDir, skillName, ...normalizedRel.split("/"));
+    const dest = join(destDir, ...normalizedRel.split("/"));
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, readRegistryFileBytes(src, normalizedRel));
+  }
   opts.onTrace?.(`copied from local registry: ${join(registryDir, skillName)}`);
   return true;
 }

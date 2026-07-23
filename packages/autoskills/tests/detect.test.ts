@@ -381,6 +381,45 @@ describe("detectTechnologies", () => {
     strictEqual(isFrontend, false);
   });
 
+  it("does not mark Python backends as frontend when HTML assets exist (#48)", () => {
+    writeFile(tmp.path, "requirements.txt", "fastapi==0.100.0\npydantic==2.0.0\n");
+    writeFile(tmp.path, "app/main.py", "from fastapi import FastAPI\napp = FastAPI()\n");
+    writeFile(tmp.path, "docs/index.html", "<html><body>API docs</body></html>");
+    writeFile(tmp.path, "static/style.css", "body { margin: 0 }");
+    const { detected, isFrontend } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "python" || t.id === "fastapi"));
+    strictEqual(isFrontend, false);
+  });
+
+  it("does not mark ASP.NET Core projects as frontend from HTML assets", () => {
+    writeFile(tmp.path, "appsettings.json", "{}");
+    writeFile(tmp.path, "wwwroot/index.html", "<html></html>");
+    const { detected, isFrontend } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "aspnetcore"));
+    strictEqual(isFrontend, false);
+  });
+
+  it("does not mark Blazor projects as frontend from HTML assets alone", () => {
+    writeFile(tmp.path, "App.csproj", '<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">');
+    writeFile(tmp.path, "wwwroot/index.html", "<html></html>");
+    const { detected, isFrontend } = detectTechnologies(tmp.path);
+    ok(detected.some((t) => t.id === "aspnet-blazor"));
+    strictEqual(isFrontend, false);
+  });
+
+  it("still marks pure HTML sites as frontend without backend signals", () => {
+    writeFile(tmp.path, "public/index.html", "<html></html>");
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, true);
+  });
+
+  it("still marks frontend when packages say so even with Python present", () => {
+    writeFile(tmp.path, "requirements.txt", "fastapi==0.100.0\n");
+    writePackageJson(tmp.path, { dependencies: { react: "^19.0.0" } });
+    const { isFrontend } = detectTechnologies(tmp.path);
+    strictEqual(isFrontend, true);
+  });
+
   it("detects combos when multiple technologies match", () => {
     writePackageJson(tmp.path, { dependencies: { expo: "^52.0.0", tailwindcss: "^4.0.0" } });
     const { combos } = detectTechnologies(tmp.path);

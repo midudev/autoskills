@@ -367,4 +367,44 @@ describe("multiSelect", () => {
     const result = await multiSelect(items, { labelFn: (x) => x.name });
     deepStrictEqual(result, items);
   });
+
+  it("handles concatenated CSI arrows and clears wrapped frames from a saved cursor", async () => {
+    const stdinOverrides: Record<string, PropertyDescriptor> = {
+      isTTY: { configurable: true, value: true },
+      setRawMode: { configurable: true, value: () => {} },
+      resume: { configurable: true, value: () => process.stdin },
+      pause: { configurable: true, value: () => process.stdin },
+      setEncoding: { configurable: true, value: () => process.stdin },
+    };
+    const previousDescriptors = new Map(
+      Object.keys(stdinOverrides).map((key) => [
+        key,
+        Object.getOwnPropertyDescriptor(process.stdin, key),
+      ]),
+    );
+    for (const [key, descriptor] of Object.entries(stdinOverrides)) {
+      Object.defineProperty(process.stdin, key, descriptor);
+    }
+
+    const output: string[] = [];
+    try {
+      const resultPromise = multiSelect(["first", "second", "third"], {
+        labelFn: (item) => `${item} ${"wrapped label ".repeat(20)}`,
+        shortcuts: [{ key: "n", label: "wrapped shortcut ".repeat(20), fn: () => [] }],
+        writeFn: (text) => output.push(text),
+      });
+      process.stdin.emit("data", "\x1b\x1b[\x1b[B\x1b[B \r");
+
+      deepStrictEqual(await resultPromise, ["first", "second"]);
+      const rendered = output.join("");
+      strictEqual(rendered.split("\x1b[s").length - 1, 1);
+      strictEqual(rendered.split("\x1b[u\x1b[J").length - 1, 4);
+      strictEqual(rendered.includes("A\r\x1b[J"), false);
+    } finally {
+      for (const [key, descriptor] of previousDescriptors) {
+        if (descriptor) Object.defineProperty(process.stdin, key, descriptor);
+        else Reflect.deleteProperty(process.stdin, key);
+      }
+    }
+  });
 });

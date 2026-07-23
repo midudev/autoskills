@@ -557,16 +557,55 @@ export interface DetectResult {
   combos: ComboSkill[];
 }
 
+/**
+ * Non-JS backends often ship HTML/CSS/templates (docs, email, admin assets)
+ * that must not classify the whole repo as a web frontend (#48).
+ * Package-based frontend detection is always trusted.
+ */
+const FILE_FRONTEND_SUPPRESS_TECH_IDS: ReadonlySet<string> = new Set([
+  "python",
+  "django",
+  "fastapi",
+  "flask",
+  "celery",
+  "sqlalchemy",
+  "pytest",
+  "pandas",
+  "numpy",
+  "scikit-learn",
+  "java",
+  "springboot",
+  "kotlin-multiplatform",
+  "go",
+  "rust",
+  "dotnet",
+  "csharp",
+  "aspnetcore",
+  "aspnet-blazor",
+  "php",
+  "laravel",
+  "wordpress",
+  "ruby",
+  "rails",
+]);
+
+function trustFileBasedFrontend(detected: Technology[]): boolean {
+  return !detected.some((t) => FILE_FRONTEND_SUPPRESS_TECH_IDS.has(t.id));
+}
+
 export function detectTechnologies(projectDir: string): DetectResult {
   const pkg = readPackageJson(projectDir);
   const denoJson = readDenoJson(projectDir);
   const root = detectTechnologiesInDir(projectDir, { pkg, denoJson });
   const seenIds = new Map<string, Technology>(root.detected.map((t) => [t.id, t]));
-  let isFrontend = root.isFrontendByPackages || root.isFrontendByFiles;
+  let isFrontendByPackages = root.isFrontendByPackages;
+  let isFrontendByFiles = root.isFrontendByFiles;
 
   const workspaceDirs = resolveWorkspaces(projectDir, { pkg, denoJson });
   for (const wsDir of workspaceDirs) {
-    const ws = detectTechnologiesInDir(wsDir, { skipFrontendFiles: isFrontend });
+    const ws = detectTechnologiesInDir(wsDir, {
+      skipFrontendFiles: isFrontendByPackages || isFrontendByFiles,
+    });
 
     for (const tech of ws.detected) {
       if (!seenIds.has(tech.id)) {
@@ -574,12 +613,13 @@ export function detectTechnologies(projectDir: string): DetectResult {
       }
     }
 
-    if (ws.isFrontendByPackages || ws.isFrontendByFiles) {
-      isFrontend = true;
-    }
+    if (ws.isFrontendByPackages) isFrontendByPackages = true;
+    if (ws.isFrontendByFiles) isFrontendByFiles = true;
   }
 
   const detected = [...seenIds.values()];
+  const isFrontend =
+    isFrontendByPackages || (isFrontendByFiles && trustFileBasedFrontend(detected));
   const detectedIds = detected.map((t) => t.id);
   const combos = detectCombos(detectedIds);
 

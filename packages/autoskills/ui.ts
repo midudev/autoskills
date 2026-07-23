@@ -92,11 +92,19 @@ interface MultiSelectOptions<T> {
   groupFn?: (item: T) => string;
   initialSelected?: boolean[];
   shortcuts?: { key: string; label: string; fn: (items: T[]) => boolean[] }[];
+  writeFn?: (text: string) => void;
 }
 
 export function multiSelect<T>(
   items: T[],
-  { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }: MultiSelectOptions<T>,
+  {
+    labelFn,
+    hintFn,
+    groupFn,
+    initialSelected,
+    shortcuts = [],
+    writeFn = write,
+  }: MultiSelectOptions<T>,
 ): Promise<T[]> {
   if (initialSelected && initialSelected.length !== items.length) {
     throw new Error(
@@ -126,16 +134,10 @@ export function multiSelect<T>(
     }
 
     const showGroups = groupCount > 1;
-    const visibleGroupCount = showGroups ? groupCount : 0;
-    const separatorCount = showGroups ? groupCount - 1 : 0;
-
-    function renderedLineCount(): number {
-      return items.length + visibleGroupCount + separatorCount + 1;
-    }
 
     function clearRendered(): void {
       if (rendered) {
-        write(`\x1b[${renderedLineCount()}A\r\x1b[J`);
+        writeFn("\x1b[u\x1b[J");
       }
     }
 
@@ -150,28 +152,32 @@ export function multiSelect<T>(
       let lastGroup: string | null = null;
       let isFirstGroup = true;
 
+      const writeln = (line: string): void => {
+        writeFn(line + "\n");
+      };
+
       for (let i = 0; i < items.length; i++) {
         if (showGroups && groupFn) {
           const group = groupFn(items[i]);
           if (group !== lastGroup) {
-            if (!isFirstGroup) write("\n");
+            if (!isFirstGroup) writeln("");
             isFirstGroup = false;
             lastGroup = group;
-            write(`   ${bold(yellow(group))}\n`);
+            writeln(`   ${bold(yellow(group))}`);
           }
         }
         const pointer = i === cursor ? cyan("❯") : " ";
         const check = selected[i] ? green("◼") : dim("◻");
         const label = labelFn(items[i], i);
         const hint = hintFn ? hintFn(items[i], i) : "";
-        write(`     ${pointer} ${check} ${label}${hint ? "  " + dim(hint) : ""}\n`);
+        writeln(`     ${pointer} ${check} ${label}${hint ? "  " + dim(hint) : ""}`);
       }
-      write("\n");
+      writeln("");
       const shortcutHints = shortcuts
         .map((s) => white(bold(`[${s.key}]`)) + dim(` ${s.label}`))
         .join(dim(" · "));
       const shortcutPart = shortcuts.length > 0 ? shortcutHints + dim(" · ") : "";
-      write(
+      writeln(
         dim("   ") +
           white(bold("[↑↓]")) +
           dim(" move · ") +
@@ -185,7 +191,7 @@ export function multiSelect<T>(
       );
     }
 
-    write(HIDE_CURSOR);
+    writeFn(HIDE_CURSOR + "\x1b[s");
     render();
 
     const { stdin } = process;
@@ -198,29 +204,47 @@ export function multiSelect<T>(
     function onData(data: string): void {
       if (settled) return;
 
-      if (data.startsWith("\x1b")) {
-        processKey(data);
-        return;
-      }
-
-      for (const ch of data.replace(/\r\n/g, "\r")) {
-        if (settled) return;
-        processKey(ch);
+      // Parse CSI / single keys so batched arrow sequences from Warp/etc.
+      // each move the cursor once instead of being ignored as a long string.
+      let i = 0;
+      const s = data.replace(/\r\n/g, "\r");
+      while (i < s.length && !settled) {
+        if (s[i] === "\x1b") {
+          if (s[i + 1] === "[") {
+            let j = i + 2;
+            while (j < s.length && s.charCodeAt(j) >= 0x20 && s.charCodeAt(j) <= 0x3f) j++;
+            const finalByte = s.charCodeAt(j);
+            if (j < s.length && finalByte >= 0x40 && finalByte <= 0x7e) {
+              processKey(s.slice(i, j + 1));
+              i = j + 1;
+              continue;
+            }
+            if (s[j] === "\x1b") {
+              i = j;
+              continue;
+            }
+          }
+          // Bare ESC or incomplete sequence — skip one char
+          i += 1;
+          continue;
+        }
+        processKey(s[i]);
+        i += 1;
       }
     }
 
     function processKey(key: string): void {
       if (key === "\x03") {
         cleanup();
-        write(SHOW_CURSOR + "\n");
-        process.exit(0);
+        writeFn(SHOW_CURSOR + "\n");
+        process.exit(130);
       }
 
       if (key === "\r" || key === "\n") {
         settled = true;
         cleanup();
         clearRendered();
-        write(SHOW_CURSOR);
+        writeFn(SHOW_CURSOR);
         resolve(items.filter((_, i) => selected[i]));
         return;
       }
