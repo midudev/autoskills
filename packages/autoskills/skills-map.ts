@@ -972,17 +972,6 @@ export const SKILLS_MAP: Technology[] = [
     skills: [],
   },
   {
-    id: "fastapi",
-    name: "FastAPI",
-    detect: {
-      configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
-        patterns: ["fastapi", "FastAPI"],
-      },
-    },
-    skills: [],
-  },
-  {
     id: "sidekiq",
     name: "Sidekiq",
     detect: {
@@ -1052,7 +1041,7 @@ export const SKILLS_MAP: Technology[] = [
         patterns: ["fastapi", "FastAPI"],
       },
     },
-    skills: ["wshobson/agents/fastapi-templates", "mindrally/skills/fastapi-python"],
+    skills: ["wshobson/agents/fastapi-templates", "fastapi/fastapi/fastapi","mindrally/skills/fastapi-python"],
   },
   {
     id: "fastmcp",
