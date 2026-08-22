@@ -115,6 +115,7 @@ If `claude-code` is auto-detected or passed with `-a`, `autoskills` writes a `CL
 | Prisma          | `prisma`, `@prisma/client`                               |
 | Drizzle ORM     | `drizzle-orm`, `drizzle-kit`                             |
 | Stripe          | `stripe`, `@stripe/stripe-js`, `@stripe/react-stripe-js` |
+| Xquik           | `x-twitter-scraper` package                              |
 | Better Auth     | `better-auth` package                                    |
 
 ### Authentication

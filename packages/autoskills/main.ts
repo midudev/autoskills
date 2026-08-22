@@ -339,6 +339,13 @@ function printSecurityChecks(checks: InstallSecurityCheck[]): void {
   }
 }
 
+function printSkippedReviews(skills: string[]): void {
+  if (skills.length === 0) return;
+  log();
+  log(yellow("   ⚠ Security review skipped"));
+  log(dim(`   No registry security review was performed for: ${skills.sort().join(", ")}.`));
+}
+
 interface SummaryOptions {
   installed: number;
   failed: number;
@@ -567,7 +574,7 @@ async function main(): Promise<void> {
   log();
 
   const startTime = Date.now();
-  const { installed, failed, errors, securityChecks } = await installAll(
+  const { installed, failed, errors, securityChecks, skippedReviews } = await installAll(
     selectedSkills,
     resolvedAgents,
     {
@@ -593,6 +600,7 @@ async function main(): Promise<void> {
     log();
   }
 
+  printSkippedReviews(skippedReviews);
   printSecurityChecks(securityChecks);
   printSummary({ installed, failed, errors, elapsed, verbose });
 }

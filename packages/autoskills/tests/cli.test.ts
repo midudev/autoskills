@@ -120,6 +120,15 @@ describe("CLI", () => {
       ok(output.includes("instantdb"));
     });
 
+    it("detects Xquik and suggests its official skill", () => {
+      writePackageJson(tmp.path, { dependencies: { "x-twitter-scraper": "0.12.4" } });
+
+      const output = run(["--dry-run"], tmp.path);
+
+      ok(output.includes("Xquik"));
+      ok(output.includes("x-twitter-scraper"));
+    });
+
     it("detects Astro from package.json", () => {
       writePackageJson(tmp.path, { dependencies: { astro: "^5" } });
 
@@ -475,5 +484,17 @@ describe("CLI", () => {
       ok(output.includes("Agents: cursor"));
       ok(!output.includes("universal"));
     });
+  });
+
+  it("installs the Xquik skill from the audited registry", () => {
+    writePackageJson(tmp.path, { dependencies: { "x-twitter-scraper": "0.12.4" } });
+
+    const output = run(["--yes", "--agent", "universal"], tmp.path);
+
+    ok(output.includes("1 skill installed"));
+    ok(output.includes("Security review skipped"));
+    ok(output.includes("x-twitter-scraper"));
+    ok(existsSync(join(tmp.path, ".agents/skills/x-twitter-scraper/SKILL.md")));
+    ok(existsSync(join(tmp.path, ".agents/skills/x-twitter-scraper/LICENSE")));
   });
 });

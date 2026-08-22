@@ -436,6 +436,14 @@ export const SKILLS_MAP: Technology[] = [
     skills: ["inferen-sh/skills/elevenlabs-tts", "inferen-sh/skills/elevenlabs-music"],
   },
   {
+    id: "xquik",
+    name: "Xquik",
+    detect: {
+      packages: ["x-twitter-scraper"],
+    },
+    skills: ["Xquik-dev/x-twitter-scraper/x-twitter-scraper"],
+  },
+  {
     id: "vercel-deploy",
     name: "Vercel",
     detect: {

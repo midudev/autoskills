@@ -157,6 +157,112 @@ describe("verifyRegistryEntry", () => {
     ok(!verdict.ok);
     ok(verdict.reason?.includes("missing"));
   });
+
+  it("detects files omitted from the manifest", () => {
+    const regDir = join(tmp.path, "registry");
+    buildRegistry(regDir, [
+      { name: "my-skill", source: "owner/repo", files: { "SKILL.md": "# hi" } },
+    ]);
+    writeFileSync(join(regDir, "my-skill", "unlisted.txt"), "not reviewed");
+    _setRegistryDir(regDir);
+    const manifest = JSON.parse(readFileSync(join(regDir, "index.json"), "utf-8"));
+
+    const verdict = verifyRegistryEntry("my-skill", manifest.skills["my-skill"], regDir);
+
+    equal(verdict.ok, false);
+    equal(verdict.reason, "unexpected file unlisted.txt");
+  });
+
+  it("rejects unsafe registry paths before installation", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "unsafe-skill", source: "owner/repo", files: { "SKILL.md": "# unsafe" } },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    const entry = manifest.skills["unsafe-skill"];
+    entry.files = ["../outside.txt"];
+    entry.sha256["../outside.txt"] = sha256("outside");
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/unsafe-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("unsafe path"));
+    equal(securityCheckForSkillPath("owner/repo/unsafe-skill"), null);
+    equal(existsSync(join(projectDir, ".agents", "skills", "outside.txt")), false);
+  });
+
+  it("rejects registry files without a valid hash", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "unhashed-skill", source: "owner/repo", files: { "SKILL.md": "# unhashed" } },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    manifest.skills["unhashed-skill"].sha256 = {};
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/unhashed-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("sha256 must contain a SHA-256 hash"));
+    equal(securityCheckForSkillPath("owner/repo/unhashed-skill"), null);
+  });
+
+  it("rejects an unsafe bundle hash before resolving the cache path", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "unsafe-cache", source: "owner/repo", files: { "SKILL.md": "# unsafe" } },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    manifest.skills["unsafe-cache"].bundleHash = "../../outside";
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/unsafe-cache", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("bundleHash must be a SHA-256 hash"));
+    equal(securityCheckForSkillPath("owner/repo/unsafe-cache"), null);
+  });
+
+  it("rejects an incomplete top-level registry", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "incomplete", source: "owner/repo", files: { "SKILL.md": "# incomplete" } },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    delete manifest.reviewer;
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/incomplete", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("skills-registry index not found"));
+    equal(securityCheckForSkillPath("owner/repo/incomplete"), null);
+  });
 });
 
 describe("installSkill", () => {
@@ -260,6 +366,106 @@ describe("installSkill", () => {
     });
   });
 
+  it("does not report a security result when review was skipped", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      {
+        name: "unreviewed-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# unreviewed" },
+        review: {
+          status: "skipped",
+          flags: [],
+          summary: "review skipped (--no-review)",
+          model: "test-model",
+          promptVersion: "1.0.0",
+          reviewedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/unreviewed-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    ok(result.success, result.output);
+    equal(result.securityCheck, undefined);
+    equal(result.reviewSkipped, true);
+    equal(securityCheckForSkillPath("owner/repo/unreviewed-skill"), null);
+  });
+
+  it("rejects a security result when review was skipped", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      {
+        name: "inconsistent-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# inconsistent" },
+        review: {
+          status: "skipped",
+          flags: [],
+          summary: "review skipped (--no-review)",
+          model: "test-model",
+          promptVersion: "1.0.0",
+          reviewedAt: new Date().toISOString(),
+        },
+        securityCheck: {
+          status: "warning",
+          findings: ["stale result"],
+          summary: "Stale result.",
+          checkedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/inconsistent-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(
+      result.output.includes(
+        "invalid registry metadata: securityCheck must be omitted when review.status is skipped",
+      ),
+    );
+    equal(securityCheckForSkillPath("owner/repo/inconsistent-skill"), null);
+  });
+
+  it("rejects registry entries without review metadata", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    mkdirSync(projectDir, { recursive: true });
+    buildRegistry(regDir, [
+      {
+        name: "malformed-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# malformed" },
+      },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    delete manifest.skills["malformed-skill"].review;
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/malformed-skill", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("invalid registry metadata: review must be an object"));
+    equal(securityCheckForSkillPath("owner/repo/malformed-skill"), null);
+  });
+
   it("returns security checks from the registry before installing", () => {
     const regDir = join(tmp.path, "registry");
     buildRegistry(regDir, [
@@ -344,6 +550,52 @@ describe("installSkill", () => {
       readFileSync(join(projectDir, ".agents", "skills", "local-skill", "SKILL.md"), "utf-8"),
       "# local",
     );
+  });
+
+  it("excludes unlisted files from local registry installs", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "listed-skill", source: "owner/repo", files: { "SKILL.md": "# listed" } },
+    ]);
+    writeFileSync(join(regDir, "listed-skill", "unlisted.txt"), "not reviewed");
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/listed-skill", [], {
+      projectDir,
+      registryDir: regDir,
+      registryBaseUrl: "https://example.test/skills-registry",
+      fetchImpl: fetchFromRegistry(regDir),
+    });
+
+    ok(result.success, result.output);
+    ok(existsSync(join(projectDir, ".agents", "skills", "listed-skill", "SKILL.md")));
+    equal(existsSync(join(projectDir, ".agents", "skills", "listed-skill", "unlisted.txt")), false);
+  });
+
+  it("refreshes matching installed skills that contain unlisted files", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "listed-skill", source: "owner/repo", files: { "SKILL.md": "# listed" } },
+    ]);
+    const installedDir = join(projectDir, ".agents", "skills", "listed-skill");
+    mkdirSync(installedDir, { recursive: true });
+    writeFileSync(join(installedDir, "SKILL.md"), "# listed");
+    writeFileSync(join(installedDir, "unlisted.txt"), "not reviewed");
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/listed-skill", [], {
+      projectDir,
+      registryDir: regDir,
+      fetchImpl: (async () => {
+        throw new Error("unexpected fetch");
+      }) as typeof fetch,
+    });
+
+    ok(result.success, result.output);
+    equal(existsSync(join(installedDir, "SKILL.md")), true);
+    equal(existsSync(join(installedDir, "unlisted.txt")), false);
   });
 
   it("skips downloads when the installed skill already matches the manifest", async () => {

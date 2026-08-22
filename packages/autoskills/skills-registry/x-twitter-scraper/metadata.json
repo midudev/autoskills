@@ -1,0 +1,39 @@
+{
+  "version": "2.6.7",
+  "organization": "Xquik",
+  "homepage": "https://docs.xquik.com",
+  "repository": "https://github.com/Xquik-dev/x-twitter-scraper",
+  "license": "MIT",
+  "date": "July 2026",
+  "abstract": "Integration guide for the Xquik Twitter scraper API and X API alternative. Covers Twitter search, follower exports, social listening, profile lookup, monitoring, webhooks, REST, MCP, 23 extraction tools, tweet composition, untrusted content, and TypeScript types. Start with read-only public data. Private reads, writes, monitors, webhooks, metered bulk jobs, and event delivery require approval for the target, payload, destination, and usage estimate. For REST, the Skill handles only the user's Xquik API key. For MCP, the client manages OAuth tokens or the API-key fallback. The Skill never handles X passwords, 2FA codes, cookies, session tokens, recovery codes, local files, shell commands, local networks, or bridge packages. Not affiliated with X Corp.",
+  "security": {
+    "defaultMode": "read-only-public-data",
+    "credentialsHandled": ["xquik-api-key"],
+    "mcpAuthentication": "client-managed-oauth-2.1-or-bearer-fallback",
+    "credentialsNeverHandled": [
+      "x-passwords",
+      "2fa-codes",
+      "cookies",
+      "session-tokens",
+      "recovery-codes"
+    ],
+    "approvalRequiredFor": [
+      "private-reads",
+      "write-actions",
+      "persistent-monitors",
+      "webhook-delivery",
+      "metered-bulk-jobs",
+      "event-delivery"
+    ],
+    "localExecution": false,
+    "localFileAccess": false,
+    "localNetworkAccess": false,
+    "untrustedContentBoundaries": true
+  },
+  "references": [
+    "https://docs.xquik.com",
+    "https://docs.xquik.com/api-reference/overview",
+    "https://docs.xquik.com/mcp/overview",
+    "https://docs.xquik.com/webhooks/overview"
+  ]
+}
