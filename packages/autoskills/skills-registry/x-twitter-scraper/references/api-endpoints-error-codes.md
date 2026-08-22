@@ -43,7 +43,7 @@ and `code`. OpenAPI enumerates 112 codes, including `closed`, `expired`,
 | 429 | `x_api_rate_limited` | X data source rate limited. Retry only safe reads |
 | 500 | `internal_error` | Server error. Retry only safe reads |
 | 502 | `x_api_unavailable` | X data source temporarily unavailable. Retry only safe reads |
-| 502 | `x_api_unauthorized` | X data source authentication failed. Retry only safe reads |
+| 502 | `x_api_unauthorized` | Stop. Do not retry automatically. Review X source authentication |
 
 Outside the cursor rules below, retry safe reads after connection failures,
 `408`, `429`, or `5xx`. Retry `424` only when `safeToRetry` is `true`. Never

@@ -26,6 +26,7 @@ type TweetMediaMime =
   | "image/png"
   | "image/gif"
   | "image/webp"
+  | "image/avif"
   | "video/mp4";
 
 interface ResolvedTweetMedia {
@@ -75,7 +76,7 @@ function assertCreateTweetRequest(
       item === null ||
       typeof item !== "object" ||
       item.url !== media[index] ||
-      !["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4"].includes(item.mimeType)
+      !["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "video/mp4"].includes(item.mimeType)
     )
   ) {
     throw new Error("Resolve every media URL and validate its MIME type before posting.");

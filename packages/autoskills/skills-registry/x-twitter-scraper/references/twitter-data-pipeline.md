@@ -58,10 +58,10 @@ Separate the request worker from data processing. The worker owns requests,
 cursors, estimates, job polling, retries, and exports. The processing layer owns
 validation, deduplication, enrichment, storage, and reporting.
 
-Retry safe reads after connection failures, `408`, `429`, or `5xx`. Respect
-`Retry-After`, use exponential backoff with jitter, and cap attempts. Retry
-`424` only when `safeToRetry` is `true`. Never retry writes or job creation
-automatically.
+Only `GET` requests qualify as safe reads. Retry safe GET requests after
+connection failures, `408`, `429`, or `5xx`. Respect `Retry-After`. Use jitter
+and cap attempts. Retry `424` only when `safeToRetry` is `true`. Never retry a
+`POST`, write, estimate, or job creation automatically.
 
 Use stable IDs as keys. Keep raw source data separate from derived fields.
 
@@ -119,6 +119,8 @@ destinations, writes, or persistent resources.
 | --- | --- | --- |
 | `401` authentication error | Stop and verify the Xquik API key | Rotate through unknown keys |
 | Connection failure or `408` | Retry a safe read within a bound | Retry a write or create another job |
+| `409 coverage_cursor_unavailable` | Wait the exact `Retry-After`, then retry the same cursor once | Restart or retry without the required delay |
+| `410 coverage_cursor_gone` | Restart without a cursor and deduplicate by ID | Reuse the expired cursor or append duplicate rows |
 | `424` dependency failure | Retry only when `safeToRetry` is `true` | Retry without an explicit safety signal |
 | `429` rate limit | Honor `Retry-After` and retry a safe read within a bound | Start parallel unbounded workers |
 | `5xx` provider error | Retry a safe read with backoff and the same run state | Create duplicate extraction jobs |

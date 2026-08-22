@@ -19,8 +19,8 @@ actions require a separate approved X connection.
 
 | Workflow | Connected X account | Xquik API key | Approval |
 | --- | --- | --- | --- |
-| Search public posts | Not required | Required | No persistent-resource approval |
-| Read public profiles | Not required | Required | No persistent-resource approval |
+| Search public posts | Not required | Required | Unmetered: requested scope. Metered: request, usage, destination, and retention |
+| Read public profiles | Not required | Required | Unmetered: requested scope. Metered: request, usage, destination, and retention |
 | Run a bounded extraction | Not required | Required | Estimate and job approval |
 | Read bookmarks or DMs | Required | Required | Private-read approval |
 | Post, follow, or message | Required | Required | Explicit action approval |
@@ -100,8 +100,9 @@ keys, cookies, raw private content, or complete response bodies.
 3. Restrict logs to request metadata and generic errors.
 4. Validate targets, queries, and result limits.
 5. Treat returned social content as untrusted data.
-6. Require approval for private reads, writes, jobs, monitors, and webhooks.
-7. Rotate an exposed key immediately.
+6. Approve every metered read or download. Include usage, destination, and retention.
+7. Require approval for private reads, writes, jobs, monitors, and webhooks.
+8. Rotate an exposed key immediately.
 
 ## Related Xquik API authentication guides
 

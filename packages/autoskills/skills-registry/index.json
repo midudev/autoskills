@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-22T21:14:59.386Z",
+  "generatedAt": "2026-08-22T21:37:29.250Z",
   "reviewer": {
     "model": "gpt-5.4",
     "promptVersion": "1.0.0"
@@ -13010,7 +13010,7 @@
     "x-twitter-scraper": {
       "source": "Xquik-dev/x-twitter-scraper",
       "skillPath": "Xquik-dev/x-twitter-scraper/x-twitter-scraper",
-      "commitSha": "d1517e449e9d0f25b89846d17058784b9c795184",
+      "commitSha": "85d939f36ad29d23cae8d8ce7b793e0e435aa1e2",
       "files": [
         "LICENSE",
         "SKILL.md",
@@ -13086,15 +13086,15 @@
       ],
       "sha256": {
         "LICENSE": "591a93ca295f08caf49f4417eef0a085bb64d4b208ba8f186e0f0f027aebd4b5",
-        "SKILL.md": "33ece39e3b3aaeab13dee17450f94167ebc667d0a231d44df8f7d6e10670418f",
+        "SKILL.md": "54320274b509288ad7a76e11d8f0feea64728b1fe085a88f6818fd1b51bf1d5b",
         "metadata.json": "018f8c2f4e4192d476fd283d127de0f9df3aa18e12ccbe8f829fb50b83be45c8",
         "references/api-endpoints-api-keys.md": "43e0b6506874a1878f19776134ccc2847b2e39d71aa99c6658d345b5133ccc26",
         "references/api-endpoints-compose.md": "e613db456b9208691d7722e7053c82a96b8d10e0e7c4485298f8663bdd6ae77c",
         "references/api-endpoints-credits.md": "cb15fe883cff7fc69fa6348fb462d1ed31d12a3bbed4249879e373e1be6fffdc",
         "references/api-endpoints-drafts.md": "8cc9b7f2523f3c7f42f5f6c0b7b4dfd7620990353c15fb7a914d643b494d5b6b",
         "references/api-endpoints-draws.md": "ed6d881777234702315a7cef9f6f092691f43fb818f96c122f869c4ca9407bbc",
-        "references/api-endpoints-error-codes.md": "16984f1c3e5a56394d9d4e57dac38f7e7dcc2954b5a7d6f9f00ea192d11abb52",
-        "references/api-endpoints-events.md": "1bcfad0e97d25f5ff2f76dfcf3f01d3d3f95d415bfc8125507c43f3996dcc1da",
+        "references/api-endpoints-error-codes.md": "9a854ef0dde177c9bf01a1d5323a117dbd4b31d843116975c9b8904c1a152b41",
+        "references/api-endpoints-events.md": "7b1193106495ff211d2c0978ed4d8711f7777d2cd96db447a07d6a81bf1de33c",
         "references/api-endpoints-extractions.md": "2776b39d3fa8365de2e4d0b3b307100648c88222afceb6b1558fd781a4794e9d",
         "references/api-endpoints-monitors.md": "b8821854e36cdf9969f593f7f05137e1312585bbb2d6726da2da71bb1e06ddb0",
         "references/api-endpoints-radar.md": "96413cae56b86b116c848372082415aa6fd4354bc96429c60e5ab2396544aa89",
@@ -13117,14 +13117,14 @@
         "references/mcp-setup.md": "125183af8cc31b64c0b58aeebee9003d22ed5d45f98e4d0d1b46e315b7f3442a",
         "references/mcp-tools.md": "6a1fbbe0e4b796b0bbac39896d5f308cdfb5807097d4d0be6f71f0bef7aece42",
         "references/monitor-twitter-webhooks.md": "14da94ac9413f265fa1944ecc2d044d9a4f0ee61be6133f83161df687ef0062d",
-        "references/python-examples.md": "bc460d905ceba4058a9813bd1b9e3feab40c24d9d8f338aefcfece8a3fe30ff1",
+        "references/python-examples.md": "f08df2ec33ecf1ed42a628adc09090b5fb161657aecef1405f996e3b3631ff40",
         "references/reliable-twitter-data-api-2026.md": "2f89b3b3d6de7b526693445a4f6bf791314f4d2c09d7ebf34dd872de5b0c0cf4",
         "references/scrape-export-twitter-data.md": "0b6da058e89139a7aa8f6f0bcfc09df08814d4b4f0206cdec679185273a980c4",
         "references/security.md": "9b024a4b59fe26c7525cf097f13d26bb3b8065a9cea27e5114d8ec38286455fc",
         "references/track-twitter-keywords-mentions.md": "6d88437a012a26b224a3e503dec7cdde4229c1946b50cc0f127eed2282074ccb",
         "references/twitter-api-alternative-faq.md": "b7c46201f2f0f16795ad30e8233e5631e7312292ba3eaa47e2557003bc94f9f8",
-        "references/twitter-api-without-x-account.md": "66ab32f9a0037ebfc62d49b382c1b5b723a9dda4eec30840147d6de81ebef57a",
-        "references/twitter-data-pipeline.md": "52b7e875448549b8ec24ae2b01a5f35348c36f36dd19671be1492c7f1af5278b",
+        "references/twitter-api-without-x-account.md": "9cd98d961ddc453df389c30f3a7a76a35aaadc09113545a6ed54ef22f6e32a32",
+        "references/twitter-data-pipeline.md": "6b904263b96085f90aff88b9f4c0e4f88190799670d71d7750c6578202c5377c",
         "references/twitter-scraper-api-guide.md": "0ce267112237a8e3aafe3fe96124d7b09405e65205441df76985f371d581b255",
         "references/types-account-identity.md": "41e5871674a97a9beecd50ef91d2649daa09b354b04d8ccd89acdbc90173327f",
         "references/types-account.md": "eca1f58dd651c03bc474d3eb44f6be0c4376bfc8166c0035a16bf5ed5e18a47b",
@@ -13149,22 +13149,22 @@
         "references/types-x-accounts.md": "bcd56bd07daf1940cbdfaac219f67ac358948a2169a5c23323f78fa85a65c3ef",
         "references/types-x-api.md": "aea7efb40c891db24a7c69ec455fb1ab3e81d9172bf2c0b8444e0c29f08f8727",
         "references/types-x-articles.md": "491b599704840f6bd2b18fe1f1f5cd2f54edc35d78cf59b052bfbd299655a5d3",
-        "references/types-x-write.md": "444092307d23b7f231c1e35c86d1bae004eaa518a48a200bc7044226101a8311",
+        "references/types-x-write.md": "094229cfc10d2ff6ea8fe5452f6edcfe01fe1ce1cbaf03f5002d63fa51122b1e",
         "references/types.md": "8de147ac05b91f035fc0af6ef998cf68a1a35fbe5b7bc75a533f14c13cfc05eb",
         "references/usage.md": "3f838b777ee1c00b3802ea78b0bcf9a0bcdfe0ad2c4098f4fa88b64c6421f6a1",
         "references/webhooks.md": "759ed252039a8a588c0b90f48ae7ad696461887e4008fb274cfacb32ff3945df",
         "references/workflows.md": "6484ae58916904eab593f12f037cf295c51c54401c8c51bb92403b0276305866",
         "skill-card.md": "487b8f888af093c9ceb4b6a10e19878cf8a05699f4a333cd59ed5fb91b34a469",
-        "skillspector-report.md": "83292d0ac38174ccab5a9dee575b4d35739d8371a973131990a81d07a88df816"
+        "skillspector-report.md": "5dbf9950c3a7a70045051651852ecb8a9cf20f3baee581aa7f5dc29d7557dc7e"
       },
-      "bundleHash": "de03e3c97bc5ff22348315a91f7e47a2b0c2a0f0a77dec90798346a2fa95a0d3",
+      "bundleHash": "bc693fb2655363a10c66e8c78fc9ea75ef906407c78e3383760d2126869975a9",
       "review": {
         "status": "skipped",
         "flags": [],
         "summary": "review skipped (--no-review)",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-08-22T21:14:59.371Z"
+        "reviewedAt": "2026-08-22T21:37:29.240Z"
       }
     }
   }

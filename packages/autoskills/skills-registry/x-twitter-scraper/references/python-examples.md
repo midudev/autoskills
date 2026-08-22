@@ -101,7 +101,7 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
             and code == "coverage_cursor_unavailable"
             and not retried_coverage_cursor
         )
-        retryable = retry_safe and (
+        retryable = retry_safe and code != "x_api_unauthorized" and (
             status in {408, 429}
             or status >= 500
             or coverage_retry
@@ -189,6 +189,19 @@ if require_explicit_approval(proposal) != proposal:
 job = xquik_fetch(
     "/extractions", method="POST", json_body=extraction_request
 )
+EXTRACTION_STATUSES = {"pending", "running", "completed", "failed"}
+
+def require_extraction_job(value: object) -> dict:
+    if (
+        not isinstance(value, dict)
+        or not isinstance(value.get("id"), str)
+        or not value["id"]
+        or value.get("status") not in EXTRACTION_STATUSES
+    ):
+        raise RuntimeError("Invalid extraction job response.")
+    return value
+
+job = require_extraction_job(job)
 
 # Poll for at most 5 minutes. Resume later by job ID if the deadline expires.
 poll_deadline = time.monotonic() + 5 * 60
@@ -198,7 +211,9 @@ while job["status"] in ("pending", "running"):
         break
     time.sleep(min(2, remaining))
     try:
-        job = xquik_fetch(f"/extractions/{job['id']}", deadline=poll_deadline)
+        job = require_extraction_job(
+            xquik_fetch(f"/extractions/{job['id']}", deadline=poll_deadline)
+        )
     except TimeoutError:
         break
 
@@ -266,10 +281,21 @@ if require_explicit_approval(proposal) != proposal:
     raise RuntimeError("Approved draw changed. Request approval again.")
 
 draw = xquik_fetch("/draws", method="POST", json_body=draw_request)
+if not isinstance(draw, dict) or not isinstance(draw.get("id"), str) or not draw["id"]:
+    raise RuntimeError("Invalid draw response.")
 
 # Get the winners.
 details = xquik_fetch(f"/draws/{draw['id']}")
+if not isinstance(details, dict) or not isinstance(details.get("winners"), list):
+    raise RuntimeError("Invalid draw details response.")
 for winner in details["winners"]:
+    if (
+        not isinstance(winner, dict)
+        or not isinstance(winner.get("isBackup"), bool)
+        or not isinstance(winner.get("position"), int)
+        or not isinstance(winner.get("authorUsername"), str)
+    ):
+        raise RuntimeError("Invalid draw winner response.")
     role = "Backup" if winner["isBackup"] else "Winner"
     print(f"{role} #{winner['position']}: @{winner['authorUsername']}")
 ```
@@ -277,7 +303,7 @@ for winner in details["winners"]:
 ## Python standard library webhook handler
 
 Bind this listener to loopback. Terminate TLS at a reverse proxy before
-registering its public HTTPS route.
+registering its public HTTPS route. Bound concurrent connections in production.
 
 ```python
 import hashlib
@@ -286,7 +312,7 @@ import json
 import re
 import socket
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 def load_secret(name: str) -> str:
     """Read from your runtime secret store."""
@@ -554,5 +580,5 @@ class WebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Queued")
 
-HTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
+ThreadingHTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
 ```

@@ -57,8 +57,9 @@ Keyword events omit `username`.
 
 ## Get event
 
-Show the exact event ID and its monitor or account scope when known. Require
-explicit approval before retrieving the event or delivering its contents.
+Show the event ID, monitor or account scope, destination, and retention. Require
+explicit approval before retrieving the event. Require separate approval before
+another workflow forwards private event data.
 
 ```http
 GET /events/{id}
