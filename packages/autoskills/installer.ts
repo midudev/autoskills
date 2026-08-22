@@ -258,6 +258,9 @@ export function verifyRegistryEntry(
   if (!existsSync(skillDir)) {
     return { ok: false, reason: `missing directory ${skillDir}` };
   }
+  if (!lstatSync(skillDir).isDirectory()) {
+    return { ok: false, reason: `invalid directory ${skillDir}` };
+  }
   const declaredFiles = new Set(entry.files.map(normalizeRegistryRelPath));
   const unexpectedFile = listSkillFiles(skillDir).find((rel) => !declaredFiles.has(rel));
   if (unexpectedFile) {

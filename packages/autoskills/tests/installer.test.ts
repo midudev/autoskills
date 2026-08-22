@@ -652,6 +652,29 @@ describe("installSkill", () => {
     equal(existsSync(join(installedDir, "unlisted.txt")), false);
   });
 
+  it("replaces an installed skill path that is not a directory", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "listed-skill", source: "owner/repo", files: { "SKILL.md": "# listed" } },
+    ]);
+    const installedPath = join(projectDir, ".agents", "skills", "listed-skill");
+    mkdirSync(join(projectDir, ".agents", "skills"), { recursive: true });
+    writeFileSync(installedPath, "corrupted installation");
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/listed-skill", [], {
+      projectDir,
+      registryDir: regDir,
+      fetchImpl: (async () => {
+        throw new Error("unexpected fetch");
+      }) as typeof fetch,
+    });
+
+    ok(result.success, result.output);
+    equal(readFileSync(join(installedPath, "SKILL.md"), "utf-8"), "# listed");
+  });
+
   it("skips downloads when the installed skill already matches the manifest", async () => {
     const regDir = join(tmp.path, "registry");
     const projectDir = join(tmp.path, "project");
