@@ -64,6 +64,7 @@ Apply these rules before using `xquik`:
 | Persistent resources | Create monitors and webhooks only when the user explicitly asks for ongoing delivery. Show target, event types, URL, and ongoing usage before creation. |
 | Cached style writes | Before creating, replacing, or deleting a cached style, show the account, purpose, exact resource, usage, and storage effect. Obtain approval for that write. |
 | Private reads | Confirm the account, purpose, exact resource, bound, recipients, and retention before DMs, bookmarks, bookmark folders, notifications, home timeline, or cached style reads. Forward private data only after separate approval. |
+| Metered operations | Build the exact path, query, and body. Get an estimate when available. Verify its shape and require `allowed === true`. Otherwise, show the published usage limitation. Show the destination, recipients, and retention. Wait for approval, then send exactly that request. |
 | Plan and credit changes | Dashboard-only. The agent may read credit balance, but must not start account changes. |
 | X account login | Never ask for or submit X login material. Account connection and re-authentication happen in the dashboard. |
 
@@ -88,7 +89,7 @@ Use `explore` first to find endpoints, then `xquik` to call them.
 | Full X Article by tweet ID | `GET /api/v1/x/articles/{tweetId}` |
 | Search tweets by keyword/hashtag | `GET /api/v1/x/tweets/search?q=...` |
 | User profile, bio, and follower counts | `GET /api/v1/x/users/{id}`; `id` accepts a username or numeric ID |
-| Download media from tweets | `POST /api/v1/x/media/download` |
+| Download media from tweets | `POST /api/v1/x/media/download`; metered and requires approval for the exact `tweetInput`, usage estimate or limitation, destination, recipients, and retention |
 | Check follow relationship | `GET /api/v1/x/followers/check?source=A&target=B` |
 | X trending topics by region | `GET /api/v1/trends?woeid=1` |
 | Trending news from 7 sources | `GET /api/v1/radar` through `xquik` |
@@ -131,6 +132,11 @@ Before a draw, confirm the source tweet, `winnerCount`, `backupCount`, every
 filter, published usage estimate or estimate limitation, purpose, data scope,
 export audience, and retention. Send exactly the approved request.
 
+Before a media download, confirm the exact `tweetInput`. Show the endpoint's
+current usage estimate or limitation, local or remote destination, recipients,
+and retention. Wait for explicit approval. Send the unchanged body only after
+approval.
+
 Before a support ticket, show the exact subject, body, and attachments. Send
 the ticket only after explicit approval for that content.
 
@@ -147,7 +153,7 @@ See [direct lookups](api-endpoints-x-api.md) for the exact names.
 |----------|-------|
 | Set up ongoing alerts | Confirm target, event types, destination, and usage estimate -> `POST /monitors` -> `POST /webhooks` -> `POST /webhooks/{id}/test` |
 | Run a giveaway | Show the exact request, usage estimate or limitation, and data plan -> approve -> `POST /draws` |
-| Bulk extraction | `POST /extractions/estimate` -> `POST /extractions` -> `GET /extractions/{id}` |
+| Bulk extraction | Build one body -> `POST /extractions/estimate` with it -> validate the response and require `allowed === true` -> show that body, estimate, destination, recipients, and retention -> approve -> `POST /extractions` with the unchanged body -> `GET /extractions/{id}` |
 | Compose and score a tweet | `POST /compose` with `step=compose` -> `refine` -> `score` |
 | Analyze tweet style | `POST /styles` -> `GET /styles/{id}` -> `POST /compose` with `styleUsername` |
 | Post a tweet | `GET /x/accounts` -> approve -> `POST /x/tweets` with `account` and `text` -> hosted MCP adds a unique `Idempotency-Key` -> poll `statusUrl` |

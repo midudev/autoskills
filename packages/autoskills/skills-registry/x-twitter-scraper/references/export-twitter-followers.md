@@ -41,9 +41,9 @@ For a small page, call `GET /x/users/{id}/followers`. For a complete export,
 estimate a `follower_explorer` job with the public username. Approve the bounded
 job, create it, and wait for completion.
 
-Export completed results as CSV, JSON, Markdown, PDF, TXT, or XLSX. Validate the
-row count and stable IDs after download. Public follower reads need no connected
-X account.
+Export completed results as `csv`, `json`, `md`, `md-document`, `pdf`, `txt`,
+or `xlsx`. Validate the row count and stable IDs after download. Public follower
+reads need no connected X account.
 
 ### How do I export Twitter followers through an API?
 

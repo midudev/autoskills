@@ -60,8 +60,14 @@ async function xquikFetch(path, options = {}) {
   const deadline = Number.isFinite(timeoutMs) ? performance.now() + timeoutMs : null;
   const remainingMs = () => deadline === null ? 30_000 : deadline - performance.now();
   const waitBeforeRetry = async (delayMs) => {
-    const waitMs = deadline === null ? delayMs : Math.min(delayMs, remainingMs());
-    if (waitMs <= 0) throw new Error("Xquik request deadline exceeded.");
+    if (!Number.isFinite(delayMs) || delayMs < 0) {
+      throw new Error("Retry delay must be a finite nonnegative number.");
+    }
+    const remaining = remainingMs();
+    if (deadline !== null && remaining <= 0) {
+      throw new Error("Xquik request deadline exceeded.");
+    }
+    const waitMs = deadline === null ? delayMs : Math.min(delayMs, remaining);
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   };
   const method = (requestOptions.method || "GET").toUpperCase();
@@ -350,6 +356,9 @@ try {
     body: JSON.stringify(monitorConfig),
   });
 } catch (monitorCreationError) {
+  if (monitorCreationError instanceof XquikApiError) {
+    throw monitorCreationError;
+  }
   let candidates;
   try {
     candidates = readMonitorList(await xquikFetch("/monitors")).filter(
@@ -384,6 +393,9 @@ try {
     body: JSON.stringify(webhookConfig),
   });
 } catch (creationError) {
+  if (creationError instanceof XquikApiError) {
+    throw creationError;
+  }
   const failures = [creationError];
   let candidates = [];
   try {

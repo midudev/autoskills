@@ -2,7 +2,7 @@
 
 **Skill:** x-twitter-scraper
 **Source:** `skills/x-twitter-scraper`
-**Scanned:** 2026-08-22 19:32:35 UTC
+**Scanned:** 2026-08-22 20:37:32 UTC
 
 ## Static Scan
 
@@ -13,8 +13,11 @@
 - Risk score: 3/100
 - Severity: low
 - Recommendation: safe
-- Findings: 0
+- Heuristic findings: 1
+- Confirmed security issues: 0
 
-The static scan found no security issues.
+The scanner flagged the standard MIT warranty clause on line 16. The file is
+license text, not an agent instruction. The finding does not grant scope or
+agency.
 
 Refresh this report after each change to the skill directory.

@@ -21,7 +21,22 @@ type CreateTweetRequest = CreateTweetBase &
     | { text?: string; media: NonEmptyTweetMedia }
   );
 
-function assertCreateTweetRequest(request: unknown): asserts request is CreateTweetRequest {
+type TweetMediaMime =
+  | "image/jpeg"
+  | "image/png"
+  | "image/gif"
+  | "image/webp"
+  | "video/mp4";
+
+interface ResolvedTweetMedia {
+  url: string;
+  mimeType: TweetMediaMime;
+}
+
+function assertCreateTweetRequest(
+  request: unknown,
+  resolvedMedia: ResolvedTweetMedia[] = [],
+): asserts request is CreateTweetRequest {
   if (request === null || typeof request !== "object" || Array.isArray(request)) {
     throw new Error("CreateTweetRequest must be an object.");
   }
@@ -29,9 +44,18 @@ function assertCreateTweetRequest(request: unknown): asserts request is CreateTw
   if (typeof value.account !== "string" || !value.account.trim()) {
     throw new Error("account must be a nonempty string.");
   }
+  if (value.is_note_tweet !== undefined && typeof value.is_note_tweet !== "boolean") {
+    throw new Error("is_note_tweet must be a boolean when present.");
+  }
   const hasText = typeof value.text === "string" && value.text.trim().length > 0;
   if (value.text !== undefined && !hasText) {
     throw new Error("text must be a nonempty string when present.");
+  }
+  if (hasText) {
+    const limit = value.is_note_tweet === true ? 25_000 : 280;
+    if ([...(value.text as string)].length > limit) {
+      throw new Error(`text must not exceed ${limit} characters.`);
+    }
   }
   const hasMedia =
     Array.isArray(value.media) &&
@@ -44,10 +68,27 @@ function assertCreateTweetRequest(request: unknown): asserts request is CreateTw
   if (!hasText && !hasMedia) {
     throw new Error("Provide nonempty text, nonempty media, or both.");
   }
+  const media = hasMedia ? value.media as string[] : [];
+  if (
+    resolvedMedia.length !== media.length ||
+    resolvedMedia.some((item, index) =>
+      item === null ||
+      typeof item !== "object" ||
+      item.url !== media[index] ||
+      !["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4"].includes(item.mimeType)
+    )
+  ) {
+    throw new Error("Resolve every media URL and validate its MIME type before posting.");
+  }
+  const imagesOnly = resolvedMedia.every((item) => item.mimeType.startsWith("image/"));
+  const oneMp4 = resolvedMedia.length === 1 && resolvedMedia[0].mimeType === "video/mp4";
+  if (resolvedMedia.length > 0 && !imagesOnly && !oneMp4) {
+    throw new Error("media must contain 1-4 images or exactly 1 MP4.");
+  }
 }
 
-// Validate media MIME types before the request. Allow up to 4 images or exactly
-// 1 MP4. Call assertCreateTweetRequest immediately before POST /api/v1/x/tweets.
+// Resolve media URLs first. Pass their verified MIME types to this assertion
+// immediately before POST /api/v1/x/tweets.
 
 type XWriteStatus =
   | "accepted"

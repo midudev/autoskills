@@ -12,8 +12,9 @@ Record the seed tweet, entry source, winner count, backup count, unique-author
 rule, and every eligibility filter. Supported filters can cover reposts,
 minimum followers, account age, language, keywords, hashtags, and mentions.
 
-Treat creation as irreversible. Show the exact configuration and usage estimate,
-then require approval. Never silently rerun a completed draw.
+Treat creation as irreversible. Show the exact configuration and published
+usage limitation, then require approval. Never invent an estimate or silently
+rerun a completed draw.
 
 ## Twitter giveaway picker API request
 

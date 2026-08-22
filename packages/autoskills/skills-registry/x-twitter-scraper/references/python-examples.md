@@ -133,31 +133,45 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
 ```python
 RESULTS_LIMIT = 1000
 
-def require_explicit_approval(scope: str) -> None:
+def require_explicit_approval(proposal: dict) -> dict:
     raise RuntimeError(
-        f"Approval required for {scope}. Implement the approval gate first."
+        f"Approval required for {json.dumps(proposal, sort_keys=True)}."
     )
 
-# Estimate the extraction.
-estimate = xquik_fetch("/extractions/estimate", method="POST", json_body={
+extraction_request = {
     "toolType": "reply_extractor",
     "targetTweetId": "1893704267862470862",
     "resultsLimit": RESULTS_LIMIT,
-})
-
-if not estimate["allowed"]:
-    print(f"Extraction estimate: {estimate['creditsRequired']} credits. Balance: {estimate['creditsAvailable']}.")
-    exit()
-
-# Create the bounded job only after approval.
-require_explicit_approval(
-    "the bounded extraction job, usage, recipients, and retention"
+}
+estimate = xquik_fetch(
+    "/extractions/estimate", method="POST", json_body=extraction_request
 )
-job = xquik_fetch("/extractions", method="POST", json_body={
-    "toolType": "reply_extractor",
-    "targetTweetId": "1893704267862470862",
-    "resultsLimit": RESULTS_LIMIT,
-})
+
+if (
+    not isinstance(estimate, dict)
+    or not isinstance(estimate.get("allowed"), bool)
+    or not isinstance(estimate.get("creditsRequired"), str)
+    or not isinstance(estimate.get("creditsAvailable"), str)
+):
+    raise RuntimeError("Invalid extraction estimate response.")
+if estimate["allowed"] is not True:
+    raise RuntimeError(
+        f"Extraction requires {estimate['creditsRequired']} credits. "
+        f"Balance: {estimate['creditsAvailable']}."
+    )
+
+proposal = {
+    "request": extraction_request,
+    "estimate": estimate,
+    "purpose": "Collect a bounded reply dataset.",
+    "recipients": ["Requesting analyst"],
+    "retention": "Delete the export after 30 days.",
+}
+if require_explicit_approval(proposal) != proposal:
+    raise RuntimeError("Approved extraction changed. Request approval again.")
+job = xquik_fetch(
+    "/extractions", method="POST", json_body=extraction_request
+)
 
 # Poll for at most 5 minutes. Resume later by job ID if the deadline expires.
 poll_deadline = time.monotonic() + 5 * 60
@@ -188,11 +202,19 @@ while True:
     else:
         path += "?limit=1000"
     page = xquik_fetch(path)
+    if (
+        not isinstance(page, dict)
+        or not isinstance(page.get("results"), list)
+        or not isinstance(page.get("hasMore"), bool)
+    ):
+        raise RuntimeError("Invalid extraction page response.")
     results.extend(page["results"])
 
     if not page["hasMore"]:
         break
-    cursor = page["nextCursor"]
+    cursor = page.get("nextCursor")
+    if not isinstance(cursor, str) or not cursor:
+        raise RuntimeError("Missing nextCursor for a continued extraction page.")
 
 print(f"Extracted {len(results)} results")
 ```
@@ -200,12 +222,7 @@ print(f"Extracted {len(results)} results")
 ## Giveaway draw
 
 ```python
-require_explicit_approval(
-    "the tweet, filters, estimated entries, intended audience, and retention"
-)
-
-# Create a draw with explicit filters.
-draw = xquik_fetch("/draws", method="POST", json_body={
+draw_request = {
     "tweetUrl": "https://x.com/burakbayir/status/1893456789012345678",
     "winnerCount": 3,
     "backupCount": 2,
@@ -215,7 +232,23 @@ draw = xquik_fetch("/draws", method="POST", json_body={
     "filterMinFollowers": 50,
     "filterAccountAgeDays": 30,
     "requiredKeywords": ["giveaway"],
-})
+}
+usage_limitation = {
+    "exactPreflightEstimateAvailable": False,
+    "billingBasis": "Metered per participant entry.",
+}
+proposal = {
+    "request": draw_request,
+    "usageLimitation": usage_limitation,
+    "purpose": "Select 3 winners and 2 backups from eligible replies.",
+    "dataScope": "Public replies to the source tweet.",
+    "recipients": ["Giveaway administrator"],
+    "retention": "Delete the participant export after 30 days.",
+}
+if require_explicit_approval(proposal) != proposal:
+    raise RuntimeError("Approved draw changed. Request approval again.")
+
+draw = xquik_fetch("/draws", method="POST", json_body=draw_request)
 
 # Get the winners.
 details = xquik_fetch(f"/draws/{draw['id']}")
@@ -250,17 +283,21 @@ def claim_nonce(nonce: str, ttl_seconds: int) -> bool:
     """Atomically insert a nonce when absent and retain it for the full TTL."""
     raise RuntimeError("Configure a shared durable webhook nonce store.")
 
-def claim_delivery(delivery_id: str) -> str:
-    """Atomically create an expiring claim or return 'pending' or 'processed'."""
-    raise RuntimeError("Configure a durable webhook delivery store.")
+def claim_event(key: str) -> str:
+    """Atomically create an expiring claim or return pending or processed."""
+    raise RuntimeError("Configure a durable webhook event store.")
 
-def mark_delivery_processed(delivery_id: str) -> None:
-    """Atomically mark a claimed delivery as processed."""
-    raise RuntimeError("Configure a durable webhook delivery store.")
+def mark_event_processed(key: str) -> None:
+    """Atomically mark a claimed delivery or stream event as processed."""
+    raise RuntimeError("Configure a durable webhook event store.")
 
-def release_delivery(delivery_id: str) -> None:
+def release_event(key: str) -> None:
     """Release a failed pending claim so Xquik can retry it."""
-    raise RuntimeError("Configure a durable webhook delivery store.")
+    raise RuntimeError("Configure a durable webhook event store.")
+
+def enqueue_delivery(event: dict) -> None:
+    """Durably enqueue the verified event before acknowledging it."""
+    raise RuntimeError("Configure a durable webhook queue.")
 
 def safe_log_value(value: object) -> str:
     return json.dumps(str(value), ensure_ascii=True)[:256]
@@ -280,6 +317,60 @@ EVENT_HANDLERS = {
     "tweet.quote": lambda u, d: print(f"Quote from {safe_log_value(u)}: {safe_log_value(d.get('text', ''))}"),
     "tweet.retweet": lambda u, d: print(f"Retweet by {safe_log_value(u)}"),
 }
+
+def is_nonempty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value)
+
+def valid_event_envelope(event: dict) -> bool:
+    event_type = event.get("eventType")
+    data = event.get("data")
+    if event_type == "webhook.test":
+        return (
+            is_nonempty_string(event.get("timestamp"))
+            and isinstance(data, dict)
+            and is_nonempty_string(data.get("message"))
+        )
+    return (
+        type(event.get("schemaVersion")) is int
+        and event.get("schemaVersion") == 1
+        and is_nonempty_string(event_type)
+        and is_nonempty_string(event.get("streamEventId"))
+        and is_nonempty_string(event.get("deliveryId"))
+        and is_nonempty_string(event.get("occurredAt"))
+        and isinstance(data, dict)
+    )
+
+def process_delivery(event: dict) -> None:
+    """Run from a queue worker, not the HTTP receiver."""
+    delivery_key = f"delivery:{event['deliveryId']}"
+    stream_key = f"stream:{event['streamEventId']}"
+    try:
+        stream_claim = claim_event(stream_key)
+    except Exception:
+        release_event(delivery_key)
+        raise
+    if stream_claim == "processed":
+        try:
+            mark_event_processed(delivery_key)
+        except Exception:
+            release_event(delivery_key)
+            raise
+        return
+    if stream_claim != "claimed":
+        release_event(delivery_key)
+        raise RuntimeError("Stream event already pending.")
+
+    stream_processed = False
+    try:
+        EVENT_HANDLERS[event["eventType"]](event.get("username", ""), event["data"])
+        mark_event_processed(stream_key)
+        stream_processed = True
+        mark_event_processed(delivery_key)
+    except Exception:
+        if not stream_processed:
+            release_event(stream_key)
+        release_event(delivery_key)
+        raise
 
 def validate_subscription_event_types(event_types: list[str]) -> None:
     """Reject subscriptions until this receiver implements every event type."""
@@ -346,12 +437,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Invalid JSON object")
             return
 
-        event_type = event.get("eventType")
-        if not isinstance(event_type, str):
+        if not valid_event_envelope(event):
             self.send_response(400)
             self.end_headers()
-            self.wfile.write(b"Invalid eventType")
+            self.wfile.write(b"Invalid event envelope")
             return
+        event_type = event["eventType"]
         if event_type == "webhook.test":
             self.send_response(200)
             self.end_headers()
@@ -364,21 +455,14 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Handler unavailable")
             return
 
-        data = event.get("data", {})
-        if not isinstance(data, dict):
-            self.send_response(400)
+        delivery_key = f"delivery:{event['deliveryId']}"
+        try:
+            claim = claim_event(delivery_key)
+        except Exception:
+            self.send_response(503)
             self.end_headers()
-            self.wfile.write(b"Invalid data")
+            self.wfile.write(b"Event store unavailable")
             return
-
-        delivery_id = event.get("deliveryId")
-        if not isinstance(delivery_id, str) or not delivery_id:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"Missing deliveryId")
-            return
-
-        claim = claim_delivery(delivery_id)
         if claim == "processed":
             self.send_response(200)
             self.end_headers()
@@ -390,20 +474,18 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Delivery already pending")
             return
 
-        handler = EVENT_HANDLERS[event_type]
         try:
-            handler(event.get("username", ""), data)
-            mark_delivery_processed(delivery_id)
+            enqueue_delivery(event)
         except Exception:
-            release_delivery(delivery_id)
-            self.send_response(500)
+            release_event(delivery_key)
+            self.send_response(503)
             self.end_headers()
-            self.wfile.write(b"Handler failed")
+            self.wfile.write(b"Queue unavailable")
             return
 
-        self.send_response(200)
+        self.send_response(202)
         self.end_headers()
-        self.wfile.write(b"OK")
+        self.wfile.write(b"Queued")
 
 HTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
 ```

@@ -29,30 +29,58 @@ draw.
 
 ```javascript
 const BASE = "https://xquik.com/api/v1";
+const apiKey = process.env.XQUIK_API_KEY;
+if (!apiKey) throw new Error("Set XQUIK_API_KEY first.");
 
-function requireExplicitApproval(scope) {
-  throw new Error(`Approval required for ${scope}. Implement the approval gate first.`);
+async function xquikFetch(path, options = {}) {
+  const response = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      ...options.headers,
+    },
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error(`Xquik API ${response.status}: ${body}`);
+  return body ? JSON.parse(body) : null;
 }
 
-requireExplicitApproval(
-  "the tweet, filters, estimated entries, intended audience, and retention period",
-);
+function requireExplicitApproval(proposal) {
+  throw new Error(`Approval required for ${JSON.stringify(proposal)}.`);
+}
 
-// Create a filtered draw.
+const drawRequest = {
+  tweetUrl: "https://x.com/burakbayir/status/1893456789012345678",
+  winnerCount: 3,
+  backupCount: 2,
+  uniqueAuthorsOnly: true,
+  mustRetweet: true,
+  mustFollowUsername: "burakbayir",
+  filterMinFollowers: 50,
+  filterAccountAgeDays: 30,
+  filterLanguage: "en",
+  requiredHashtags: ["#giveaway"],
+};
+const usageLimitation = {
+  exactPreflightEstimateAvailable: false,
+  billingBasis: "Metered per participant entry.",
+};
+const approval = requireExplicitApproval({
+  request: drawRequest,
+  usageLimitation,
+  purpose: "Select 3 winners and 2 backups from eligible replies.",
+  dataScope: "Public replies to the source tweet.",
+  recipients: ["Giveaway administrator"],
+  retention: "Delete the participant export after 30 days.",
+});
+if (JSON.stringify(approval.request) !== JSON.stringify(drawRequest)) {
+  throw new Error("Approved draw request changed. Request approval again.");
+}
+
 const draw = await xquikFetch("/draws", {
   method: "POST",
-  body: JSON.stringify({
-    tweetUrl: "https://x.com/burakbayir/status/1893456789012345678",
-    winnerCount: 3,
-    backupCount: 2,
-    uniqueAuthorsOnly: true,
-    mustRetweet: true,
-    mustFollowUsername: "burakbayir",
-    filterMinFollowers: 50,
-    filterAccountAgeDays: 30,
-    filterLanguage: "en",
-    requiredHashtags: ["#giveaway"],
-  }),
+  body: JSON.stringify(drawRequest),
 });
 
 // Get the winners and draw details.
@@ -62,9 +90,16 @@ const details = await xquikFetch(`/draws/${draw.id}`);
 //   ...
 // ]
 
-// Approve the exact format, audience, and retention before materializing it.
-requireExplicitApproval("the draw export format, audience, and retention period");
-const exportUrl = `${BASE}/draws/${draw.id}/export?format=csv`;
+const exportProposal = {
+  request: { drawId: draw.id, format: "csv", type: "winners" },
+  destination: "Restricted giveaway administration storage.",
+  recipients: ["Giveaway administrator"],
+  retention: "Delete the export after 30 days.",
+};
+if (requireExplicitApproval(exportProposal) !== exportProposal) {
+  throw new Error("Approved draw export changed. Request approval again.");
+}
+const exportUrl = `${BASE}/draws/${draw.id}/export?format=csv&type=winners`;
 ```
 
 ## Twitter giveaway draw usage

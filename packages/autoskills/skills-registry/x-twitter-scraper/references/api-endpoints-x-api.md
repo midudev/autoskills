@@ -48,10 +48,16 @@ The API returns:
 ## Search tweets
 
 ```http
-GET /x/tweets/search?q={query}
+GET /x/tweets/search?q=<percent-encoded-query>
 ```
 
 Use X search syntax with keywords, `#hashtags`, `from:user`, `to:user`, `"exact phrases"`, `OR`, and `-exclude`.
+Build the query string with a URL encoder. Do not interpolate raw search text:
+
+```javascript
+const tweetSearch = new URLSearchParams({ q: 'from:openai "agents sdk"' });
+const tweetSearchPath = `/x/tweets/search?${tweetSearch}`;
+```
 
 Returns tweets with available `likeCount`, `retweetCount`, `replyCount`, and media. The API omits unavailable fields.
 Fresh cursorless `queryType=Latest` pagination returns newest-first across pages.
@@ -69,7 +75,16 @@ Returns profile info. `id` accepts either an X username without `@` or a numeric
 
 ```http
 GET /x/users/batch?ids=44196397,783214
-GET /x/users/search?q=founder&minFollowers=1000&verifiedOnly=true
+GET /x/users/search?q=<percent-encoded-query>&minFollowers=1000&verifiedOnly=true
+```
+
+```javascript
+const userSearch = new URLSearchParams({
+  q: "founder & researcher",
+  minFollowers: "1000",
+  verifiedOnly: "true",
+});
+const userSearchPath = `/x/users/search?${userSearch}`;
 ```
 
 Batch lookup accepts up to 100 comma-separated numeric user IDs.

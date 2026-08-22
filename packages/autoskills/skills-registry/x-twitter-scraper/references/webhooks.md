@@ -51,9 +51,9 @@ The in-memory nonce claims below are atomic only within their single-process,
 private listeners. Production clusters must replace them with one shared atomic
 insert-if-absent operation and a 5-minute TTL.
 
-Live deliveries also require one shared durable `deliveryId` store. The
-examples fail closed until that store is configured. Test deliveries omit the
-delivery ID and do not enter this store.
+Live deliveries require one shared durable store for `deliveryId` and
+`streamEventId`. The examples fail closed until that store is configured. Test
+deliveries omit both IDs and do not enter this store.
 
 ### Node.js standard library
 
@@ -69,20 +69,37 @@ const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024;
 const recentNonces = new Map();
 
 // Replace these fail-closed methods with one shared durable store.
-const deliveryStore = {
-  async claimPending(_deliveryId) {
-    throw new Error("Configure a durable webhook delivery store.");
+const eventStore = {
+  async claimPending(_key) {
+    throw new Error("Configure a durable webhook event store.");
   },
-  async markProcessed(_deliveryId) {
-    throw new Error("Configure a durable webhook delivery store.");
+  async markProcessed(_key) {
+    throw new Error("Configure a durable webhook event store.");
   },
-  async release(_deliveryId) {
-    throw new Error("Configure a durable webhook delivery store.");
+  async release(_key) {
+    throw new Error("Configure a durable webhook event store.");
   },
 };
 
 async function handleEvent(_event) {
-  throw new Error("Persist or durably enqueue idempotently by deliveryId before acknowledging.");
+  throw new Error("Persist or durably enqueue the stream event before acknowledging.");
+}
+
+const isNonemptyString = (value) => typeof value === "string" && value.length > 0;
+const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+function validEventEnvelope(event) {
+  if (event.eventType === "webhook.test") {
+    return isNonemptyString(event.timestamp) &&
+      isRecord(event.data) &&
+      isNonemptyString(event.data.message);
+  }
+  return event.schemaVersion === 1 &&
+    isNonemptyString(event.eventType) &&
+    isNonemptyString(event.streamEventId) &&
+    isNonemptyString(event.deliveryId) &&
+    isNonemptyString(event.occurredAt) &&
+    isRecord(event.data);
 }
 
 function claimNonce(nonce) {
@@ -117,16 +134,32 @@ const server = createServer((req, res) => {
     return;
   }
 
-  req.setTimeout(10_000, () => req.destroy());
   const chunks = [];
   let bodyBytes = 0;
-  let bodyTooLarge = false;
+  let bodyReadFinished = false;
+  let bodyDeadline;
+  const finishBodyRead = () => {
+    if (bodyReadFinished) return false;
+    bodyReadFinished = true;
+    clearTimeout(bodyDeadline);
+    return true;
+  };
+  bodyDeadline = setTimeout(() => {
+    if (!finishBodyRead()) return;
+    res.writeHead(408).end("Request body timeout");
+    req.destroy();
+  }, 10_000);
+  req.setTimeout(10_000, () => {
+    if (!finishBodyRead()) return;
+    res.writeHead(408).end("Request body timeout");
+    req.destroy();
+  });
 
   req.on("data", (chunk) => {
-    if (bodyTooLarge) return;
+    if (bodyReadFinished) return;
     bodyBytes += chunk.length;
     if (bodyBytes > MAX_WEBHOOK_BODY_BYTES) {
-      bodyTooLarge = true;
+      finishBodyRead();
       chunks.length = 0;
       res.writeHead(413).end("Request body too large");
       req.destroy();
@@ -135,7 +168,7 @@ const server = createServer((req, res) => {
     chunks.push(chunk);
   });
   req.on("end", async () => {
-    if (bodyTooLarge) return;
+    if (!finishBodyRead()) return;
     const payload = Buffer.concat(chunks).toString("utf8");
     const signature = req.headers["x-xquik-signature"];
     const timestamp = req.headers["x-xquik-timestamp"];
@@ -162,6 +195,10 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (!validEventEnvelope(event)) {
+      res.writeHead(400).end("Invalid event envelope");
+      return;
+    }
     if (!["webhook.test", "tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"].includes(event.eventType)) {
       res.writeHead(503).end("Handler unavailable");
       return;
@@ -171,41 +208,59 @@ const server = createServer((req, res) => {
       res.writeHead(200).end("Test accepted");
       return;
     }
-    if (typeof event.deliveryId !== "string" || event.deliveryId.length === 0) {
-      res.writeHead(400).end("Missing deliveryId");
-      return;
-    }
-
-    let claim;
+    const deliveryKey = `delivery:${event.deliveryId}`;
+    const streamKey = `stream:${event.streamEventId}`;
+    let deliveryClaim;
     try {
-      claim = await deliveryStore.claimPending(event.deliveryId);
+      deliveryClaim = await eventStore.claimPending(deliveryKey);
     } catch {
-      res.writeHead(503).end("Delivery store unavailable");
+      res.writeHead(503).end("Event store unavailable");
       return;
     }
-    if (claim === "processed") {
+    if (deliveryClaim === "processed") {
       res.writeHead(200).end("Already processed");
       return;
     }
-    if (claim !== "claimed") {
+    if (deliveryClaim !== "claimed") {
       res.writeHead(409).end("Delivery already pending");
       return;
     }
 
+    let streamClaimed = false;
+    let streamProcessed = false;
     try {
+      const streamClaim = await eventStore.claimPending(streamKey);
+      if (streamClaim === "processed") {
+        streamProcessed = true;
+        await eventStore.markProcessed(deliveryKey);
+        res.writeHead(200).end("Stream event already processed");
+        return;
+      }
+      if (streamClaim !== "claimed") {
+        await eventStore.release(deliveryKey);
+        res.writeHead(409).end("Stream event already pending");
+        return;
+      }
+      streamClaimed = true;
       await handleEvent(event);
-      await deliveryStore.markProcessed(event.deliveryId);
+      await eventStore.markProcessed(streamKey);
+      streamProcessed = true;
+      await eventStore.markProcessed(deliveryKey);
       res.writeHead(200).end("OK");
     } catch {
       try {
-        await deliveryStore.release(event.deliveryId);
+        if (streamClaimed && !streamProcessed) await eventStore.release(streamKey);
+        await eventStore.release(deliveryKey);
       } catch {
-        res.writeHead(503).end("Delivery store unavailable");
+        res.writeHead(503).end("Event store unavailable");
         return;
       }
       res.writeHead(500).end("Handler failed");
     }
   });
+  req.on("aborted", finishBodyRead);
+  req.on("close", finishBodyRead);
+  req.on("error", finishBodyRead);
 });
 
 server.listen(3000, "127.0.0.1");
@@ -241,21 +296,43 @@ def claim_nonce(nonce: str) -> bool:
     RECENT_NONCES[nonce] = now + 5 * 60 * 1000
     return True
 
-def claim_delivery(delivery_id: str) -> str:
+def claim_event(key: str) -> str:
     """Atomically create a durable lease or return pending or processed."""
-    raise RuntimeError("Configure a durable webhook delivery store.")
+    raise RuntimeError("Configure a durable webhook event store.")
 
-def mark_delivery_processed(delivery_id: str) -> None:
-    """Mark a claimed delivery processed after handling succeeds."""
-    raise RuntimeError("Configure a durable webhook delivery store.")
+def mark_event_processed(key: str) -> None:
+    """Mark a claimed delivery or stream event processed."""
+    raise RuntimeError("Configure a durable webhook event store.")
 
-def release_delivery(delivery_id: str) -> None:
+def release_event(key: str) -> None:
     """Release a failed pending claim so Xquik can retry it."""
-    raise RuntimeError("Configure a durable webhook delivery store.")
+    raise RuntimeError("Configure a durable webhook event store.")
 
 def handle_event(event: dict) -> None:
-    """Persist or enqueue idempotently by deliveryId before acknowledging."""
+    """Persist or durably enqueue the stream event before acknowledging."""
     raise RuntimeError("Configure durable event handling.")
+
+def is_nonempty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value)
+
+def valid_event_envelope(event: dict) -> bool:
+    event_type = event.get("eventType")
+    data = event.get("data")
+    if event_type == "webhook.test":
+        return (
+            is_nonempty_string(event.get("timestamp"))
+            and isinstance(data, dict)
+            and is_nonempty_string(data.get("message"))
+        )
+    return (
+        type(event.get("schemaVersion")) is int
+        and event.get("schemaVersion") == 1
+        and is_nonempty_string(event_type)
+        and is_nonempty_string(event.get("streamEventId"))
+        and is_nonempty_string(event.get("deliveryId"))
+        and is_nonempty_string(event.get("occurredAt"))
+        and isinstance(data, dict)
+    )
 
 def verify_signature(payload: bytes, signature: str, timestamp: str, nonce: str, secret: str) -> bool:
     if not secret or not timestamp.isdigit() or not re.fullmatch(r"[0-9a-f]{32}", nonce):
@@ -315,12 +392,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Invalid JSON object")
             return
 
-        event_type = event.get("eventType")
-        if not isinstance(event_type, str):
+        if not valid_event_envelope(event):
             self.send_response(400)
             self.end_headers()
-            self.wfile.write(b"Invalid eventType")
+            self.wfile.write(b"Invalid event envelope")
             return
+        event_type = event["eventType"]
         if event_type not in {"webhook.test", "tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"}:
             self.send_response(503)
             self.end_headers()
@@ -333,37 +410,53 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Test accepted")
             return
 
-        delivery_id = event.get("deliveryId")
-        if not isinstance(delivery_id, str) or not delivery_id:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"Missing deliveryId")
-            return
-
+        delivery_key = f"delivery:{event['deliveryId']}"
+        stream_key = f"stream:{event['streamEventId']}"
         try:
-            claim = claim_delivery(delivery_id)
+            delivery_claim = claim_event(delivery_key)
         except Exception:
             self.send_response(503)
             self.end_headers()
-            self.wfile.write(b"Delivery store unavailable")
+            self.wfile.write(b"Event store unavailable")
             return
-        if claim == "processed":
+        if delivery_claim == "processed":
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"Already processed")
             return
-        if claim != "claimed":
+        if delivery_claim != "claimed":
             self.send_response(409)
             self.end_headers()
             self.wfile.write(b"Delivery already pending")
             return
 
+        stream_claimed = False
+        stream_processed = False
         try:
+            stream_claim = claim_event(stream_key)
+            if stream_claim == "processed":
+                stream_processed = True
+                mark_event_processed(delivery_key)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"Stream event already processed")
+                return
+            if stream_claim != "claimed":
+                release_event(delivery_key)
+                self.send_response(409)
+                self.end_headers()
+                self.wfile.write(b"Stream event already pending")
+                return
+            stream_claimed = True
             handle_event(event)
-            mark_delivery_processed(delivery_id)
+            mark_event_processed(stream_key)
+            stream_processed = True
+            mark_event_processed(delivery_key)
         except Exception:
             try:
-                release_delivery(delivery_id)
+                if stream_claimed and not stream_processed:
+                    release_event(stream_key)
+                release_event(delivery_key)
             except Exception:
                 pass
             self.send_response(500)
@@ -414,17 +507,17 @@ const maxWebhookBodyBytes int64 = 1024 * 1024
 var webhookSecret = requireWebhookSecret()
 var recentNonces sync.Map
 
-type DeliveryStore interface {
-    ClaimPending(deliveryID string) (string, error)
-    MarkProcessed(deliveryID string) error
-    Release(deliveryID string) error
+type EventStore interface {
+    ClaimPending(key string) (string, error)
+    MarkProcessed(key string) error
+    Release(key string) error
 }
 
 // Assign one shared durable implementation before starting the server.
-var deliveryStore DeliveryStore
+var eventStore EventStore
 
 func handleEvent(_ any) error {
-    return errors.New("configure idempotent durable event handling by deliveryId")
+    return errors.New("configure durable stream-event handling")
 }
 
 func claimNonce(nonce string) bool {
@@ -481,55 +574,94 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     var event *struct {
-        DeliveryID   string `json:"deliveryId"`
-        StreamEventID string `json:"streamEventId"`
-        EventType    string `json:"eventType"`
-        Username     string `json:"username"`
-        Data         struct {
-            Text string `json:"text"`
-        } `json:"data"`
+        SchemaVersion int            `json:"schemaVersion"`
+        StreamEventID string         `json:"streamEventId"`
+        DeliveryID    string         `json:"deliveryId"`
+        EventType     string         `json:"eventType"`
+        OccurredAt    string         `json:"occurredAt"`
+        Timestamp     string         `json:"timestamp"`
+        Username      string         `json:"username"`
+        Data          map[string]any `json:"data"`
     }
     if err := json.Unmarshal(payload, &event); err != nil || event == nil {
         http.Error(w, "Invalid JSON", http.StatusBadRequest)
         return
     }
 
-    switch event.EventType {
-    case "webhook.test":
+    if event.EventType == "webhook.test" {
+        message, validMessage := event.Data["message"].(string)
+        if event.Timestamp == "" || !validMessage || message == "" {
+            http.Error(w, "Invalid test event envelope", http.StatusBadRequest)
+            return
+        }
         fmt.Fprint(w, "Test accepted")
         return
+    }
+    if event.SchemaVersion != 1 || event.EventType == "" || event.StreamEventID == "" ||
+        event.DeliveryID == "" || event.OccurredAt == "" || event.Data == nil {
+        http.Error(w, "Invalid production event envelope", http.StatusBadRequest)
+        return
+    }
+
+    switch event.EventType {
     case "tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet":
-        // Continue with durable delivery deduplication.
+        // Continue with durable delivery and stream-event deduplication.
     default:
         http.Error(w, "Handler unavailable", http.StatusServiceUnavailable)
         return
     }
 
-    if event.DeliveryID == "" {
-        http.Error(w, "Missing deliveryId", http.StatusBadRequest)
-        return
-    }
-    claim, err := deliveryStore.ClaimPending(event.DeliveryID)
+    deliveryKey := "delivery:" + event.DeliveryID
+    streamKey := "stream:" + event.StreamEventID
+    deliveryClaim, err := eventStore.ClaimPending(deliveryKey)
     if err != nil {
-        http.Error(w, "Delivery store unavailable", http.StatusServiceUnavailable)
+        http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
         return
     }
-    if claim == "processed" {
+    if deliveryClaim == "processed" {
         fmt.Fprint(w, "Already processed")
         return
     }
-    if claim != "claimed" {
+    if deliveryClaim != "claimed" {
         http.Error(w, "Delivery already pending", http.StatusConflict)
         return
     }
 
+    streamClaim, err := eventStore.ClaimPending(streamKey)
+    if err != nil {
+        _ = eventStore.Release(deliveryKey)
+        http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
+        return
+    }
+    if streamClaim == "processed" {
+        if err := eventStore.MarkProcessed(deliveryKey); err != nil {
+            _ = eventStore.Release(deliveryKey)
+            http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
+            return
+        }
+        fmt.Fprint(w, "Stream event already processed")
+        return
+    }
+    if streamClaim != "claimed" {
+        _ = eventStore.Release(deliveryKey)
+        http.Error(w, "Stream event already pending", http.StatusConflict)
+        return
+    }
+
     if err := handleEvent(event); err != nil {
-        _ = deliveryStore.Release(event.DeliveryID)
+        _ = eventStore.Release(streamKey)
+        _ = eventStore.Release(deliveryKey)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
         return
     }
-    if err := deliveryStore.MarkProcessed(event.DeliveryID); err != nil {
-        _ = deliveryStore.Release(event.DeliveryID)
+    if err := eventStore.MarkProcessed(streamKey); err != nil {
+        _ = eventStore.Release(streamKey)
+        _ = eventStore.Release(deliveryKey)
+        http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
+        return
+    }
+    if err := eventStore.MarkProcessed(deliveryKey); err != nil {
+        _ = eventStore.Release(deliveryKey)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
         return
     }
@@ -537,8 +669,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    if deliveryStore == nil {
-        log.Fatal("Configure a durable webhook delivery store.")
+    if eventStore == nil {
+        log.Fatal("Configure a durable webhook event store.")
     }
     mux := http.NewServeMux()
     mux.HandleFunc("/webhook", webhookHandler)
@@ -565,32 +697,52 @@ func main() {
 
 ## Idempotency
 
-Webhook deliveries can retry. Claim `deliveryId` with an expiring pending lease
-in durable storage. Mark it processed only after the handler or durable queue
-write succeeds:
+Webhook deliveries can retry, and one stream event can reach several webhooks.
+Claim both `deliveryId` and `streamEventId` with durable, expiring leases. Mark
+the stream event first, then the delivery, after handling or durable enqueueing.
 
 This rule applies to live deliveries. A `webhook.test` payload omits
 `deliveryId` and `streamEventId`; acknowledge it after signature, nonce, and
-event-type validation without entering the delivery store.
+event-envelope validation without entering the event store.
 
 ```javascript
 async function processDelivery(event, res) {
-  const claim = await deliveryStore.claimPending(event.deliveryId);
-  if (claim === "processed") {
+  const deliveryKey = `delivery:${event.deliveryId}`;
+  const streamKey = `stream:${event.streamEventId}`;
+  const deliveryClaim = await eventStore.claimPending(deliveryKey);
+  if (deliveryClaim === "processed") {
     res.writeHead(200).end("Already processed");
     return;
   }
-  if (claim !== "claimed") {
+  if (deliveryClaim !== "claimed") {
     res.writeHead(409).end("Delivery already pending");
     return;
   }
 
+  let streamClaimed = false;
+  let streamProcessed = false;
   try {
+    const streamClaim = await eventStore.claimPending(streamKey);
+    if (streamClaim === "processed") {
+      streamProcessed = true;
+      await eventStore.markProcessed(deliveryKey);
+      res.writeHead(200).end("Stream event already processed");
+      return;
+    }
+    if (streamClaim !== "claimed") {
+      await eventStore.release(deliveryKey);
+      res.writeHead(409).end("Stream event already pending");
+      return;
+    }
+    streamClaimed = true;
     await handleEvent(event);
-    await deliveryStore.markProcessed(event.deliveryId);
+    await eventStore.markProcessed(streamKey);
+    streamProcessed = true;
+    await eventStore.markProcessed(deliveryKey);
     res.writeHead(200).end("OK");
   } catch (error) {
-    await deliveryStore.release(event.deliveryId);
+    if (streamClaimed && !streamProcessed) await eventStore.release(streamKey);
+    await eventStore.release(deliveryKey);
     throw error;
   }
 }
