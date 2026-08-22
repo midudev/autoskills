@@ -844,7 +844,12 @@ async function main() {
       );
 
       const prev = manifest.skills[skillName];
-      if (prev && prev.bundleHash === bundleHash) {
+      const reviewStatus = prev?.review?.status;
+      const reusableReview =
+        reviewStatus === "approved" ||
+        reviewStatus === "flagged" ||
+        (FLAGS.noReview && reviewStatus === "skipped");
+      if (prev && prev.bundleHash === bundleHash && reusableReview) {
         log(dim(`   · ${skillName} — unchanged`));
         report.totals.unchanged++;
         continue;

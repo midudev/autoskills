@@ -69,6 +69,17 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
+function registryPathIssue(path: string): string | null {
+  const normalized = normalizeRegistryRelPath(path);
+  const segments = normalized.split("/");
+  return normalized.startsWith("/") ||
+    /^[a-z]:/i.test(normalized) ||
+    normalized.includes("\0") ||
+    segments.some((segment) => segment === "" || segment === "." || segment === "..")
+    ? `unsafe path ${path}`
+    : null;
+}
+
 function registryEntryIssue(entry: unknown): string | null {
   if (!isRecord(entry)) return "entry must be an object";
   for (const field of ["source", "skillPath", "commitSha", "bundleHash"] as const) {
@@ -89,15 +100,8 @@ function registryEntryIssue(entry: unknown): string | null {
   const normalizedFiles = new Set<string>();
   for (const rel of entry.files) {
     const normalizedRel = normalizeRegistryRelPath(rel);
-    const segments = normalizedRel.split("/");
-    if (
-      normalizedRel.startsWith("/") ||
-      /^[a-z]:/i.test(normalizedRel) ||
-      normalizedRel.includes("\0") ||
-      segments.some((segment) => segment === "" || segment === "." || segment === "..")
-    ) {
-      return `files contains unsafe path ${rel}`;
-    }
+    const pathIssue = registryPathIssue(rel);
+    if (pathIssue) return `files contains ${pathIssue}`;
     if (normalizedFiles.has(normalizedRel)) {
       return `files contains duplicate path ${normalizedRel}`;
     }
@@ -153,6 +157,16 @@ function registryIssue(registry: unknown): string | null {
     }
   }
   if (!isRecord(registry.skills)) return "skills must be an object";
+  const normalizedSkillNames = new Set<string>();
+  for (const skillName of Object.keys(registry.skills)) {
+    const pathIssue = registryPathIssue(skillName);
+    if (pathIssue) return `skills contains ${pathIssue}`;
+    const normalizedSkillName = normalizeRegistryRelPath(skillName);
+    if (normalizedSkillNames.has(normalizedSkillName)) {
+      return `skills contains duplicate path ${normalizedSkillName}`;
+    }
+    normalizedSkillNames.add(normalizedSkillName);
+  }
   return null;
 }
 

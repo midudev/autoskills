@@ -21,9 +21,12 @@ Remaining credits cap how many replies and retweeters the draw inspects before
 it applies filters. `totalEntries` and `validEntries` describe that inspected
 set. They may not cover every reply or retweet on the source tweet.
 
-Get approval first. Show the source tweet, winner count, backup count,
-filters, and estimated usage. Also show the lawful purpose, participant-data
-handling, export audience, and retention plan. Record every field before
+Build the exact request first. Show the source tweet, winner count, backup
+count, and every filter. Show a published usage estimate when one is available.
+Otherwise, state that no precise preflight estimate is available and explain
+the credit-derived inspection cap. Never invent an estimate. Also show the
+lawful purpose, participant-data handling, export audience, and retention plan.
+Obtain approval for every displayed field before creating the draw or
 persisting participant data.
 
 Send this body:

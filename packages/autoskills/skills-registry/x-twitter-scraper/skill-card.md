@@ -5,9 +5,11 @@
 The Xquik Skill routes bounded Twitter data requests through REST, MCP, SDKs,
 webhooks, and exports. It also supports approved X account actions.
 
-Reviewers need a valid Xquik API key and must follow `SKILL.md` approval rules.
-Refresh SkillSpector, Tier-3 evaluation evidence, `BENCHMARK.md`, and the
-detached OMS signature before marking a release as reviewed.
+REST review requires a valid `XQUIK_API_KEY`. MCP review uses client-managed
+OAuth 2.1. Use the bearer fallback only when OAuth is unavailable. Reviewers
+must follow `SKILL.md` approval rules. Refresh SkillSpector, Tier-3 evaluation
+evidence, `BENCHMARK.md`, and the detached OMS signature before marking a
+release as reviewed.
 
 ## Owner
 

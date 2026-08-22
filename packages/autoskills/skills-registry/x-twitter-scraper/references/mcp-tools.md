@@ -96,7 +96,7 @@ Use `explore` first to find endpoints, then `xquik` to call them.
 | Credit balance | `GET /api/v1/credits` |
 | Monitor an X account | `POST /api/v1/monitors`; persistent and requires approval |
 | Set up webhook notifications | `POST /api/v1/webhooks`; persistent and requires approval |
-| Run a giveaway draw | `POST /api/v1/draws`; metered and requires explicit approval for the bounded draw |
+| Run a giveaway draw | `POST /api/v1/draws`; metered and requires approval for the exact request and data plan |
 | Compose or draft a tweet | `POST /api/v1/compose`; run compose, refine, then score |
 | Link your X username | Use the Xquik dashboard account settings |
 | Analyze tweet style | `POST /api/v1/styles` |
@@ -109,7 +109,7 @@ Use `explore` first to find endpoints, then `xquik` to call them.
 | Follow or unfollow | `POST /api/v1/x/users/{id}/follow` follows. The `DELETE` method on the same route unfollows. Both require approval. |
 | Send a DM | `POST /api/v1/x/dm/{userId}`; requires approval |
 | Upload media | `POST /api/v1/x/media`; approve its use in a post or profile change |
-| Open support ticket | `POST /api/v1/support/tickets` |
+| Open support ticket | `POST /api/v1/support/tickets`; requires approval for the exact content and attachments |
 | List support tickets | `GET /api/v1/support/tickets` |
 | Get user's recent tweets | `GET /api/v1/x/users/{id}/tweets` |
 | Get user's liked tweets | `GET /api/v1/x/users/{id}/likes` |
@@ -127,6 +127,13 @@ Use `explore` first to find endpoints, then `xquik` to call them.
 | Get DM history | `GET /api/v1/x/dm/{userId}/history?account={username}`; private and requires exact-account approval |
 | Check credit balance | `GET /api/v1/credits` |
 
+Before a draw, confirm the source tweet, `winnerCount`, `backupCount`, every
+filter, published usage estimate or estimate limitation, purpose, data scope,
+export audience, and retention. Send exactly the approved request.
+
+Before a support ticket, show the exact subject, body, and attachments. Send
+the ticket only after explicit approval for that content.
+
 Use `POST /api/v1/extractions` only for bulk data that simpler endpoints cannot provide. Examples include complete follower lists, replies, and community members. Always call `POST /api/v1/extractions/estimate` first.
 
 Fresh cursorless Tweet Search with `queryType=Latest` is newest-first across
@@ -139,13 +146,13 @@ See [direct lookups](api-endpoints-x-api.md) for the exact names.
 | Workflow | Steps |
 |----------|-------|
 | Set up ongoing alerts | Confirm target, event types, destination, and usage estimate -> `POST /monitors` -> `POST /webhooks` -> `POST /webhooks/{id}/test` |
-| Run a giveaway | Confirm tweet URL and rules -> `POST /draws` |
+| Run a giveaway | Show the exact request, usage estimate or limitation, and data plan -> approve -> `POST /draws` |
 | Bulk extraction | `POST /extractions/estimate` -> `POST /extractions` -> `GET /extractions/{id}` |
 | Compose and score a tweet | `POST /compose` with `step=compose` -> `refine` -> `score` |
 | Analyze tweet style | `POST /styles` -> `GET /styles/{id}` -> `POST /compose` with `styleUsername` |
 | Post a tweet | `GET /x/accounts` -> approve -> `POST /x/tweets` with `account` and `text` -> hosted MCP adds a unique `Idempotency-Key` -> poll `statusUrl` |
 | Get trending news | `GET /radar` through `xquik` -> `POST /compose` with the selected topic |
-| Open a support ticket | `POST /support/tickets` -> `GET /support/tickets/{id}` |
+| Open a support ticket | Show exact content and attachments -> approve -> `POST /support/tickets` -> `GET /support/tickets/{id}` |
 | Collect complete reply coverage | `GET /x/tweets/{id}/replies?mode=complete&limit=<1-25000>` -> filter direct rows by `inReplyToId` -> keep `nested_replies` separate -> inspect `diagnostic` |
 
 ## Common mistakes

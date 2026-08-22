@@ -18,9 +18,10 @@ POST /extractions
 
 Run a bulk data extraction job. See `references/extractions.md` for all 23 tools.
 
-Get approval first. Call the estimate endpoint with the same body first.
-Create the job only when the estimate returns `allowed: true`. Then require
-approval for the target, bound, usage, and data-handling plan.
+Build the exact creation body first. Send that body to the estimate endpoint
+before requesting creation approval. Show the returned usage and stop when
+`allowed` is not `true`. Then require approval for the exact target, bound,
+estimated usage, recipients, and data-handling plan. Create only after approval.
 
 Send this body:
 ```json

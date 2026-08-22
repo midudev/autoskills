@@ -151,6 +151,17 @@ normalized label returned as `xUsername`.
 | `username1` | string | Yes | First cached `xUsername` identifier |
 | `username2` | string | Yes | Second cached `xUsername` identifier |
 
+Build the query with `URLSearchParams` so custom labels retain spaces and
+special characters:
+
+```typescript
+const query = new URLSearchParams({
+  username1: firstStyle.xUsername,
+  username2: secondStyle.xUsername,
+});
+const path = `/styles/compare?${query}`;
+```
+
 For a 200 response, the API returns:
 
 ```json

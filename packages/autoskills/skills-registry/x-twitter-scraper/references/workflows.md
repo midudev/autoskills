@@ -49,6 +49,7 @@ async function fetchTextWithTimeout(url, options = {}) {
 
 async function xquikFetch(path, options = {}) {
   const baseDelay = 1000;
+  const maxRetryDelay = 30_000;
   const method = (options.method || "GET").toUpperCase();
   const retrySafe = ["GET", "HEAD", "OPTIONS"].includes(method);
   let retriedCoverageCursor = false;
@@ -65,7 +66,7 @@ async function xquikFetch(path, options = {}) {
     } catch (error) {
       if (!retrySafe || attempt === 3) throw error;
       await new Promise((resolve) =>
-        setTimeout(resolve, baseDelay * 2 ** attempt + Math.random() * 1000),
+        setTimeout(resolve, Math.min(maxRetryDelay, baseDelay * 2 ** attempt + Math.random() * 1000)),
       );
       continue;
     }
@@ -108,9 +109,12 @@ async function xquikFetch(path, options = {}) {
       throw new Error("Xquik API 409: missing Retry-After");
     }
     if (coverageRetry) retriedCoverageCursor = true;
-    const delay = retryAfterMs !== null
-      ? retryAfterMs
-      : baseDelay * 2 ** attempt + Math.random() * 1000;
+    const delay = Math.min(
+      maxRetryDelay,
+      retryAfterMs !== null
+        ? retryAfterMs
+        : baseDelay * 2 ** attempt + Math.random() * 1000,
+    );
 
     await new Promise((resolve) => setTimeout(resolve, delay));
   }

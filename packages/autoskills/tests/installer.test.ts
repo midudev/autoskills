@@ -263,6 +263,37 @@ describe("verifyRegistryEntry", () => {
     ok(result.output.includes("skills-registry index not found"));
     equal(securityCheckForSkillPath("owner/repo/incomplete"), null);
   });
+
+  it("rejects unsafe skill names before resolving installation paths", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    const targetDir = join(projectDir, "target");
+    buildRegistry(regDir, [
+      { name: "safe-skill", source: "owner/repo", files: { "SKILL.md": "# safe" } },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    const entry = manifest.skills["safe-skill"];
+    delete manifest.skills["safe-skill"];
+    entry.skillPath = "owner/repo/../../target";
+    manifest.skills["../../target"] = entry;
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    mkdirSync(targetDir, { recursive: true });
+    writeFileSync(join(targetDir, "sentinel.txt"), "keep");
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/../../target", [], {
+      projectDir,
+      registryDir: regDir,
+      fetchImpl: (async () => {
+        throw new Error("unexpected fetch");
+      }) as typeof fetch,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("skills-registry index not found"));
+    equal(readFileSync(join(targetDir, "sentinel.txt"), "utf-8"), "keep");
+  });
 });
 
 describe("installSkill", () => {

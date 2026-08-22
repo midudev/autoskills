@@ -8,7 +8,8 @@ All requests require the `x-api-key` header unless the section says session auth
 
 JSON endpoints return JSON. Export endpoints return files. Read `Content-Type`
 before decoding the body. Use `Content-Disposition` for the suggested filename.
-Call `response.json()` only for JSON exports.
+Call `response.json()` whenever `Content-Type` indicates JSON. This includes
+ordinary JSON routes and JSON exports. Handle every non-JSON export as a file.
 
 Plan and credit changes are dashboard-only. This Skill may read usage state with `GET /credits`, but it must not start changes.
 
