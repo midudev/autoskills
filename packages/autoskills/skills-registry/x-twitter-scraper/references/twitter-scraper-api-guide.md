@@ -78,7 +78,9 @@ at [docs.xquik.com](https://docs.xquik.com) and in this repository.
 
 Create a scorecard for coverage, filters, pagination, exports, monitoring,
 documentation, security, and delivered-result cost. Apply the same query and
-filters. Include charges for rejected or duplicate rows.
+filters. Include rejected-row or duplicate-row charges only when the provider
+applies them. For Xquik, track excluded rows as a quality metric. Do not count
+them in cost estimates.
 
 ### What evidence should a paid Twitter data API review include?
 

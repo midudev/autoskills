@@ -42,6 +42,14 @@ def sleep_before_retry(delay, deadline=None):
         raise TimeoutError("Request deadline reached")
     time.sleep(min(delay, remaining))
 
+def parse_retry_after(value):
+    if not isinstance(value, str) or re.fullmatch(r"[0-9]+", value) is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
 def read_response_with_deadline(response, deadline, max_bytes=None):
     """Read bounded chunks under one total deadline."""
     chunks = []
@@ -81,7 +89,11 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
             f"{BASE}{path}", data=body, headers=HEADERS, method=method
         )
 
-        attempt_deadline = min(deadline, time.monotonic() + 30) if deadline is not None else time.monotonic() + 30
+        attempt_deadline = (
+            min(deadline, time.monotonic() + 30)
+            if deadline is not None
+            else time.monotonic() + 30
+        )
         try:
             timeout = max(0.001, attempt_deadline - time.monotonic())
             with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -141,11 +153,7 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
         if not retryable or attempt == max_retries:
             raise Exception(f"Xquik API {status}: {payload.get('error', 'request failed')}")
 
-        retry_after_seconds = (
-            int(retry_after)
-            if isinstance(retry_after, str) and retry_after.isdigit()
-            else None
-        )
+        retry_after_seconds = parse_retry_after(retry_after)
         if coverage_retry and retry_after_seconds is None:
             raise RuntimeError("Xquik API 409: missing Retry-After")
         if coverage_retry and retry_after_seconds > MAX_RETRY_DELAY_SECONDS:
@@ -162,16 +170,28 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
         )
         sleep_before_retry(delay, deadline)
 
-def xquik_download(path, deadline=None):
-    """Return bytes and selected headers from an approved GET export."""
+def xquik_download(path, approved_max_bytes, deadline=None):
+    """Return an approved bounded GET export and selected headers."""
+    if (
+        isinstance(approved_max_bytes, bool)
+        or not isinstance(approved_max_bytes, int)
+        or approved_max_bytes <= 0
+    ):
+        raise ValueError("approved_max_bytes must be a positive integer")
     remaining = deadline - time.monotonic() if deadline is not None else None
     if remaining is not None and remaining <= 0:
         raise TimeoutError("Request deadline reached")
     request = urllib.request.Request(f"{BASE}{path}", headers=HEADERS, method="GET")
-    attempt_deadline = min(deadline, time.monotonic() + 30) if deadline is not None else time.monotonic() + 30
+    attempt_deadline = (
+        min(deadline, time.monotonic() + 30)
+        if deadline is not None
+        else time.monotonic() + 30
+    )
     timeout = max(0.001, attempt_deadline - time.monotonic())
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return read_response_with_deadline(response, attempt_deadline), {
+        return read_response_with_deadline(
+            response, attempt_deadline, approved_max_bytes
+        ), {
             "contentType": response.headers.get("Content-Type", ""),
             "contentDisposition": response.headers.get("Content-Disposition", ""),
         }

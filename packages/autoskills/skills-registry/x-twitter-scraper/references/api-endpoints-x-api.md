@@ -226,7 +226,9 @@ GET /x/bookmarks
 
 Get bookmarked tweets. Requires a connected X account. Metered per returned result.
 
-This is a private read. Confirm the account and purpose before calling.
+This endpoint has no account parameter. Identify the dashboard-selected active
+connected account. Block the read when that selection is missing or ambiguous.
+This is a private read. Confirm that exact account and purpose before calling.
 
 ## Get bookmark folders
 
@@ -269,7 +271,9 @@ GET /x/notifications
 
 Get notifications with type filter. Requires a connected X account. Metered per returned result.
 
-This is a private read. Confirm the account and purpose before calling.
+This endpoint has no account parameter. Identify the dashboard-selected active
+connected account. Block the read when that selection is missing or ambiguous.
+This is a private read. Confirm that exact account and purpose before calling.
 
 ## Get home timeline
 
@@ -279,6 +283,8 @@ GET /x/timeline
 
 Get home timeline. Requires a connected X account. Metered per returned result.
 
-This is a private read. Confirm the account and purpose before calling.
+This endpoint has no account parameter. Identify the dashboard-selected active
+connected account. Block the read when that selection is missing or ambiguous.
+This is a private read. Confirm that exact account and purpose before calling.
 
 ---

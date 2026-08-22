@@ -48,6 +48,14 @@ function assertCreateTweetRequest(
   if (value.is_note_tweet !== undefined && typeof value.is_note_tweet !== "boolean") {
     throw new Error("is_note_tweet must be a boolean when present.");
   }
+  for (const field of ["reply_to_tweet_id", "community_id"] as const) {
+    if (
+      value[field] !== undefined &&
+      (typeof value[field] !== "string" || !value[field].trim())
+    ) {
+      throw new Error(`${field} must be a nonempty string when present.`);
+    }
+  }
   const hasText = typeof value.text === "string" && value.text.trim().length > 0;
   if (value.text !== undefined && !hasText) {
     throw new Error("text must be a nonempty string when present.");
