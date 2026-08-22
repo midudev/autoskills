@@ -75,20 +75,23 @@ const usageLimitation = {
   exactPreflightEstimateAvailable: false,
   billingBasis: "Metered per participant entry.",
 };
-const approval = await requireExplicitApproval({
+const drawProposal = {
   request: drawRequest,
   usageLimitation,
   purpose: "Select 3 winners and 2 backups from eligible replies.",
   dataScope: "Public replies to the source tweet.",
   recipients: ["Giveaway administrator"],
   retention: "Delete the participant export after 30 days.",
-});
-if (JSON.stringify(approval.request) !== JSON.stringify(drawRequest)) {
+};
+const approval = await requireExplicitApproval(drawProposal);
+if (JSON.stringify(approval) !== JSON.stringify(drawProposal)) {
   throw new Error("Approved draw request changed. Request approval again.");
 }
 
+const drawIdempotencyKey = crypto.randomUUID();
 const draw = await xquikFetch("/draws", {
   method: "POST",
+  headers: { "Idempotency-Key": drawIdempotencyKey },
   body: JSON.stringify(drawRequest),
 });
 if (
@@ -122,6 +125,11 @@ if (JSON.stringify(approvedExport) !== JSON.stringify(exportProposal)) {
 }
 const exportUrl = `${BASE}/draws/${draw.id}/export?format=csv&type=winners`;
 ```
+
+Persist `drawIdempotencyKey` with the approved proposal before submission.
+Never retry `POST /draws` automatically. If its response is lost, preserve the
+key and inspect `statusUrl`. Start a new attempt only when `safeToRetry` is true.
+Require new approval and a new key for that attempt.
 
 ## Twitter giveaway draw usage
 

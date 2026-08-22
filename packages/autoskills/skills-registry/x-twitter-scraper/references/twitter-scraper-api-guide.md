@@ -116,8 +116,10 @@ scope before treating it as complete.
 
 Outside documented cursor recovery, retry only safe methods after connection
 failures, `408`, `429`, or `5xx`. Use bounded exponential backoff with jitter.
-Honor `Retry-After` for `429`. Retry `409 coverage_cursor_unavailable` once
-after its exact `Retry-After`. Retry `424` only when the response explicitly
+Honor `Retry-After` for `429`. For `409 coverage_cursor_unavailable`,
+wait the exact `Retry-After` seconds and retry the same cursor once.
+For `410 coverage_cursor_gone`, restart without a cursor and deduplicate by ID.
+Its response omits `Retry-After`. Retry `424` only when the response explicitly
 marks the read safe to retry. Never retry a write automatically. Reuse its
 `Idempotency-Key`, inspect `statusUrl`, and start a new attempt only when
 `safeToRetry` is true and the user approves.

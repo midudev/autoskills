@@ -847,8 +847,7 @@ async function processDelivery(event, res, handlerDeadlineAt) {
       return;
     }
     streamClaimed = true;
-    await handleEvent(event, { deadlineAt: handlerDeadlineAt });
-    await store.markProcessed(streamKey);
+    await store.applyEffectAndMarkProcessed(streamKey, event);
     streamProcessed = true;
     await store.markProcessed(deliveryKey);
     res.writeHead(200).end("OK");

@@ -161,9 +161,12 @@ When more results exist, the response includes `hasMore: true` and a
 `nextCursor` string. Pass it as `cursor`. Radar alone uses `after`.
 
 ```javascript
-async function fetchAllPages(path, dataKey, maxResults, identityForItem) {
+async function fetchAllPages(path, dataKey, maxResults, identityForItem, maxPages = 100) {
   if (!Number.isInteger(maxResults) || maxResults < 1) {
     throw new Error("maxResults must be a finite positive integer.");
+  }
+  if (!Number.isInteger(maxPages) || maxPages < 1) {
+    throw new Error("maxPages must be a finite positive integer.");
   }
   if (typeof identityForItem !== "function") {
     throw new Error("identityForItem must select a stable endpoint-specific ID.");
@@ -177,7 +180,7 @@ async function fetchAllPages(path, dataKey, maxResults, identityForItem) {
   let restartedExpiredCursor = false;
 
   while (results.length < maxResults) {
-    if (pageCount >= maxResults) {
+    if (pageCount >= maxPages) {
       throw new Error("Pagination exceeded the maximum page count without enough results.");
     }
     pageCount++;
@@ -330,31 +333,6 @@ const webhookConfig = {
   eventTypes,
 };
 
-function readMonitorList(data) {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.monitors)) return data.monitors;
-  throw new Error("Unexpected monitor list response.");
-}
-
-function readWebhookList(data) {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.webhooks)) return data.webhooks;
-  throw new Error("Unexpected webhook list response.");
-}
-
-function eventTypeKey(eventTypes) {
-  return [...eventTypes].sort().join("\u0000");
-}
-
-// Snapshot existing IDs before creating anything. These private reads need the
-// approval above and enable safe reconciliation after ambiguous timeouts.
-const existingMonitorIds = new Set(
-  readMonitorList(await xquikFetch("/monitors")).map((item) => item.id),
-);
-const existingWebhookIds = new Set(
-  readWebhookList(await xquikFetch("/webhooks")).map((item) => item.id),
-);
-
 // Create a persistent monitor. Active monitors are metered hourly.
 let monitor;
 try {
@@ -366,33 +344,14 @@ try {
   if (isDefinitiveWriteRejection(monitorCreationError)) {
     throw monitorCreationError;
   }
-  let candidates;
-  try {
-    candidates = readMonitorList(await xquikFetch("/monitors")).filter(
-      (item) =>
-        typeof item.id === "string" &&
-        Array.isArray(item.eventTypes) &&
-        !existingMonitorIds.has(item.id) &&
-        item.username === monitorConfig.username &&
-        eventTypeKey(item.eventTypes) === eventTypeKey(monitorConfig.eventTypes),
-    );
-  } catch (reconciliationError) {
-    throw new AggregateError(
-      [monitorCreationError, reconciliationError],
-      "Monitor creation is ambiguous. Reconcile new monitors manually.",
-    );
-  }
-  if (candidates.length !== 1) {
-    throw new AggregateError(
-      [monitorCreationError],
-      `Monitor creation is ambiguous. Found ${candidates.length} new matches. Reconcile them manually.`,
-    );
-  }
-  [monitor] = candidates;
+  throw new AggregateError(
+    [monitorCreationError],
+    "Monitor creation is ambiguous. Do not adopt matching monitors. Reconcile manually.",
+  );
 }
 
 // Register a persistent delivery destination. POST /webhooks does not accept
-// Idempotency-Key, so reconcile an ambiguous failure before deleting anything.
+// an ownership key. Retain resources after an ambiguous failure.
 let webhook;
 try {
   webhook = await xquikFetch("/webhooks", {
@@ -413,52 +372,9 @@ try {
     }
     throw creationError;
   }
-  const failures = [creationError];
-  let candidates = [];
-  try {
-    candidates = readWebhookList(await xquikFetch("/webhooks")).filter(
-      (item) =>
-        typeof item.id === "string" &&
-        Array.isArray(item.eventTypes) &&
-        !existingWebhookIds.has(item.id) &&
-        item.url === webhookConfig.url &&
-        eventTypeKey(item.eventTypes) === eventTypeKey(webhookConfig.eventTypes),
-    );
-  } catch (reconciliationError) {
-    failures.push(reconciliationError);
-  }
-
-  let webhookRemoved = false;
-  if (candidates.length === 1) {
-    try {
-      await xquikFetch(`/webhooks/${encodeURIComponent(candidates[0].id)}`, {
-        method: "DELETE",
-      });
-      webhookRemoved = true;
-    } catch (cleanupError) {
-      failures.push(cleanupError);
-    }
-  } else {
-    failures.push(
-      new Error(`Found ${candidates.length} new webhook matches. Reconcile them manually.`),
-    );
-  }
-
-  if (webhookRemoved) {
-    try {
-      await xquikFetch(`/monitors/${encodeURIComponent(monitor.id)}`, {
-        method: "DELETE",
-      });
-    } catch (cleanupError) {
-      failures.push(cleanupError);
-    }
-  } else {
-    failures.push(new Error(`Monitor ${monitor.id} was retained for manual reconciliation.`));
-  }
-
   throw new AggregateError(
-    failures,
-    `Webhook setup failed. Reconcile monitor ${monitor.id} and webhook resources manually.`,
+    [creationError],
+    `Webhook creation is ambiguous. Retain monitor ${monitor.id} and every matching webhook. Reconcile manually.`,
   );
 }
 // Store webhook.secret now. The API returns it once.

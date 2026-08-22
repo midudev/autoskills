@@ -1,8 +1,9 @@
 # SkillSpector Security Report
 
 **Skill:** x-twitter-scraper
-**Source:** `skills/x-twitter-scraper`
-**Scanned:** 2026-08-22 23:01:11 UTC
+**Source repository path:** `Xquik-dev/x-twitter-scraper/skills/x-twitter-scraper`
+**Scan working path:** `skills/x-twitter-scraper`
+**Scanned:** 2026-08-22 23:34:12 UTC
 
 ## Static Scan
 

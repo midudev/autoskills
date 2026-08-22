@@ -77,7 +77,9 @@ or per-request price alone.
 
 Select the extraction type and exact target. Send the same bounded body to
 `POST /extractions/estimate`. Review allowed state, estimated results, and usage.
-After approval, send that body to `POST /extractions`.
+Require `allowed === true`. Stop when `allowed` is false or missing. Show the
+exact estimate and unchanged body. Require approval for that body and usage.
+Send it unchanged to `POST /extractions` only after approval.
 
 Persist the returned job ID. Poll until `completed` or `failed`. Paginate results
 with the opaque cursor or call `/extractions/{id}/export`. Supported formats are

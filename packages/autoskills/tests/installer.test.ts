@@ -317,6 +317,41 @@ describe("verifyRegistryEntry", () => {
     ok(result.output.includes("skills.malformed is invalid: review must be an object"));
     equal(securityCheckForSkillPath("owner/repo/target"), null);
   });
+
+  it("rejects non-string review and security statuses", async () => {
+    for (const field of ["review", "securityCheck"] as const) {
+      const skillName = `${field}-status-array`;
+      const regDir = join(tmp.path, skillName, "registry");
+      const projectDir = join(tmp.path, skillName, "project");
+      buildRegistry(regDir, [
+        {
+          name: skillName,
+          source: "owner/repo",
+          files: { "SKILL.md": "# invalid status" },
+          securityCheck: {
+            status: "warning",
+            findings: ["manual review"],
+            summary: "Needs manual review.",
+            checkedAt: new Date().toISOString(),
+          },
+        },
+      ]);
+      const manifestPath = join(regDir, "index.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      manifest.skills[skillName][field].status = [field === "review" ? "flagged" : "warning"];
+      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      _setRegistryDir(regDir);
+
+      const result = await installSkill(`owner/repo/${skillName}`, [], {
+        projectDir,
+        registryDir: regDir,
+      });
+
+      equal(result.success, false);
+      ok(result.output.includes(`${field}.status is invalid`));
+      equal(securityCheckForSkillPath(`owner/repo/${skillName}`), null);
+    }
+  });
 });
 
 describe("installSkill", () => {

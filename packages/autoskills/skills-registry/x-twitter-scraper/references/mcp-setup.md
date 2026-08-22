@@ -297,8 +297,10 @@ Of these, 119 support JSON or text. Binary support downloads use REST.
 | `xquik` | Send confirmed Xquik API requests | Varies by endpoint |
 
 `explore` searches the credential-scoped catalog. `xquik` sends authenticated
-operations with normalized snake_case responses. Authentication is injected, so
-tool code must never include credentials.
+operations and returns the selected REST response object. Original field names
+remain unchanged, including `safeToRetry`, `allowed`, `monitorId`, and
+`nextCursor`. Authentication is injected, so tool code must never include
+credentials.
 
 Hosted MCP v2.6.0 catalogs 120 of 128 documented REST operations. These 8 credential,
 checkout, or guest-wallet operations remain direct REST or dashboard workflows:

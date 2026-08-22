@@ -54,6 +54,10 @@ backup count, and eligibility filters. Estimate or show usage before submitting
 After approval, create the draw once. Persist its ID immediately. Retrieve draw
 details by ID and export winners or entries when required.
 
+Before exporting, show the exact draw ID, type, format, destination, recipients,
+and retention. Require separate approval for that export. Continue only when
+the approved scope matches every field.
+
 Keep the original rule configuration beside the result. This prevents later
 ambiguity about which entries qualified.
 

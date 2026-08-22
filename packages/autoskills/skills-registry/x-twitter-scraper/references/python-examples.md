@@ -346,7 +346,7 @@ for winner in details["winners"]:
     if (
         not isinstance(winner, dict)
         or not isinstance(winner.get("isBackup"), bool)
-        or not isinstance(winner.get("position"), int)
+        or type(winner.get("position")) is not int
         or not isinstance(winner.get("authorUsername"), str)
     ):
         raise RuntimeError("Invalid draw winner response.")

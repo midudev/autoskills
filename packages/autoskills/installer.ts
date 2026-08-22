@@ -116,7 +116,10 @@ function registryEntryIssue(entry: unknown): string | null {
   const review = entry.review;
   if (!isRecord(review)) return "review must be an object";
   if (!isStringArray(review.flags)) return "review.flags must contain only strings";
-  if (!["approved", "flagged", "skipped"].includes(String(review.status))) {
+  if (
+    typeof review.status !== "string" ||
+    !["approved", "flagged", "skipped"].includes(review.status)
+  ) {
     return "review.status is invalid";
   }
   for (const field of ["summary", "model", "promptVersion", "reviewedAt"] as const) {
@@ -132,7 +135,10 @@ function registryEntryIssue(entry: unknown): string | null {
   if (!isStringArray(securityCheck.findings)) {
     return "securityCheck.findings must contain only strings";
   }
-  if (!["ok", "warning"].includes(String(securityCheck.status))) {
+  if (
+    typeof securityCheck.status !== "string" ||
+    !["ok", "warning"].includes(securityCheck.status)
+  ) {
     return "securityCheck.status is invalid";
   }
   for (const field of ["summary", "checkedAt"] as const) {
