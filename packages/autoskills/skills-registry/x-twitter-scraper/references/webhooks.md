@@ -56,6 +56,9 @@ Live deliveries require one shared durable store for `deliveryId` and
 deliveries omit both IDs and do not enter this store.
 Commit each external effect and processed state in one transaction. A durable
 outbox also satisfies this rule.
+Bound every store call by the request's 10-second deadline. Pass the supplied
+abort signal or context into the storage driver. Pending claims must use
+expiring durable leases because deadline cleanup can also time out.
 
 ### Node.js standard library
 
@@ -68,23 +71,53 @@ const WEBHOOK_SECRET = process.env.XQUIK_WEBHOOK_SECRET;
 if (!WEBHOOK_SECRET) throw new Error("Set XQUIK_WEBHOOK_SECRET first.");
 
 const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024;
+const STORE_OPERATION_MAX_MS = 2_000;
 const recentNonces = new Map();
 
 // Replace these fail-closed methods with one shared durable store.
 const eventStore = {
-  async claimPending(_key) {
+  async claimPending(_key, _signal) {
     throw new Error("Configure a durable webhook event store.");
   },
-  async markProcessed(_key) {
+  async markProcessed(_key, _signal) {
     throw new Error("Configure a durable webhook event store.");
   },
-  async applyEffectAndMarkProcessed(_key, _event) {
+  async applyEffectAndMarkProcessed(_key, _event, _signal) {
     throw new Error("Configure a transactional effect or durable outbox.");
   },
-  async release(_key) {
+  async release(_key, _signal) {
     throw new Error("Configure a durable webhook event store.");
   },
 };
+
+async function runStoreOperation(handlerDeadlineAt, operation) {
+  const timeoutMs = Math.min(STORE_OPERATION_MAX_MS, handlerDeadlineAt - Date.now());
+  if (timeoutMs <= 0) throw new Error("Webhook handler deadline reached.");
+  const controller = new AbortController();
+  let timeout;
+  const deadline = new Promise((_, reject) => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      reject(new Error("Webhook event store deadline reached."));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([operation(controller.signal), deadline]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function boundedEventStore(handlerDeadlineAt) {
+  const run = (operation) => runStoreOperation(handlerDeadlineAt, operation);
+  return {
+    claimPending: (key) => run((signal) => eventStore.claimPending(key, signal)),
+    markProcessed: (key) => run((signal) => eventStore.markProcessed(key, signal)),
+    applyEffectAndMarkProcessed: (key, event) =>
+      run((signal) => eventStore.applyEffectAndMarkProcessed(key, event, signal)),
+    release: (key) => run((signal) => eventStore.release(key, signal)),
+  };
+}
 
 const isNonemptyString = (value) => typeof value === "string" && value.length > 0;
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -134,6 +167,8 @@ function verifySignature(payload, signature, timestamp, nonce, secret) {
 }
 
 const server = createServer((req, res) => {
+  const handlerDeadlineAt = Date.now() + 10_000;
+  const store = boundedEventStore(handlerDeadlineAt);
   if (req.method !== "POST" || req.url !== "/webhook") {
     res.writeHead(404).end("Not found");
     return;
@@ -219,7 +254,7 @@ const server = createServer((req, res) => {
     const streamKey = `stream:${event.streamEventId}`;
     let deliveryClaim;
     try {
-      deliveryClaim = await eventStore.claimPending(deliveryKey);
+      deliveryClaim = await store.claimPending(deliveryKey);
     } catch {
       releaseNonce(nonce);
       res.writeHead(503).end("Event store unavailable");
@@ -238,28 +273,30 @@ const server = createServer((req, res) => {
     let streamClaimed = false;
     let streamProcessed = false;
     try {
-      const streamClaim = await eventStore.claimPending(streamKey);
+      const streamClaim = await store.claimPending(streamKey);
       if (streamClaim === "processed") {
         streamProcessed = true;
-        await eventStore.markProcessed(deliveryKey);
+        await store.markProcessed(deliveryKey);
         res.writeHead(200).end("Stream event already processed");
         return;
       }
       if (streamClaim !== "claimed") {
-        await eventStore.release(deliveryKey);
+        await store.release(deliveryKey);
         releaseNonce(nonce);
         res.writeHead(409).end("Stream event already pending");
         return;
       }
       streamClaimed = true;
-      await eventStore.applyEffectAndMarkProcessed(streamKey, event);
+      await store.applyEffectAndMarkProcessed(streamKey, event);
       streamProcessed = true;
-      await eventStore.markProcessed(deliveryKey);
+      await store.markProcessed(deliveryKey);
       res.writeHead(200).end("OK");
     } catch {
       try {
-        if (streamClaimed && !streamProcessed) await eventStore.release(streamKey);
-        await eventStore.release(deliveryKey);
+        if (streamClaimed && !streamProcessed) {
+          await store.release(streamKey);
+        }
+        await store.release(deliveryKey);
       } catch {
         releaseNonce(nonce);
         res.writeHead(503).end("Event store unavailable");
@@ -295,6 +332,7 @@ def load_secret(name: str) -> str:
 # Use the per-webhook secret from POST /webhooks, not an Xquik account credential.
 WEBHOOK_SECRET = load_secret("XQUIK_WEBHOOK_SECRET")
 MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
+STORE_OPERATION_MAX_SECONDS = 2.0
 RECENT_NONCES: dict[str, int] = {}
 
 def claim_nonce(nonce: str) -> bool:
@@ -310,20 +348,30 @@ def claim_nonce(nonce: str) -> bool:
 def release_nonce(nonce: str) -> None:
     RECENT_NONCES.pop(nonce, None)
 
-def claim_event(key: str) -> str:
-    """Atomically create a durable lease or return pending or processed."""
+def store_timeout_seconds(handler_deadline: float) -> float:
+    remaining = min(STORE_OPERATION_MAX_SECONDS, handler_deadline - time.monotonic())
+    if remaining <= 0:
+        raise TimeoutError("Webhook handler deadline reached")
+    return remaining
+
+def claim_event(key: str, handler_deadline: float) -> str:
+    """Use store_timeout_seconds in the driver. Return claimed, pending, or processed."""
+    store_timeout_seconds(handler_deadline)
     raise RuntimeError("Configure a durable webhook event store.")
 
-def mark_event_processed(key: str) -> None:
-    """Mark a claimed delivery processed."""
+def mark_event_processed(key: str, handler_deadline: float) -> None:
+    """Mark a claim processed before the shared handler deadline."""
+    store_timeout_seconds(handler_deadline)
     raise RuntimeError("Configure a durable webhook event store.")
 
-def release_event(key: str) -> None:
-    """Release a failed pending claim so Xquik can retry it."""
+def release_event(key: str, handler_deadline: float) -> None:
+    """Release a failed claim before its durable lease expires."""
+    store_timeout_seconds(handler_deadline)
     raise RuntimeError("Configure a durable webhook event store.")
 
-def apply_effect_and_mark_processed(key: str, event: dict) -> None:
-    """Atomically persist one effect or outbox row and mark the stream processed."""
+def apply_effect_and_mark_processed(key: str, event: dict, handler_deadline: float) -> None:
+    """Persist one effect or outbox row and mark it before the shared deadline."""
+    store_timeout_seconds(handler_deadline)
     raise RuntimeError("Configure transactional event effects.")
 
 def is_nonempty_string(value: object) -> bool:
@@ -380,6 +428,7 @@ def read_body_with_deadline(stream, connection, length: int, timeout_seconds: fl
 
 class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
+        handler_deadline = time.monotonic() + 10.0
         signature = self.headers.get("X-Xquik-Signature", "")
         timestamp = self.headers.get("X-Xquik-Timestamp", "")
         nonce = self.headers.get("X-Xquik-Nonce", "")
@@ -393,7 +442,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Request body too large or missing")
             return
         try:
-            payload = read_body_with_deadline(self.rfile, self.connection, length, 10.0)
+            payload = read_body_with_deadline(
+                self.rfile,
+                self.connection,
+                length,
+                max(0.0, handler_deadline - time.monotonic()),
+            )
         except (socket.timeout, TimeoutError):
             self.close_connection = True
             self.send_response(408)
@@ -453,7 +507,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
         delivery_key = f"delivery:{event['deliveryId']}"
         stream_key = f"stream:{event['streamEventId']}"
         try:
-            delivery_claim = claim_event(delivery_key)
+            delivery_claim = claim_event(delivery_key, handler_deadline)
         except Exception:
             release_nonce(nonce)
             self.send_response(503)
@@ -475,30 +529,30 @@ class WebhookHandler(BaseHTTPRequestHandler):
         stream_claimed = False
         stream_processed = False
         try:
-            stream_claim = claim_event(stream_key)
+            stream_claim = claim_event(stream_key, handler_deadline)
             if stream_claim == "processed":
                 stream_processed = True
-                mark_event_processed(delivery_key)
+                mark_event_processed(delivery_key, handler_deadline)
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b"Stream event already processed")
                 return
             if stream_claim != "claimed":
-                release_event(delivery_key)
+                release_event(delivery_key, handler_deadline)
                 release_nonce(nonce)
                 self.send_response(409)
                 self.end_headers()
                 self.wfile.write(b"Stream event already pending")
                 return
             stream_claimed = True
-            apply_effect_and_mark_processed(stream_key, event)
+            apply_effect_and_mark_processed(stream_key, event, handler_deadline)
             stream_processed = True
-            mark_event_processed(delivery_key)
+            mark_event_processed(delivery_key, handler_deadline)
         except Exception:
             try:
                 if stream_claimed and not stream_processed:
-                    release_event(stream_key)
-                release_event(delivery_key)
+                    release_event(stream_key, handler_deadline)
+                release_event(delivery_key, handler_deadline)
             except Exception:
                 pass
             release_nonce(nonce)
@@ -520,6 +574,7 @@ HTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
 package main
 
 import (
+    "context"
     "crypto/hmac"
     "crypto/sha256"
     "encoding/hex"
@@ -551,10 +606,10 @@ var webhookSecret = requireWebhookSecret()
 var recentNonces sync.Map
 
 type EventStore interface {
-    ClaimPending(key string) (string, error)
-    MarkProcessed(key string) error
-    ApplyEffectAndMarkProcessed(key string, event any) error
-    Release(key string) error
+    ClaimPending(ctx context.Context, key string) (string, error)
+    MarkProcessed(ctx context.Context, key string) error
+    ApplyEffectAndMarkProcessed(ctx context.Context, key string, event any) error
+    Release(ctx context.Context, key string) error
 }
 
 // Assign one shared durable implementation before starting the server.
@@ -596,6 +651,8 @@ func verifySignature(payload []byte, signature, timestamp, nonce, secret string)
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
+    ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+    defer cancel()
     r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
     payload, err := io.ReadAll(r.Body)
     if err != nil {
@@ -666,7 +723,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
     deliveryKey := "delivery:" + event.DeliveryID
     streamKey := "stream:" + event.StreamEventID
-    deliveryClaim, err := eventStore.ClaimPending(deliveryKey)
+    deliveryClaim, err := eventStore.ClaimPending(ctx, deliveryKey)
     if err != nil {
         releaseNonce(nonce)
         http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
@@ -682,16 +739,16 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    streamClaim, err := eventStore.ClaimPending(streamKey)
+    streamClaim, err := eventStore.ClaimPending(ctx, streamKey)
     if err != nil {
-        _ = eventStore.Release(deliveryKey)
+        _ = eventStore.Release(ctx, deliveryKey)
         releaseNonce(nonce)
         http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
         return
     }
     if streamClaim == "processed" {
-        if err := eventStore.MarkProcessed(deliveryKey); err != nil {
-            _ = eventStore.Release(deliveryKey)
+        if err := eventStore.MarkProcessed(ctx, deliveryKey); err != nil {
+            _ = eventStore.Release(ctx, deliveryKey)
             releaseNonce(nonce)
             http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
             return
@@ -700,21 +757,21 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
     if streamClaim != "claimed" {
-        _ = eventStore.Release(deliveryKey)
+        _ = eventStore.Release(ctx, deliveryKey)
         releaseNonce(nonce)
         http.Error(w, "Stream event already pending", http.StatusConflict)
         return
     }
 
-    if err := eventStore.ApplyEffectAndMarkProcessed(streamKey, event); err != nil {
-        _ = eventStore.Release(streamKey)
-        _ = eventStore.Release(deliveryKey)
+    if err := eventStore.ApplyEffectAndMarkProcessed(ctx, streamKey, event); err != nil {
+        _ = eventStore.Release(ctx, streamKey)
+        _ = eventStore.Release(ctx, deliveryKey)
         releaseNonce(nonce)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
         return
     }
-    if err := eventStore.MarkProcessed(deliveryKey); err != nil {
-        _ = eventStore.Release(deliveryKey)
+    if err := eventStore.MarkProcessed(ctx, deliveryKey); err != nil {
+        _ = eventStore.Release(ctx, deliveryKey)
         releaseNonce(nonce)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
         return
@@ -760,10 +817,11 @@ This rule applies to live deliveries. A `webhook.test` payload omits
 event-envelope validation without entering the event store.
 
 ```javascript
-async function processDelivery(event, res) {
+async function processDelivery(event, res, handlerDeadlineAt) {
+  const store = boundedEventStore(handlerDeadlineAt);
   const deliveryKey = `delivery:${event.deliveryId}`;
   const streamKey = `stream:${event.streamEventId}`;
-  const deliveryClaim = await eventStore.claimPending(deliveryKey);
+  const deliveryClaim = await store.claimPending(deliveryKey);
   if (deliveryClaim === "processed") {
     res.writeHead(200).end("Already processed");
     return;
@@ -776,27 +834,29 @@ async function processDelivery(event, res) {
   let streamClaimed = false;
   let streamProcessed = false;
   try {
-    const streamClaim = await eventStore.claimPending(streamKey);
+    const streamClaim = await store.claimPending(streamKey);
     if (streamClaim === "processed") {
       streamProcessed = true;
-      await eventStore.markProcessed(deliveryKey);
+      await store.markProcessed(deliveryKey);
       res.writeHead(200).end("Stream event already processed");
       return;
     }
     if (streamClaim !== "claimed") {
-      await eventStore.release(deliveryKey);
+      await store.release(deliveryKey);
       res.writeHead(409).end("Stream event already pending");
       return;
     }
     streamClaimed = true;
-    await handleEvent(event);
-    await eventStore.markProcessed(streamKey);
+    await handleEvent(event, { deadlineAt: handlerDeadlineAt });
+    await store.markProcessed(streamKey);
     streamProcessed = true;
-    await eventStore.markProcessed(deliveryKey);
+    await store.markProcessed(deliveryKey);
     res.writeHead(200).end("OK");
   } catch (error) {
-    if (streamClaimed && !streamProcessed) await eventStore.release(streamKey);
-    await eventStore.release(deliveryKey);
+    if (streamClaimed && !streamProcessed) {
+      await store.release(streamKey);
+    }
+    await store.release(deliveryKey);
     throw error;
   }
 }

@@ -17,13 +17,13 @@ interface Monitor {
 interface KeywordMonitor {
   id: string;
   query: string;
-  eventTypes: EventType[];
+  eventTypes: KeywordEventType[];
   isActive: boolean;
   createdAt: string;
   nextBillingAt: string;
 }
 
-type EventType =
+type KeywordEventType =
   | "tweet.new"
   | "tweet.quote"
   | "tweet.reply"
@@ -33,7 +33,10 @@ type EventType =
   | "tweet.poll"
   | "tweet.mention"
   | "tweet.hashtag"
-  | "tweet.longform"
+  | "tweet.longform";
+
+type EventType =
+  | KeywordEventType
   | "profile.avatar.changed"
   | "profile.banner.changed"
   | "profile.name.changed"
@@ -47,3 +50,7 @@ type EventType =
   | "profile.unavailable.changed";
 
 ```
+
+Keyword monitor requests accept only `KeywordEventType`. The shared OpenAPI
+event array also serves account monitors and webhooks. It therefore includes
+profile events. Never pass a `profile.*` value to a keyword monitor request.

@@ -63,7 +63,7 @@ Apply these rules before using `xquik`:
 | Direct messages | Show sender, recipient, and message text. Never send bulk or automatic DMs. |
 | Persistent resources | Create monitors and webhooks only when the user explicitly asks for ongoing delivery. Show target, event types, URL, and ongoing usage before creation. |
 | Cached style writes | Before creating, replacing, or deleting a cached style, show the account, purpose, exact resource, usage, and storage effect. Obtain approval for that write. |
-| Private reads | Confirm the account, purpose, exact resource, bound, recipients, and retention before DMs, bookmarks, bookmark folders, notifications, home timeline, or cached style reads. Forward private data only after separate approval. |
+| Private reads | Confirm the account or monitor, purpose, exact resource, filters, bound, cursor, recipients, destination, and retention before events, DMs, bookmarks, bookmark folders, notifications, home timeline, or cached style reads. Forward private data only after separate approval. |
 | Metered operations | Build the exact path, query, and body. Get an estimate when available. Verify its shape and require `allowed === true`. Otherwise, show the published usage limitation. Show the destination, recipients, and retention. Wait for approval, then send exactly that request. |
 | Plan and credit changes | Dashboard-only. The agent may read credit balance, but must not start account changes. |
 | X account login | Never ask for or submit X login material. Account connection and re-authentication happen in the dashboard. |
@@ -93,7 +93,7 @@ Use `explore` first to find endpoints, then `xquik` to call them.
 | Check follow relationship | `GET /api/v1/x/followers/check?source=A&target=B` |
 | X trending topics by region | `GET /api/v1/trends?woeid=1` |
 | Trending news from 7 sources | `GET /api/v1/radar` through `xquik` |
-| Activity from monitored accounts | `GET /api/v1/events` |
+| Activity from monitored accounts | `GET /api/v1/events`; private and requires approval for the exact monitor or account scope, filters, page size, cursor, destination, and retention |
 | Credit balance | `GET /api/v1/credits` |
 | Monitor an X account | `POST /api/v1/monitors`; persistent and requires approval |
 | Set up webhook notifications | `POST /api/v1/webhooks`; persistent and requires approval |

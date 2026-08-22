@@ -34,6 +34,13 @@ class XquikApiError extends Error {
   }
 }
 
+function isDefinitiveWriteRejection(error) {
+  return error instanceof XquikApiError &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    ![408, 409, 423, 424, 425, 429].includes(error.status);
+}
+
 async function fetchTextWithTimeout(url, { timeoutMs = 30_000, ...options } = {}) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new Error("timeoutMs must be a finite positive number.");
@@ -356,7 +363,7 @@ try {
     body: JSON.stringify(monitorConfig),
   });
 } catch (monitorCreationError) {
-  if (monitorCreationError instanceof XquikApiError) {
+  if (isDefinitiveWriteRejection(monitorCreationError)) {
     throw monitorCreationError;
   }
   let candidates;
@@ -393,7 +400,17 @@ try {
     body: JSON.stringify(webhookConfig),
   });
 } catch (creationError) {
-  if (creationError instanceof XquikApiError) {
+  if (isDefinitiveWriteRejection(creationError)) {
+    try {
+      await xquikFetch(`/monitors/${encodeURIComponent(monitor.id)}`, {
+        method: "DELETE",
+      });
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [creationError, cleanupError],
+        `Webhook creation was rejected. Reconcile monitor ${monitor.id} manually.`,
+      );
+    }
     throw creationError;
   }
   const failures = [creationError];

@@ -193,7 +193,11 @@ followers, following, and verified followers.
 GET /x/users/{id}/followers-you-know
 ```
 
-Get followers known to the requesting account. This route is metered per result.
+Get followers known to the requesting account. Require a connected X account
+and exactly 1 active account selection. Approve that account, target user,
+purpose, bound, recipients, and retention.
+Block the read when that selection is missing or ambiguous.
+This route is metered per result.
 
 ## X Lists
 

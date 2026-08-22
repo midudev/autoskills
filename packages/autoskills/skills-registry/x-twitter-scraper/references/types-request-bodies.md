@@ -14,11 +14,11 @@ interface UpdateMonitorRequest {
 
 interface CreateKeywordMonitorRequest {
   query: string;
-  eventTypes: EventType[];
+  eventTypes: KeywordEventType[];
 }
 
 interface UpdateKeywordMonitorRequest {
-  eventTypes?: EventType[];
+  eventTypes?: KeywordEventType[];
   isActive?: boolean;
 }
 

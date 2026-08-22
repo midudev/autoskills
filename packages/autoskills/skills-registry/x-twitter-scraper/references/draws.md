@@ -46,8 +46,17 @@ async function xquikFetch(path, options = {}) {
   return body ? JSON.parse(body) : null;
 }
 
-function requireExplicitApproval(proposal) {
-  throw new Error(`Approval required for ${JSON.stringify(proposal)}.`);
+const approvalProvider = globalThis.xquikApprovalProvider;
+if (typeof approvalProvider !== "function") {
+  throw new Error("Configure xquikApprovalProvider before running a draw.");
+}
+
+async function requireExplicitApproval(proposal) {
+  const approvalScope = structuredClone(proposal);
+  if ((await approvalProvider(approvalScope)) !== true) {
+    throw new Error("Approval denied.");
+  }
+  return approvalScope;
 }
 
 const drawRequest = {
@@ -66,7 +75,7 @@ const usageLimitation = {
   exactPreflightEstimateAvailable: false,
   billingBasis: "Metered per participant entry.",
 };
-const approval = requireExplicitApproval({
+const approval = await requireExplicitApproval({
   request: drawRequest,
   usageLimitation,
   purpose: "Select 3 winners and 2 backups from eligible replies.",
@@ -107,7 +116,8 @@ const exportProposal = {
   recipients: ["Giveaway administrator"],
   retention: "Delete the export after 30 days.",
 };
-if (requireExplicitApproval(exportProposal) !== exportProposal) {
+const approvedExport = await requireExplicitApproval(exportProposal);
+if (JSON.stringify(approvedExport) !== JSON.stringify(exportProposal)) {
   throw new Error("Approved draw export changed. Request approval again.");
 }
 const exportUrl = `${BASE}/draws/${draw.id}/export?format=csv&type=winners`;

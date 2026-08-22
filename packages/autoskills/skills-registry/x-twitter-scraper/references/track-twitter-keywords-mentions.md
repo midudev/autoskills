@@ -55,9 +55,11 @@ Define an exact keyword query and exclusions. Validate it with a bounded search.
 Then create a keyword monitor after approving its target, filters, expected
 usage, event delivery, and deletion path.
 
-Poll monitor events or register an HTTPS webhook. Treat "real time" as ongoing
-detection, not guaranteed zero-latency streaming. Measure delay from source post
-time to stored event time.
+Poll monitor events. Before registering an HTTPS webhook, obtain explicit
+approval for the event scope, exact destination URL, HMAC verification method,
+intended use, retention, and disable or delete path. Treat "real time" as
+ongoing detection, not guaranteed zero-latency streaming. Measure delay from
+source post time to stored event time.
 
 Persist monitor ID, event ID, tweet ID, event type, source occurrence time, and
 processing time. For webhooks, also store delivery time. These fields support

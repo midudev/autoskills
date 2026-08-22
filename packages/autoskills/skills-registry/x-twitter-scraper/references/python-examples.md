@@ -28,7 +28,9 @@ HEADERS = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 ## Retry with exponential backoff
 
 ```python
-import time, random
+import random
+import re
+import time
 
 MAX_RETRY_DELAY_SECONDS = 30.0
 MAX_JSON_RESPONSE_BYTES = 16 * 1024 * 1024
