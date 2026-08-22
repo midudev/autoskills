@@ -81,6 +81,10 @@ const deliveryStore = {
   },
 };
 
+async function handleEvent(_event) {
+  throw new Error("Persist or durably enqueue idempotently by deliveryId before acknowledging.");
+}
+
 function claimNonce(nonce) {
   const now = Date.now();
   for (const [value, expiresAt] of recentNonces) {
@@ -189,7 +193,7 @@ const server = createServer((req, res) => {
     }
 
     try {
-      console.log("Accepted verified Xquik webhook");
+      await handleEvent(event);
       await deliveryStore.markProcessed(event.deliveryId);
       res.writeHead(200).end("OK");
     } catch {
@@ -248,6 +252,10 @@ def mark_delivery_processed(delivery_id: str) -> None:
 def release_delivery(delivery_id: str) -> None:
     """Release a failed pending claim so Xquik can retry it."""
     raise RuntimeError("Configure a durable webhook delivery store.")
+
+def handle_event(event: dict) -> None:
+    """Persist or enqueue idempotently by deliveryId before acknowledging."""
+    raise RuntimeError("Configure durable event handling.")
 
 def verify_signature(payload: bytes, signature: str, timestamp: str, nonce: str, secret: str) -> bool:
     if not secret or not timestamp.isdigit() or not re.fullmatch(r"[0-9a-f]{32}", nonce):
@@ -351,7 +359,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            print("Accepted verified Xquik webhook")
+            handle_event(event)
             mark_delivery_processed(delivery_id)
         except Exception:
             try:
@@ -415,6 +423,10 @@ type DeliveryStore interface {
 // Assign one shared durable implementation before starting the server.
 var deliveryStore DeliveryStore
 
+func handleEvent(_ any) error {
+    return errors.New("configure idempotent durable event handling by deliveryId")
+}
+
 func claimNonce(nonce string) bool {
     now := time.Now().UnixMilli()
     recentNonces.Range(func(key, value any) bool {
@@ -468,7 +480,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    var event struct {
+    var event *struct {
         DeliveryID   string `json:"deliveryId"`
         StreamEventID string `json:"streamEventId"`
         EventType    string `json:"eventType"`
@@ -477,7 +489,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
             Text string `json:"text"`
         } `json:"data"`
     }
-    if err := json.Unmarshal(payload, &event); err != nil {
+    if err := json.Unmarshal(payload, &event); err != nil || event == nil {
         http.Error(w, "Invalid JSON", http.StatusBadRequest)
         return
     }
@@ -511,7 +523,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    fmt.Print("Accepted verified Xquik webhook\n")
+    if err := handleEvent(event); err != nil {
+        _ = deliveryStore.Release(event.DeliveryID)
+        http.Error(w, "Handler failed", http.StatusInternalServerError)
+        return
+    }
     if err := deliveryStore.MarkProcessed(event.DeliveryID); err != nil {
         _ = deliveryStore.Release(event.DeliveryID)
         http.Error(w, "Handler failed", http.StatusInternalServerError)

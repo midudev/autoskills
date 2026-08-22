@@ -28,6 +28,7 @@ import { pipeline } from "node:stream/promises";
 import { SKILLS_MAP, COMBO_SKILLS_MAP, FRONTEND_BONUS_SKILLS } from "../skills-map.ts";
 import { parseSkillPath } from "../lib.ts";
 import { bold, cyan, dim, green, log, red, yellow } from "../colors.ts";
+import { isReviewReusable } from "../review-cache.ts";
 
 process.loadEnvFile();
 
@@ -765,7 +766,10 @@ async function main() {
       sha = head.sha;
 
       const manifestSha = getManifestRepoSha(manifest, repo, skills);
-      if (manifestSha === sha) {
+      const repoReviewsReusable = skills.every(({ skillName }) =>
+        isReviewReusable(manifest.skills[skillName]?.review?.status, FLAGS.noReview),
+      );
+      if (manifestSha === sha && repoReviewsReusable) {
         for (const { skillName } of skills) {
           log(dim(`   · ${skillName} — unchanged`));
           report.totals.skills++;
@@ -844,12 +848,11 @@ async function main() {
       );
 
       const prev = manifest.skills[skillName];
-      const reviewStatus = prev?.review?.status;
-      const reusableReview =
-        reviewStatus === "approved" ||
-        reviewStatus === "flagged" ||
-        (FLAGS.noReview && reviewStatus === "skipped");
-      if (prev && prev.bundleHash === bundleHash && reusableReview) {
+      if (
+        prev &&
+        prev.bundleHash === bundleHash &&
+        isReviewReusable(prev.review?.status, FLAGS.noReview)
+      ) {
         log(dim(`   · ${skillName} — unchanged`));
         report.totals.unchanged++;
         continue;

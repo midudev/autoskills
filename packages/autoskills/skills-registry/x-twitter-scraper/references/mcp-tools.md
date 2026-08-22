@@ -47,7 +47,7 @@ async () => spec.endpoints.filter(e => e.summary.toLowerCase().includes('tweet')
 
 ### Send API requests with `xquik`
 
-The tool provides `xquik.request()` with authentication and required idempotency headers injected automatically. Never pass API keys or headers. The sandbox reuses each generated key for bounded transient retries. After an unresolved write failure, verify state. Start a new attempt only when `safe_to_retry` is true and the user approves.
+The tool provides `xquik.request()` with authentication and required idempotency headers injected automatically. Never pass API keys or headers. The sandbox reuses each generated key for bounded transient retries. After an unresolved write failure, verify state. Start a new attempt only when `safeToRetry` is true and the user approves.
 
 For `409 coverage_cursor_unavailable`, wait the exact `Retry-After` seconds and
 retry the same cursor once. For `410 coverage_cursor_gone`, the response omits

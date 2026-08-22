@@ -13,8 +13,6 @@ This guide focuses only on public X data and approved X account workflows.
 > Xquik is an independent third-party service. Not affiliated with X Corp.
 > "Twitter" and "X" are trademarks of X Corp.
 
-![Xquik logo for the X API alternative](../../../logo.png)
-
 ## Xquik documentation, scale, and reliability
 
 Evaluate an alternative with evidence, not a single feature. Use a known tweet,

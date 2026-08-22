@@ -80,7 +80,7 @@ Run the same pack against each provider. Save raw evidence. Compare total
 workload cost, including discarded rows, cleanup, retries, storage, and
 engineering time.
 
-### What are the top tweet scraping tools?
+### What are the top tweet-scraping tools?
 
 Shortlist tools by execution model. APIs suit reusable applications. Hosted
 actors suit scheduled platform jobs. Browser automation may suit narrow visual

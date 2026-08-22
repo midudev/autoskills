@@ -34,9 +34,12 @@ class XquikApiError extends Error {
   }
 }
 
-async function fetchTextWithTimeout(url, options = {}) {
+async function fetchTextWithTimeout(url, { timeoutMs = 30_000, ...options } = {}) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new Error("timeoutMs must be a finite positive number.");
+  }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  const timeout = setTimeout(() => controller.abort(), Math.min(30_000, timeoutMs));
 
   try {
     const response = await fetch(url, { ...options, signal: controller.signal });
@@ -50,7 +53,18 @@ async function fetchTextWithTimeout(url, options = {}) {
 async function xquikFetch(path, options = {}) {
   const baseDelay = 1000;
   const maxRetryDelay = 30_000;
-  const method = (options.method || "GET").toUpperCase();
+  const { timeoutMs, ...requestOptions } = options;
+  if (timeoutMs !== undefined && (!Number.isFinite(timeoutMs) || timeoutMs <= 0)) {
+    throw new Error("timeoutMs must be a finite positive number.");
+  }
+  const deadline = Number.isFinite(timeoutMs) ? performance.now() + timeoutMs : null;
+  const remainingMs = () => deadline === null ? 30_000 : deadline - performance.now();
+  const waitBeforeRetry = async (delayMs) => {
+    const waitMs = deadline === null ? delayMs : Math.min(delayMs, remainingMs());
+    if (waitMs <= 0) throw new Error("Xquik request deadline exceeded.");
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  };
+  const method = (requestOptions.method || "GET").toUpperCase();
   const retrySafe = ["GET", "HEAD", "OPTIONS"].includes(method);
   let retriedCoverageCursor = false;
 
@@ -59,14 +73,20 @@ async function xquikFetch(path, options = {}) {
     let responseBody;
 
     try {
+      const requestTimeoutMs = remainingMs();
+      if (requestTimeoutMs <= 0) throw new Error("Xquik request deadline exceeded.");
       ({ response, body: responseBody } = await fetchTextWithTimeout(
         `${BASE}${path}`,
-        { ...options, headers: { ...headers, ...options.headers } },
+        {
+          ...requestOptions,
+          timeoutMs: requestTimeoutMs,
+          headers: { ...headers, ...requestOptions.headers },
+        },
       ));
     } catch (error) {
       if (!retrySafe || attempt === 3) throw error;
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.min(maxRetryDelay, baseDelay * 2 ** attempt + Math.random() * 1000)),
+      await waitBeforeRetry(
+        Math.min(maxRetryDelay, baseDelay * 2 ** attempt + Math.random() * 1000),
       );
       continue;
     }
@@ -116,7 +136,7 @@ async function xquikFetch(path, options = {}) {
         : baseDelay * 2 ** attempt + Math.random() * 1000,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await waitBeforeRetry(delay);
   }
 }
 ```
@@ -138,10 +158,16 @@ async function fetchAllPages(path, dataKey, maxResults, identityForItem) {
 
   const results = [];
   const seenIds = new Set();
+  const seenCursors = new Set();
   let cursor;
+  let pageCount = 0;
   let restartedExpiredCursor = false;
 
   while (results.length < maxResults) {
+    if (pageCount >= maxResults) {
+      throw new Error("Pagination exceeded the maximum page count without enough results.");
+    }
+    pageCount++;
     const remaining = maxResults - results.length;
     const params = new URLSearchParams({ limit: String(Math.min(100, remaining)) });
     if (cursor) params.set("cursor", cursor);
@@ -158,6 +184,7 @@ async function fetchAllPages(path, dataKey, maxResults, identityForItem) {
         !restartedExpiredCursor
       ) {
         cursor = undefined;
+        seenCursors.clear();
         restartedExpiredCursor = true;
         continue;
       }
@@ -182,6 +209,10 @@ async function fetchAllPages(path, dataKey, maxResults, identityForItem) {
     if (typeof data.nextCursor !== "string" || !data.nextCursor) {
       throw new Error("Missing nextCursor for a paginated response.");
     }
+    if (seenCursors.has(data.nextCursor)) {
+      throw new Error("Repeated nextCursor without pagination progress.");
+    }
+    seenCursors.add(data.nextCursor);
     cursor = data.nextCursor;
   }
 
@@ -228,10 +259,15 @@ let job = await xquikFetch("/extractions", {
   }),
 });
 
-// Poll for at most 5 minutes.
-for (let poll = 0; poll < 150 && ["pending", "running"].includes(job.status); poll++) {
-  await new Promise((r) => setTimeout(r, 2000));
-  job = await xquikFetch(`/extractions/${job.id}`);
+// Poll for at most 5 minutes, including waits, retries, and network time.
+const pollDeadline = performance.now() + 5 * 60 * 1000;
+while (["pending", "running"].includes(job.status)) {
+  let remainingPollMs = pollDeadline - performance.now();
+  if (remainingPollMs <= 0) break;
+  await new Promise((resolve) => setTimeout(resolve, Math.min(2000, remainingPollMs)));
+  remainingPollMs = pollDeadline - performance.now();
+  if (remainingPollMs <= 0) break;
+  job = await xquikFetch(`/extractions/${job.id}`, { timeoutMs: remainingPollMs });
 }
 
 if (job.status !== "completed") {
@@ -363,11 +399,13 @@ try {
     failures.push(reconciliationError);
   }
 
+  let webhookRemoved = false;
   if (candidates.length === 1) {
     try {
       await xquikFetch(`/webhooks/${encodeURIComponent(candidates[0].id)}`, {
         method: "DELETE",
       });
+      webhookRemoved = true;
     } catch (cleanupError) {
       failures.push(cleanupError);
     }
@@ -377,25 +415,28 @@ try {
     );
   }
 
-  try {
-    await xquikFetch(`/monitors/${encodeURIComponent(monitor.id)}`, {
-      method: "DELETE",
-    });
-  } catch (cleanupError) {
-    failures.push(cleanupError);
+  if (webhookRemoved) {
+    try {
+      await xquikFetch(`/monitors/${encodeURIComponent(monitor.id)}`, {
+        method: "DELETE",
+      });
+    } catch (cleanupError) {
+      failures.push(cleanupError);
+    }
+  } else {
+    failures.push(new Error(`Monitor ${monitor.id} was retained for manual reconciliation.`));
   }
 
   throw new AggregateError(
     failures,
-    `Webhook setup failed. Monitor ${monitor.id} cleanup was attempted. Reconcile webhook resources manually.`,
+    `Webhook setup failed. Reconcile monitor ${monitor.id} and webhook resources manually.`,
   );
 }
 // Store webhook.secret now. The API returns it once.
-
-// Poll events when you do not use a webhook.
-const eventParams = new URLSearchParams({ monitorId: monitor.id, limit: "50" });
-const events = await xquikFetch(`/events?${eventParams}`);
 ```
+
+Use `GET /events` only in a separate polling-only workflow. Do not register a
+webhook and poll the same monitor simultaneously.
 
 Monitor event types include `tweet.new`, `tweet.quote`, `tweet.reply`, and
 `tweet.retweet`. Test deliveries use `webhook.test`; do not subscribe to it.

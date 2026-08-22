@@ -294,6 +294,29 @@ describe("verifyRegistryEntry", () => {
     ok(result.output.includes("skills-registry index not found"));
     equal(readFileSync(join(targetDir, "sentinel.txt"), "utf-8"), "keep");
   });
+
+  it("rejects the whole registry when another entry is malformed", async () => {
+    const regDir = join(tmp.path, "registry");
+    const projectDir = join(tmp.path, "project");
+    buildRegistry(regDir, [
+      { name: "target", source: "owner/repo", files: { "SKILL.md": "# target" } },
+      { name: "malformed", source: "owner/repo", files: { "SKILL.md": "# malformed" } },
+    ]);
+    const manifestPath = join(regDir, "index.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    delete manifest.skills.malformed.review;
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    _setRegistryDir(regDir);
+
+    const result = await installSkill("owner/repo/target", [], {
+      projectDir,
+      registryDir: regDir,
+    });
+
+    equal(result.success, false);
+    ok(result.output.includes("skills.malformed is invalid: review must be an object"));
+    equal(securityCheckForSkillPath("owner/repo/target"), null);
+  });
 });
 
 describe("installSkill", () => {

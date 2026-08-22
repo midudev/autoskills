@@ -21,8 +21,33 @@ type CreateTweetRequest = CreateTweetBase &
     | { text?: string; media: NonEmptyTweetMedia }
   );
 
+function assertCreateTweetRequest(request: unknown): asserts request is CreateTweetRequest {
+  if (request === null || typeof request !== "object" || Array.isArray(request)) {
+    throw new Error("CreateTweetRequest must be an object.");
+  }
+  const value = request as Record<string, unknown>;
+  if (typeof value.account !== "string" || !value.account.trim()) {
+    throw new Error("account must be a nonempty string.");
+  }
+  const hasText = typeof value.text === "string" && value.text.trim().length > 0;
+  if (value.text !== undefined && !hasText) {
+    throw new Error("text must be a nonempty string when present.");
+  }
+  const hasMedia =
+    Array.isArray(value.media) &&
+    value.media.length >= 1 &&
+    value.media.length <= 4 &&
+    value.media.every((item) => typeof item === "string" && item.trim().length > 0);
+  if (value.media !== undefined && !hasMedia) {
+    throw new Error("media must contain 1-4 nonempty URLs.");
+  }
+  if (!hasText && !hasMedia) {
+    throw new Error("Provide nonempty text, nonempty media, or both.");
+  }
+}
+
 // Validate media MIME types before the request. Allow up to 4 images or exactly
-// 1 MP4. A request must include nonempty text, nonempty media, or both.
+// 1 MP4. Call assertCreateTweetRequest immediately before POST /api/v1/x/tweets.
 
 type XWriteStatus =
   | "accepted"

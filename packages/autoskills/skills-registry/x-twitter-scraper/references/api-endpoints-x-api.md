@@ -1,6 +1,8 @@
 # Xquik REST API endpoints: direct X lookups
 
-These metered operations require account access.
+These metered reads require Xquik credentials. Public tweet, article, search,
+and profile lookups do not require a connected X account. Connect an X account
+only for sections that explicitly require private or account-scoped access.
 
 ## Get tweet
 

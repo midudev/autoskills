@@ -2,6 +2,10 @@
 
 ## List events
 
+Events can contain private monitor data. Show the exact monitor or keyword
+monitor, event type filters, page size, cursor, destination, and retention.
+Require explicit approval for that scope before reading a page.
+
 ```http
 GET /events
 ```
@@ -52,6 +56,9 @@ Keyword events set `monitorType` to `keyword`. They include `monitorId`,
 Keyword events omit `username`.
 
 ## Get event
+
+Show the exact event ID and its monitor or account scope when known. Require
+explicit approval before retrieving the event or delivering its contents.
 
 ```http
 GET /events/{id}

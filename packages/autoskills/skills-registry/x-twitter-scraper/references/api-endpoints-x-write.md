@@ -44,7 +44,7 @@ exception.
 ## Create tweet
 
 ```http
-POST /x/tweets
+POST /api/v1/x/tweets
 ```
 
 Get approval first. Preview the final text, account, reply target,
@@ -66,7 +66,7 @@ The API returns `XWriteAction` with HTTP 200 or 202.
 ## Delete tweet
 
 ```http
-DELETE /x/tweets/{id}
+DELETE /api/v1/x/tweets/{id}
 ```
 
 This action is destructive. Tweet deletion is irreversible through this API. Show
@@ -79,7 +79,7 @@ The API returns `XWriteAction` with HTTP 200 or 202.
 ## Like tweet
 
 ```http
-POST /x/tweets/{id}/like
+POST /api/v1/x/tweets/{id}/like
 ```
 
 Get approval first. A like is an account-affecting engagement signal. The
@@ -90,7 +90,7 @@ Send `{ "account": "username" }`
 ## Unlike tweet
 
 ```http
-DELETE /x/tweets/{id}/like
+DELETE /api/v1/x/tweets/{id}/like
 ```
 
 Get approval first. Confirm the account and tweet ID before removing this
@@ -101,7 +101,7 @@ Send `{ "account": "username" }`.
 ## Retweet
 
 ```http
-POST /x/tweets/{id}/retweet
+POST /api/v1/x/tweets/{id}/retweet
 ```
 
 Get approval first. A retweet republishes content to the account's audience.
@@ -112,7 +112,7 @@ Send `{ "account": "username" }`
 ## Unretweet
 
 ```http
-DELETE /x/tweets/{id}/retweet
+DELETE /api/v1/x/tweets/{id}/retweet
 ```
 
 Get approval first. Confirm the account and tweet ID before removing the
@@ -123,7 +123,7 @@ Send `{ "account": "username" }`.
 ## Follow user
 
 ```http
-POST /x/users/{id}/follow
+POST /api/v1/x/users/{id}/follow
 ```
 
 Get approval first. Following changes the account's public social graph.
@@ -136,7 +136,7 @@ Possible errors include `502 x_write_failed`.
 ## Unfollow user
 
 ```http
-DELETE /x/users/{id}/follow
+DELETE /api/v1/x/users/{id}/follow
 ```
 
 Get approval first. Confirm the account and target user before changing the
@@ -147,7 +147,7 @@ Send `{ "account": "username" }`.
 ## Remove follower
 
 ```http
-POST /x/users/{id}/remove-follower
+POST /api/v1/x/users/{id}/remove-follower
 ```
 
 Remove a user from your followers without blocking them.
@@ -162,7 +162,7 @@ This call is metered.
 ## Send DM
 
 ```http
-POST /x/dm/{userId}
+POST /api/v1/x/dm/{userId}
 ```
 
 This sends private data. Preview the exact recipient, account, message, and
@@ -180,7 +180,7 @@ Send this body:
 ## Update profile
 
 ```http
-PATCH /x/profile
+PATCH /api/v1/x/profile
 ```
 
 This changes public identity fields. Preview every changed field and confirm the exact
@@ -191,7 +191,7 @@ Send `{ "account": "username", "name": "...", "description": "...", "location": 
 ## Update avatar
 
 ```http
-PATCH /x/profile/avatar
+PATCH /api/v1/x/profile/avatar
 ```
 
 Update the profile image with a GIF, JPEG, or PNG file up to 700 KB. This call is metered.
@@ -204,7 +204,7 @@ Send FormData with required `account` and `file` fields. The file limit is 700 K
 ## Update banner
 
 ```http
-PATCH /x/profile/banner
+PATCH /api/v1/x/profile/banner
 ```
 
 Update the profile banner with a GIF, JPEG, or PNG file up to 2 MB. This call is metered.
@@ -217,7 +217,7 @@ Send FormData with required `account` and `file` fields. The file limit is 2 MB.
 ## Upload media
 
 ```http
-POST /x/media
+POST /api/v1/x/media
 ```
 
 Get approval first. Media upload transfers a file or remote URL for later
@@ -230,7 +230,7 @@ The API returns `mediaId`, `mediaUrl`, and `success`. Pass `mediaUrl` in the `me
 ## Create community
 
 ```http
-POST /x/communities
+POST /api/v1/x/communities
 ```
 
 Get approval first. Community creation is a persistent public action.
@@ -241,7 +241,7 @@ Send `{ "account": "username", "name": "...", "description": "..." }`. Every fie
 ## Delete community
 
 ```http
-DELETE /x/communities/{id}
+DELETE /api/v1/x/communities/{id}
 ```
 
 This action is destructive. Community deletion is irreversible through this API.
@@ -252,7 +252,7 @@ Send `{ "account": "username", "community_name": "..." }`. Use the name to confi
 ## Join community
 
 ```http
-POST /x/communities/{id}/join
+POST /api/v1/x/communities/{id}/join
 ```
 
 Get approval first. Joining changes public community membership. Confirm the
@@ -265,7 +265,7 @@ Possible errors include `409 already_member`.
 ## Leave community
 
 ```http
-DELETE /x/communities/{id}/join
+DELETE /api/v1/x/communities/{id}/join
 ```
 
 Get approval first. Leaving changes public community membership. Confirm the
@@ -276,7 +276,7 @@ Send `{ "account": "username" }`
 ## Get write action status
 
 ```http
-GET /x/write-actions/{id}
+GET /api/v1/x/write-actions/{id}
 ```
 
 Check a pending write action by the ID returned from an earlier write response.

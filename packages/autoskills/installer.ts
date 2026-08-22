@@ -58,6 +58,7 @@ export interface Registry {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let _cachedRegistry: Registry | null | undefined;
+let _cachedRegistryIssue: string | null = null;
 let _cachedRegistryDir: string | null = null;
 let _cachedPackageVersion: string | null | undefined;
 
@@ -166,6 +167,8 @@ function registryIssue(registry: unknown): string | null {
       return `skills contains duplicate path ${normalizedSkillName}`;
     }
     normalizedSkillNames.add(normalizedSkillName);
+    const entryIssue = registryEntryIssue(registry.skills[skillName]);
+    if (entryIssue) return `skills.${skillName} is invalid: ${entryIssue}`;
   }
   return null;
 }
@@ -206,14 +209,18 @@ export function loadRegistry(): Registry | null {
   const manifestPath = join(getRegistryDir(), "index.json");
   try {
     const parsed: unknown = JSON.parse(readFileSync(manifestPath, "utf-8"));
-    if (registryIssue(parsed)) {
+    const issue = registryIssue(parsed);
+    if (issue) {
+      _cachedRegistryIssue = issue;
       _cachedRegistry = null;
       return null;
     }
+    _cachedRegistryIssue = null;
     const body = parsed as unknown as Registry;
     _cachedRegistry = body;
     return body;
   } catch {
+    _cachedRegistryIssue = null;
     _cachedRegistry = null;
     return null;
   }
@@ -223,6 +230,7 @@ export function loadRegistry(): Registry | null {
 export function _setRegistryDir(dir: string | null): void {
   _cachedRegistryDir = dir;
   _cachedRegistry = undefined;
+  _cachedRegistryIssue = null;
 }
 
 // ── Integrity ────────────────────────────────────────────────
@@ -638,8 +646,15 @@ export async function installSkill(
 
   const registry = loadRegistry();
   if (!registry) {
+    const targetPrefix = `skills.${skillName} is invalid: `;
+    if (_cachedRegistryIssue?.startsWith(targetPrefix)) {
+      return fail(
+        `skill '${skillName}' has invalid registry metadata: ${_cachedRegistryIssue.slice(targetPrefix.length)}.`,
+      );
+    }
+    const detail = _cachedRegistryIssue ? ` Invalid registry: ${_cachedRegistryIssue}.` : "";
     return fail(
-      `skills-registry index not found. Run 'pnpm sync:skills' in the autoskills package.`,
+      `skills-registry index not found. Run 'pnpm sync:skills' in the autoskills package.${detail}`,
     );
   }
 

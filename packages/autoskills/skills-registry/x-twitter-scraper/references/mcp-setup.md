@@ -148,6 +148,7 @@ async def run_xquik(api_key: str) -> str:
             "url": "https://xquik.com/mcp",
             "headers": {"Authorization": f"Bearer {api_key}"},
         },
+        require_approval={"explore": "never", "xquik": "always"},
     ) as server:
         agent = Agent(
             name="Xquik agent",
