@@ -2,6 +2,9 @@
 
 ## List trends
 
+Before either metered request, show `woeid`, `count`, and published usage.
+Require explicit approval to spend credits on that exact request.
+
 ```http
 GET /x/trends?woeid=1&count=30
 GET /trends?woeid=1&count=30

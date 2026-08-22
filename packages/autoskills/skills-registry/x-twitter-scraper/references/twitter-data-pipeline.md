@@ -38,8 +38,9 @@ should resume one run instead of creating another extraction blindly.
 | `complete` | Stored dataset and run record | Advance the watermark |
 | `failed` | Error class, attempt count, recovery note | Retry safely or stop |
 
-Use a deterministic key from the query version and time window. Reject a second
-active run with the same key.
+Normalize the complete creation payload with sorted keys. Include the target,
+`toolType`, every filter, `resultsLimit`, query version, and time window. Hash
+that payload as the run key. Reject a second active run with the same key.
 
 ### How do I automate tweet export?
 

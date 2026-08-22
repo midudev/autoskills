@@ -31,6 +31,7 @@ HEADERS = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 import time, random
 
 MAX_RETRY_DELAY_SECONDS = 30.0
+MAX_JSON_RESPONSE_BYTES = 16 * 1024 * 1024
 
 def sleep_before_retry(delay, deadline=None):
     if deadline is None:
@@ -40,6 +41,26 @@ def sleep_before_retry(delay, deadline=None):
     if remaining <= 0:
         raise TimeoutError("Request deadline reached")
     time.sleep(min(delay, remaining))
+
+def read_response_with_deadline(response, deadline, max_bytes=None):
+    """Read bounded chunks under one total deadline."""
+    chunks = []
+    total = 0
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("Response body deadline reached")
+        connection = getattr(getattr(response.fp, "raw", None), "_sock", None)
+        if connection is None:
+            raise RuntimeError("Response socket unavailable")
+        connection.settimeout(remaining)
+        chunk = response.read1(64 * 1024)
+        if not chunk:
+            return b"".join(chunks)
+        total += len(chunk)
+        if max_bytes is not None and total > max_bytes:
+            raise RuntimeError("Response body exceeds the configured limit")
+        chunks.append(chunk)
 
 def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None):
     if max_retries < 0:
@@ -60,10 +81,13 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
             f"{BASE}{path}", data=body, headers=HEADERS, method=method
         )
 
+        attempt_deadline = min(deadline, time.monotonic() + 30) if deadline is not None else time.monotonic() + 30
         try:
-            timeout = min(30, remaining) if remaining is not None else 30
+            timeout = max(0.001, attempt_deadline - time.monotonic())
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                response_body = response.read()
+                response_body = read_response_with_deadline(
+                    response, attempt_deadline, MAX_JSON_RESPONSE_BYTES
+                )
                 if response.status == 204 or not response_body:
                     return None
                 content_type = response.headers.get("Content-Type", "")
@@ -74,7 +98,14 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
         except urllib.error.HTTPError as error:
             status = error.code
             try:
-                payload = json.loads(error.read() or b"{}")
+                error_body = (
+                    read_response_with_deadline(
+                        error.fp, attempt_deadline, MAX_JSON_RESPONSE_BYTES
+                    )
+                    if error.fp is not None
+                    else b""
+                )
+                payload = json.loads(error_body or b"{}")
             except json.JSONDecodeError:
                 payload = {"error": "request failed"}
             if not isinstance(payload, dict):
@@ -137,9 +168,10 @@ def xquik_download(path, deadline=None):
     if remaining is not None and remaining <= 0:
         raise TimeoutError("Request deadline reached")
     request = urllib.request.Request(f"{BASE}{path}", headers=HEADERS, method="GET")
-    timeout = min(30, remaining) if remaining is not None else 30
+    attempt_deadline = min(deadline, time.monotonic() + 30) if deadline is not None else time.monotonic() + 30
+    timeout = max(0.001, attempt_deadline - time.monotonic())
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read(), {
+        return read_response_with_deadline(response, attempt_deadline), {
             "contentType": response.headers.get("Content-Type", ""),
             "contentDisposition": response.headers.get("Content-Disposition", ""),
         }
@@ -339,7 +371,7 @@ def claim_event(key: str) -> str:
     raise RuntimeError("Configure a durable webhook event store.")
 
 def mark_event_processed(key: str) -> None:
-    """Atomically mark a claimed delivery or stream event as processed."""
+    """Atomically mark a claimed delivery as processed."""
     raise RuntimeError("Configure a durable webhook event store.")
 
 def release_event(key: str) -> None:
@@ -350,13 +382,18 @@ def enqueue_delivery_and_consume_nonce(event: dict, nonce: str) -> None:
     """Atomically enqueue the event and commit its pending nonce."""
     raise RuntimeError("Configure a durable webhook queue.")
 
-def safe_log_value(value: object) -> str:
-    return json.dumps(str(value), ensure_ascii=True)[:256]
+def apply_effect_and_mark_processed(key: str, event: dict) -> None:
+    """Atomically persist one effect or outbox row and mark the stream processed."""
+    raise RuntimeError("Configure transactional event effects.")
 
 def verify_signature(payload: bytes, signature: str, timestamp: str, nonce: str, secret: str) -> bool:
     if not secret or not timestamp.isdigit() or not re.fullmatch(r"[0-9a-f]{32}", nonce):
         return False
-    if abs(int(time.time() * 1000) - int(timestamp)) > 5 * 60 * 1000:
+    try:
+        signed_at = int(timestamp)
+    except ValueError:
+        return False
+    if abs(int(time.time() * 1000) - signed_at) > 5 * 60 * 1000:
         return False
     signing_input = timestamp.encode() + b"." + nonce.encode() + b"." + payload
     expected = "sha256=" + hmac.new(secret.encode(), signing_input, hashlib.sha256).hexdigest()
@@ -379,12 +416,7 @@ def read_body_with_deadline(stream, connection, length: int, timeout_seconds: fl
         remaining_bytes -= len(chunk)
     return b"".join(chunks)
 
-EVENT_HANDLERS = {
-    "tweet.new": lambda u, d: print(f"New tweet from {safe_log_value(u)}: {safe_log_value(d.get('text', ''))}"),
-    "tweet.reply": lambda u, d: print(f"Reply from {safe_log_value(u)}: {safe_log_value(d.get('text', ''))}"),
-    "tweet.quote": lambda u, d: print(f"Quote from {safe_log_value(u)}: {safe_log_value(d.get('text', ''))}"),
-    "tweet.retweet": lambda u, d: print(f"Retweet by {safe_log_value(u)}"),
-}
+SUPPORTED_EVENT_TYPES = {"tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"}
 
 def is_nonempty_string(value: object) -> bool:
     return isinstance(value, str) and bool(value)
@@ -430,8 +462,7 @@ def process_delivery(event: dict) -> None:
 
     stream_processed = False
     try:
-        EVENT_HANDLERS[event["eventType"]](event.get("username", ""), event["data"])
-        mark_event_processed(stream_key)
+        apply_effect_and_mark_processed(stream_key, event)
         stream_processed = True
         mark_event_processed(delivery_key)
     except Exception:
@@ -442,7 +473,7 @@ def process_delivery(event: dict) -> None:
 
 def validate_subscription_event_types(event_types: list[str]) -> None:
     """Reject subscriptions until this receiver implements every event type."""
-    unsupported = sorted(set(event_types) - EVENT_HANDLERS.keys())
+    unsupported = sorted(set(event_types) - SUPPORTED_EVENT_TYPES)
     if unsupported:
         raise ValueError(f"Add handlers before subscribing: {', '.join(unsupported)}")
 
@@ -504,7 +535,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Invalid event envelope")
             return
         event_type = event["eventType"]
-        if event_type != "webhook.test" and event_type not in EVENT_HANDLERS:
+        if event_type != "webhook.test" and event_type not in SUPPORTED_EVENT_TYPES:
             self.send_response(503)
             self.end_headers()
             self.wfile.write(b"Handler unavailable")

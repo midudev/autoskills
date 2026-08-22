@@ -82,9 +82,20 @@ const draw = await xquikFetch("/draws", {
   method: "POST",
   body: JSON.stringify(drawRequest),
 });
+if (
+  draw === null ||
+  typeof draw !== "object" ||
+  typeof draw.id !== "string" ||
+  !draw.id
+) {
+  throw new Error("Invalid draw response.");
+}
 
 // Get the winners and draw details.
 const details = await xquikFetch(`/draws/${draw.id}`);
+if (details === null || typeof details !== "object" || !Array.isArray(details.winners)) {
+  throw new Error("Invalid draw details response.");
+}
 // details.winners: [
 //   { position: 1, authorUsername: "winner1", tweetId: "...", isBackup: false },
 //   ...

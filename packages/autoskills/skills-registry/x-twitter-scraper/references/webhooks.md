@@ -54,6 +54,8 @@ insert-if-absent operation and a 5-minute TTL.
 Live deliveries require one shared durable store for `deliveryId` and
 `streamEventId`. The examples fail closed until that store is configured. Test
 deliveries omit both IDs and do not enter this store.
+Commit each external effect and processed state in one transaction. A durable
+outbox also satisfies this rule.
 
 ### Node.js standard library
 
@@ -76,14 +78,13 @@ const eventStore = {
   async markProcessed(_key) {
     throw new Error("Configure a durable webhook event store.");
   },
+  async applyEffectAndMarkProcessed(_key, _event) {
+    throw new Error("Configure a transactional effect or durable outbox.");
+  },
   async release(_key) {
     throw new Error("Configure a durable webhook event store.");
   },
 };
-
-async function handleEvent(_event) {
-  throw new Error("Persist or durably enqueue the stream event before acknowledging.");
-}
 
 const isNonemptyString = (value) => typeof value === "string" && value.length > 0;
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -251,8 +252,7 @@ const server = createServer((req, res) => {
         return;
       }
       streamClaimed = true;
-      await handleEvent(event);
-      await eventStore.markProcessed(streamKey);
+      await eventStore.applyEffectAndMarkProcessed(streamKey, event);
       streamProcessed = true;
       await eventStore.markProcessed(deliveryKey);
       res.writeHead(200).end("OK");
@@ -315,16 +315,16 @@ def claim_event(key: str) -> str:
     raise RuntimeError("Configure a durable webhook event store.")
 
 def mark_event_processed(key: str) -> None:
-    """Mark a claimed delivery or stream event processed."""
+    """Mark a claimed delivery processed."""
     raise RuntimeError("Configure a durable webhook event store.")
 
 def release_event(key: str) -> None:
     """Release a failed pending claim so Xquik can retry it."""
     raise RuntimeError("Configure a durable webhook event store.")
 
-def handle_event(event: dict) -> None:
-    """Persist or durably enqueue the stream event before acknowledging."""
-    raise RuntimeError("Configure durable event handling.")
+def apply_effect_and_mark_processed(key: str, event: dict) -> None:
+    """Atomically persist one effect or outbox row and mark the stream processed."""
+    raise RuntimeError("Configure transactional event effects.")
 
 def is_nonempty_string(value: object) -> bool:
     return isinstance(value, str) and bool(value)
@@ -351,7 +351,11 @@ def valid_event_envelope(event: dict) -> bool:
 def verify_signature(payload: bytes, signature: str, timestamp: str, nonce: str, secret: str) -> bool:
     if not secret or not timestamp.isdigit() or not re.fullmatch(r"[0-9a-f]{32}", nonce):
         return False
-    if abs(int(time.time() * 1000) - int(timestamp)) > 5 * 60 * 1000:
+    try:
+        signed_at = int(timestamp)
+    except ValueError:
+        return False
+    if abs(int(time.time() * 1000) - signed_at) > 5 * 60 * 1000:
         return False
     signing_input = timestamp.encode() + b"." + nonce.encode() + b"." + payload
     expected = "sha256=" + hmac.new(secret.encode(), signing_input, hashlib.sha256).hexdigest()
@@ -487,8 +491,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b"Stream event already pending")
                 return
             stream_claimed = True
-            handle_event(event)
-            mark_event_processed(stream_key)
+            apply_effect_and_mark_processed(stream_key, event)
             stream_processed = True
             mark_event_processed(delivery_key)
         except Exception:
@@ -550,15 +553,12 @@ var recentNonces sync.Map
 type EventStore interface {
     ClaimPending(key string) (string, error)
     MarkProcessed(key string) error
+    ApplyEffectAndMarkProcessed(key string, event any) error
     Release(key string) error
 }
 
 // Assign one shared durable implementation before starting the server.
 var eventStore EventStore
-
-func handleEvent(_ any) error {
-    return errors.New("configure durable stream-event handling")
-}
 
 func claimNonce(nonce string) bool {
     now := time.Now().UnixMilli()
@@ -706,18 +706,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if err := handleEvent(event); err != nil {
+    if err := eventStore.ApplyEffectAndMarkProcessed(streamKey, event); err != nil {
         _ = eventStore.Release(streamKey)
         _ = eventStore.Release(deliveryKey)
         releaseNonce(nonce)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
-        return
-    }
-    if err := eventStore.MarkProcessed(streamKey); err != nil {
-        _ = eventStore.Release(streamKey)
-        _ = eventStore.Release(deliveryKey)
-        releaseNonce(nonce)
-        http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
         return
     }
     if err := eventStore.MarkProcessed(deliveryKey); err != nil {
