@@ -169,7 +169,7 @@ See [direct lookups](api-endpoints-x-api.md) for the exact names.
 | Using `compose` when the user wants to send a tweet | `POST /compose` creates drafts. Use `POST /x/tweets` to send. |
 | Using `POST /x/tweets` when the user wants writing help | Use compose, refine, and score instead. |
 | Falling back to web search after an API error | Keep data already fetched from Xquik. |
-| Skipping account checks before metered calls | Attempt the requested call. On 402, explain the account state and direct the user to the dashboard. |
+| Skipping a separate balance query before metered calls | Skip only the balance query. Before draws, media downloads, or extractions, validate the estimate or published limit. Require explicit approval, then send the unchanged request. On 402, explain the account state and direct the user to the dashboard. |
 | Passing API keys in code | The server adds authentication. Do not include keys. |
 | Using `explore` for API calls | `explore` searches the API spec. Use `xquik` for API calls. |
 | Looking up follow or DM targets by username | These routes need a numeric user ID. Resolve it through `GET /x/users/{id}` first. |

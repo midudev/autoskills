@@ -112,6 +112,10 @@ function claimNonce(nonce) {
   return true;
 }
 
+function releaseNonce(nonce) {
+  recentNonces.delete(nonce);
+}
+
 function verifySignature(payload, signature, timestamp, nonce, secret) {
   if (![signature, timestamp, nonce, secret].every((value) => typeof value === "string" && value.length > 0)) return false;
   if (!/^\d+$/.test(timestamp) || !/^[0-9a-f]{32}$/.test(nonce)) return false;
@@ -174,10 +178,7 @@ const server = createServer((req, res) => {
     const timestamp = req.headers["x-xquik-timestamp"];
     const nonce = req.headers["x-xquik-nonce"];
 
-    if (
-      !verifySignature(payload, signature, timestamp, nonce, WEBHOOK_SECRET) ||
-      !claimNonce(nonce)
-    ) {
+    if (!verifySignature(payload, signature, timestamp, nonce, WEBHOOK_SECRET)) {
       res.writeHead(401).end("Invalid signature");
       return;
     }
@@ -204,6 +205,11 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (!claimNonce(nonce)) {
+      res.writeHead(409).end("Nonce already used");
+      return;
+    }
+
     if (event.eventType === "webhook.test") {
       res.writeHead(200).end("Test accepted");
       return;
@@ -214,6 +220,7 @@ const server = createServer((req, res) => {
     try {
       deliveryClaim = await eventStore.claimPending(deliveryKey);
     } catch {
+      releaseNonce(nonce);
       res.writeHead(503).end("Event store unavailable");
       return;
     }
@@ -222,6 +229,7 @@ const server = createServer((req, res) => {
       return;
     }
     if (deliveryClaim !== "claimed") {
+      releaseNonce(nonce);
       res.writeHead(409).end("Delivery already pending");
       return;
     }
@@ -238,6 +246,7 @@ const server = createServer((req, res) => {
       }
       if (streamClaim !== "claimed") {
         await eventStore.release(deliveryKey);
+        releaseNonce(nonce);
         res.writeHead(409).end("Stream event already pending");
         return;
       }
@@ -252,9 +261,11 @@ const server = createServer((req, res) => {
         if (streamClaimed && !streamProcessed) await eventStore.release(streamKey);
         await eventStore.release(deliveryKey);
       } catch {
+        releaseNonce(nonce);
         res.writeHead(503).end("Event store unavailable");
         return;
       }
+      releaseNonce(nonce);
       res.writeHead(500).end("Handler failed");
     }
   });
@@ -295,6 +306,9 @@ def claim_nonce(nonce: str) -> bool:
         return False
     RECENT_NONCES[nonce] = now + 5 * 60 * 1000
     return True
+
+def release_nonce(nonce: str) -> None:
+    RECENT_NONCES.pop(nonce, None)
 
 def claim_event(key: str) -> str:
     """Atomically create a durable lease or return pending or processed."""
@@ -343,9 +357,25 @@ def verify_signature(payload: bytes, signature: str, timestamp: str, nonce: str,
     expected = "sha256=" + hmac.new(secret.encode(), signing_input, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
 
+def read_body_with_deadline(stream, connection, length: int, timeout_seconds: float) -> bytes:
+    """Read one socket chunk at a time under one total deadline."""
+    deadline = time.monotonic() + timeout_seconds
+    chunks: list[bytes] = []
+    remaining_bytes = length
+    while remaining_bytes:
+        remaining_seconds = deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            raise TimeoutError("Request body deadline reached")
+        connection.settimeout(remaining_seconds)
+        chunk = stream.read1(min(64 * 1024, remaining_bytes))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining_bytes -= len(chunk)
+    return b"".join(chunks)
+
 class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        self.connection.settimeout(10)
         signature = self.headers.get("X-Xquik-Signature", "")
         timestamp = self.headers.get("X-Xquik-Timestamp", "")
         nonce = self.headers.get("X-Xquik-Nonce", "")
@@ -359,8 +389,8 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Request body too large or missing")
             return
         try:
-            payload = self.rfile.read(length)
-        except socket.timeout:
+            payload = read_body_with_deadline(self.rfile, self.connection, length, 10.0)
+        except (socket.timeout, TimeoutError):
             self.close_connection = True
             self.send_response(408)
             self.end_headers()
@@ -372,7 +402,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Incomplete request body")
             return
 
-        if not verify_signature(payload, signature, timestamp, nonce, WEBHOOK_SECRET) or not claim_nonce(nonce):
+        if not verify_signature(payload, signature, timestamp, nonce, WEBHOOK_SECRET):
             self.send_response(401)
             self.end_headers()
             self.wfile.write(b"Invalid signature")
@@ -404,6 +434,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Handler unavailable")
             return
 
+        if not claim_nonce(nonce):
+            self.send_response(409)
+            self.end_headers()
+            self.wfile.write(b"Nonce already used")
+            return
+
         if event_type == "webhook.test":
             self.send_response(200)
             self.end_headers()
@@ -415,6 +451,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
         try:
             delivery_claim = claim_event(delivery_key)
         except Exception:
+            release_nonce(nonce)
             self.send_response(503)
             self.end_headers()
             self.wfile.write(b"Event store unavailable")
@@ -425,6 +462,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Already processed")
             return
         if delivery_claim != "claimed":
+            release_nonce(nonce)
             self.send_response(409)
             self.end_headers()
             self.wfile.write(b"Delivery already pending")
@@ -443,6 +481,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 return
             if stream_claim != "claimed":
                 release_event(delivery_key)
+                release_nonce(nonce)
                 self.send_response(409)
                 self.end_headers()
                 self.wfile.write(b"Stream event already pending")
@@ -459,6 +498,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
                 release_event(delivery_key)
             except Exception:
                 pass
+            release_nonce(nonce)
             self.send_response(500)
             self.end_headers()
             self.wfile.write(b"Handler failed")
@@ -532,6 +572,10 @@ func claimNonce(nonce string) bool {
     return !replayed
 }
 
+func releaseNonce(nonce string) {
+    recentNonces.Delete(nonce)
+}
+
 func verifySignature(payload []byte, signature, timestamp, nonce, secret string) bool {
     if secret == "" {
         return false
@@ -568,7 +612,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
     timestamp := r.Header.Get("X-Xquik-Timestamp")
     nonce := r.Header.Get("X-Xquik-Nonce")
 
-    if !verifySignature(payload, signature, timestamp, nonce, webhookSecret) || !claimNonce(nonce) {
+    if !verifySignature(payload, signature, timestamp, nonce, webhookSecret) {
         http.Error(w, "Invalid signature", http.StatusUnauthorized)
         return
     }
@@ -594,6 +638,10 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
             http.Error(w, "Invalid test event envelope", http.StatusBadRequest)
             return
         }
+        if !claimNonce(nonce) {
+            http.Error(w, "Nonce already used", http.StatusConflict)
+            return
+        }
         fmt.Fprint(w, "Test accepted")
         return
     }
@@ -611,10 +659,16 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    if !claimNonce(nonce) {
+        http.Error(w, "Nonce already used", http.StatusConflict)
+        return
+    }
+
     deliveryKey := "delivery:" + event.DeliveryID
     streamKey := "stream:" + event.StreamEventID
     deliveryClaim, err := eventStore.ClaimPending(deliveryKey)
     if err != nil {
+        releaseNonce(nonce)
         http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
         return
     }
@@ -623,6 +677,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
     if deliveryClaim != "claimed" {
+        releaseNonce(nonce)
         http.Error(w, "Delivery already pending", http.StatusConflict)
         return
     }
@@ -630,12 +685,14 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
     streamClaim, err := eventStore.ClaimPending(streamKey)
     if err != nil {
         _ = eventStore.Release(deliveryKey)
+        releaseNonce(nonce)
         http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
         return
     }
     if streamClaim == "processed" {
         if err := eventStore.MarkProcessed(deliveryKey); err != nil {
             _ = eventStore.Release(deliveryKey)
+            releaseNonce(nonce)
             http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
             return
         }
@@ -644,6 +701,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
     }
     if streamClaim != "claimed" {
         _ = eventStore.Release(deliveryKey)
+        releaseNonce(nonce)
         http.Error(w, "Stream event already pending", http.StatusConflict)
         return
     }
@@ -651,17 +709,20 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
     if err := handleEvent(event); err != nil {
         _ = eventStore.Release(streamKey)
         _ = eventStore.Release(deliveryKey)
+        releaseNonce(nonce)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
         return
     }
     if err := eventStore.MarkProcessed(streamKey); err != nil {
         _ = eventStore.Release(streamKey)
         _ = eventStore.Release(deliveryKey)
+        releaseNonce(nonce)
         http.Error(w, "Event store unavailable", http.StatusServiceUnavailable)
         return
     }
     if err := eventStore.MarkProcessed(deliveryKey); err != nil {
         _ = eventStore.Release(deliveryKey)
+        releaseNonce(nonce)
         http.Error(w, "Handler failed", http.StatusInternalServerError)
         return
     }

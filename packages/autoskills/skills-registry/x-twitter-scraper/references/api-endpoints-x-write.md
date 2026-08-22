@@ -59,7 +59,7 @@ Send this body:
 | `reply_to_tweet_id` | string | No | Tweet ID to reply to |
 | `community_id` | string | No | Community ID to post into |
 | `is_note_tweet` | boolean | No | Long-form note tweet up to 25,000 characters |
-| `media` | string[] | No | Up to 4 image URLs, or exactly 1 MP4 URL. `POST /x/media` returns usable `mediaUrl` values |
+| `media` | string[] | No | Up to 4 image URLs, or exactly 1 MP4 URL. `POST /api/v1/x/media` returns usable `mediaUrl` values |
 
 The API returns `XWriteAction` with HTTP 200 or 202.
 

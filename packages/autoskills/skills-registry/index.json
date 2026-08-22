@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-22T20:41:18.401Z",
+  "generatedAt": "2026-08-22T21:14:59.386Z",
   "reviewer": {
     "model": "gpt-5.4",
     "promptVersion": "1.0.0"
@@ -13010,7 +13010,7 @@
     "x-twitter-scraper": {
       "source": "Xquik-dev/x-twitter-scraper",
       "skillPath": "Xquik-dev/x-twitter-scraper/x-twitter-scraper",
-      "commitSha": "412b1cfeee9c0dd439557877d41e90a08fc3b40a",
+      "commitSha": "d1517e449e9d0f25b89846d17058784b9c795184",
       "files": [
         "LICENSE",
         "SKILL.md",
@@ -13086,7 +13086,7 @@
       ],
       "sha256": {
         "LICENSE": "591a93ca295f08caf49f4417eef0a085bb64d4b208ba8f186e0f0f027aebd4b5",
-        "SKILL.md": "51584c1faa911f9bfc1ef53cdd624c7ed7dda1d134e45f39ff435e6435c32811",
+        "SKILL.md": "33ece39e3b3aaeab13dee17450f94167ebc667d0a231d44df8f7d6e10670418f",
         "metadata.json": "018f8c2f4e4192d476fd283d127de0f9df3aa18e12ccbe8f829fb50b83be45c8",
         "references/api-endpoints-api-keys.md": "43e0b6506874a1878f19776134ccc2847b2e39d71aa99c6658d345b5133ccc26",
         "references/api-endpoints-compose.md": "e613db456b9208691d7722e7053c82a96b8d10e0e7c4485298f8663bdd6ae77c",
@@ -13097,7 +13097,7 @@
         "references/api-endpoints-events.md": "1bcfad0e97d25f5ff2f76dfcf3f01d3d3f95d415bfc8125507c43f3996dcc1da",
         "references/api-endpoints-extractions.md": "2776b39d3fa8365de2e4d0b3b307100648c88222afceb6b1558fd781a4794e9d",
         "references/api-endpoints-monitors.md": "b8821854e36cdf9969f593f7f05137e1312585bbb2d6726da2da71bb1e06ddb0",
-        "references/api-endpoints-radar.md": "18f259bfd72bf8b00b1b5bf42e4918b78c4ca3798b4bb48e7dad6d743456859e",
+        "references/api-endpoints-radar.md": "96413cae56b86b116c848372082415aa6fd4354bc96429c60e5ab2396544aa89",
         "references/api-endpoints-support.md": "ac7bc4007521231f700b3d813e75844d4634bbe0ca2628f6bf9f8920461413e7",
         "references/api-endpoints-trends.md": "d0b04344a7d3aef11bcf53e11230615901d6b03f4c9a11bdaa82caffffc4b603",
         "references/api-endpoints-tweet-style-cache.md": "95643b69a9bd5b5edf73b2d91f5910c94dd68df57acf9c3f4c58b0376709d34f",
@@ -13105,7 +13105,7 @@
         "references/api-endpoints-x-accounts.md": "ddbd9ee06239814fbda041b52b1f1bbf97e4dbbfd125c9ca7307a686984b681d",
         "references/api-endpoints-x-api.md": "9e78f8c6dd7de10f419b3b0fb8a958d151e18dd83b6cba518da57181eb8f42b2",
         "references/api-endpoints-x-media.md": "8558f5b700af6679c3274d16b8c81f766223842d79c72883db15d97476402a48",
-        "references/api-endpoints-x-write.md": "73d0b7d3d4e9e72a7eff4baf72146b567d2be5ad239fc6259c99e844d4ad16f8",
+        "references/api-endpoints-x-write.md": "9cb987c57d97bf127960d4d143fbf04110a413a7d99973658dd7cf9cb0a251ea",
         "references/api-endpoints.md": "b736c51daa90ab45db0f219a112a12fe53ee5317260a848e0d1a0efe963c7ffe",
         "references/automate-twitter-giveaways.md": "9d0f679af3ce8c205a6953fe70be118b6dd6832e641af258e757e62720c8a241",
         "references/best-x-api-alternative.md": "e9f13386f99f666270fb29e1604e82a38ff10b5fedbbb52c3e2560d3031f1d85",
@@ -13115,9 +13115,9 @@
         "references/extract-x-community-data.md": "83c4c8990244028281c65a6ec6f60cfe3b8bc221fdf8721be90ecd66144b1bba",
         "references/extractions.md": "49e1473a907561a0fce438eb63b513ebe6dc962ea6d48f076464cfda2fa07675",
         "references/mcp-setup.md": "125183af8cc31b64c0b58aeebee9003d22ed5d45f98e4d0d1b46e315b7f3442a",
-        "references/mcp-tools.md": "56e3029d1476a2fb9ae346208369a4baaada988313087acc7e2d068dc541c825",
+        "references/mcp-tools.md": "6a1fbbe0e4b796b0bbac39896d5f308cdfb5807097d4d0be6f71f0bef7aece42",
         "references/monitor-twitter-webhooks.md": "14da94ac9413f265fa1944ecc2d044d9a4f0ee61be6133f83161df687ef0062d",
-        "references/python-examples.md": "c91649be17990f43c3d2c2a1a9b57a4478989fe97a4e081f50a5306367d4ec55",
+        "references/python-examples.md": "bc460d905ceba4058a9813bd1b9e3feab40c24d9d8f338aefcfece8a3fe30ff1",
         "references/reliable-twitter-data-api-2026.md": "2f89b3b3d6de7b526693445a4f6bf791314f4d2c09d7ebf34dd872de5b0c0cf4",
         "references/scrape-export-twitter-data.md": "0b6da058e89139a7aa8f6f0bcfc09df08814d4b4f0206cdec679185273a980c4",
         "references/security.md": "9b024a4b59fe26c7525cf097f13d26bb3b8065a9cea27e5114d8ec38286455fc",
@@ -13152,19 +13152,19 @@
         "references/types-x-write.md": "444092307d23b7f231c1e35c86d1bae004eaa518a48a200bc7044226101a8311",
         "references/types.md": "8de147ac05b91f035fc0af6ef998cf68a1a35fbe5b7bc75a533f14c13cfc05eb",
         "references/usage.md": "3f838b777ee1c00b3802ea78b0bcf9a0bcdfe0ad2c4098f4fa88b64c6421f6a1",
-        "references/webhooks.md": "5ed524ba6cc6a35019cfdc4fdc819eb230d02f6a88772f65e241dd6d2ee53f1d",
+        "references/webhooks.md": "759ed252039a8a588c0b90f48ae7ad696461887e4008fb274cfacb32ff3945df",
         "references/workflows.md": "6484ae58916904eab593f12f037cf295c51c54401c8c51bb92403b0276305866",
         "skill-card.md": "487b8f888af093c9ceb4b6a10e19878cf8a05699f4a333cd59ed5fb91b34a469",
-        "skillspector-report.md": "fbb0a0836bd31467b5dea64e72127ffaf5e55ec07e8f3fd5720afd2bfa21be86"
+        "skillspector-report.md": "83292d0ac38174ccab5a9dee575b4d35739d8371a973131990a81d07a88df816"
       },
-      "bundleHash": "3a5910879d36ef54fc1eb175385d9ec471f243417b15cce2b80ab5e4a6cb2f27",
+      "bundleHash": "de03e3c97bc5ff22348315a91f7e47a2b0c2a0f0a77dec90798346a2fa95a0d3",
       "review": {
         "status": "skipped",
         "flags": [],
         "summary": "review skipped (--no-review)",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-08-22T20:41:18.386Z"
+        "reviewedAt": "2026-08-22T21:14:59.371Z"
       }
     }
   }

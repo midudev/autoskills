@@ -21,8 +21,12 @@ Use these query parameters:
 
 Pass `nextCursor` as `after` for the next page:
 
-```http
-GET /radar?limit=50&after=<nextCursor>
+```javascript
+const query = new URLSearchParams({
+  limit: "50",
+  after: nextCursor,
+});
+const nextPath = `/radar?${query}`;
 ```
 
 The API returns:

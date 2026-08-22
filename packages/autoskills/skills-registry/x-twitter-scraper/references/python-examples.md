@@ -66,6 +66,10 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
                 response_body = response.read()
                 if response.status == 204 or not response_body:
                     return None
+                content_type = response.headers.get("Content-Type", "")
+                media_type = content_type.split(";", 1)[0].strip().lower()
+                if media_type != "application/json" and not media_type.endswith("+json"):
+                    raise TypeError("Expected JSON. Use xquik_download for file responses.")
                 return json.loads(response_body)
         except urllib.error.HTTPError as error:
             status = error.code
@@ -126,6 +130,19 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
             )
         )
         sleep_before_retry(delay, deadline)
+
+def xquik_download(path, deadline=None):
+    """Return bytes and selected headers from an approved GET export."""
+    remaining = deadline - time.monotonic() if deadline is not None else None
+    if remaining is not None and remaining <= 0:
+        raise TimeoutError("Request deadline reached")
+    request = urllib.request.Request(f"{BASE}{path}", headers=HEADERS, method="GET")
+    timeout = min(30, remaining) if remaining is not None else 30
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read(), {
+            "contentType": response.headers.get("Content-Type", ""),
+            "contentDisposition": response.headers.get("Content-Disposition", ""),
+        }
 ```
 
 ## Extraction workflow
@@ -280,7 +297,15 @@ WEBHOOK_SECRET = load_secret("XQUIK_WEBHOOK_SECRET")
 MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
 
 def claim_nonce(nonce: str, ttl_seconds: int) -> bool:
-    """Atomically insert a nonce when absent and retain it for the full TTL."""
+    """Atomically create a pending nonce claim unless one already exists."""
+    raise RuntimeError("Configure a shared durable webhook nonce store.")
+
+def consume_nonce(nonce: str) -> None:
+    """Atomically commit a pending nonce for its full replay window."""
+    raise RuntimeError("Configure a shared durable webhook nonce store.")
+
+def release_nonce(nonce: str) -> None:
+    """Release only a pending nonce claim after failed admission."""
     raise RuntimeError("Configure a shared durable webhook nonce store.")
 
 def claim_event(key: str) -> str:
@@ -295,8 +320,8 @@ def release_event(key: str) -> None:
     """Release a failed pending claim so Xquik can retry it."""
     raise RuntimeError("Configure a durable webhook event store.")
 
-def enqueue_delivery(event: dict) -> None:
-    """Durably enqueue the verified event before acknowledging it."""
+def enqueue_delivery_and_consume_nonce(event: dict, nonce: str) -> None:
+    """Atomically enqueue the event and commit its pending nonce."""
     raise RuntimeError("Configure a durable webhook queue.")
 
 def safe_log_value(value: object) -> str:
@@ -310,6 +335,23 @@ def verify_signature(payload: bytes, signature: str, timestamp: str, nonce: str,
     signing_input = timestamp.encode() + b"." + nonce.encode() + b"." + payload
     expected = "sha256=" + hmac.new(secret.encode(), signing_input, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+def read_body_with_deadline(stream, connection, length: int, timeout_seconds: float) -> bytes:
+    """Read one socket chunk at a time under one total deadline."""
+    deadline = time.monotonic() + timeout_seconds
+    chunks: list[bytes] = []
+    remaining_bytes = length
+    while remaining_bytes:
+        remaining_seconds = deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            raise TimeoutError("Request body deadline reached")
+        connection.settimeout(remaining_seconds)
+        chunk = stream.read1(min(64 * 1024, remaining_bytes))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining_bytes -= len(chunk)
+    return b"".join(chunks)
 
 EVENT_HANDLERS = {
     "tweet.new": lambda u, d: print(f"New tweet from {safe_log_value(u)}: {safe_log_value(d.get('text', ''))}"),
@@ -383,7 +425,6 @@ def validate_subscription_event_types(event_types: list[str]) -> None:
 
 class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        self.connection.settimeout(10)
         try:
             length = int(self.headers.get("Content-Length", ""))
         except ValueError:
@@ -398,8 +439,8 @@ class WebhookHandler(BaseHTTPRequestHandler):
         timestamp = self.headers.get("X-Xquik-Timestamp", "")
         nonce = self.headers.get("X-Xquik-Nonce", "")
         try:
-            payload = self.rfile.read(length)
-        except socket.timeout:
+            payload = read_body_with_deadline(self.rfile, self.connection, length, 10.0)
+        except (socket.timeout, TimeoutError):
             self.close_connection = True
             self.send_response(408)
             self.end_headers()
@@ -415,12 +456,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.send_response(401)
             self.end_headers()
             self.wfile.write(b"Invalid signature")
-            return
-
-        if not claim_nonce(nonce, 5 * 60):
-            self.send_response(409)
-            self.end_headers()
-            self.wfile.write(b"Nonce already used")
             return
 
         try:
@@ -443,41 +478,73 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Invalid event envelope")
             return
         event_type = event["eventType"]
-        if event_type == "webhook.test":
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"Test accepted")
-            return
-
-        if event_type not in EVENT_HANDLERS:
+        if event_type != "webhook.test" and event_type not in EVENT_HANDLERS:
             self.send_response(503)
             self.end_headers()
             self.wfile.write(b"Handler unavailable")
+            return
+
+        try:
+            nonce_claimed = claim_nonce(nonce, 5 * 60)
+        except Exception:
+            self.send_response(503)
+            self.end_headers()
+            self.wfile.write(b"Nonce store unavailable")
+            return
+        if not nonce_claimed:
+            self.send_response(409)
+            self.end_headers()
+            self.wfile.write(b"Nonce already used")
+            return
+
+        if event_type == "webhook.test":
+            try:
+                consume_nonce(nonce)
+            except Exception:
+                release_nonce(nonce)
+                self.send_response(503)
+                self.end_headers()
+                self.wfile.write(b"Nonce store unavailable")
+                return
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Test accepted")
             return
 
         delivery_key = f"delivery:{event['deliveryId']}"
         try:
             claim = claim_event(delivery_key)
         except Exception:
+            release_nonce(nonce)
             self.send_response(503)
             self.end_headers()
             self.wfile.write(b"Event store unavailable")
             return
         if claim == "processed":
+            try:
+                consume_nonce(nonce)
+            except Exception:
+                release_nonce(nonce)
+                self.send_response(503)
+                self.end_headers()
+                self.wfile.write(b"Nonce store unavailable")
+                return
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"Already processed")
             return
         if claim != "claimed":
+            release_nonce(nonce)
             self.send_response(409)
             self.end_headers()
             self.wfile.write(b"Delivery already pending")
             return
 
         try:
-            enqueue_delivery(event)
+            enqueue_delivery_and_consume_nonce(event, nonce)
         except Exception:
             release_event(delivery_key)
+            release_nonce(nonce)
             self.send_response(503)
             self.end_headers()
             self.wfile.write(b"Queue unavailable")
