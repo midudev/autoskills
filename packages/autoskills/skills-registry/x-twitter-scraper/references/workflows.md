@@ -78,7 +78,7 @@ async function xquikFetch(path, options = {}) {
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   };
   const method = (requestOptions.method || "GET").toUpperCase();
-  const retrySafe = ["GET", "HEAD", "OPTIONS"].includes(method);
+  const retrySafe = method === "GET";
   let retriedCoverageCursor = false;
 
   for (let attempt = 0; attempt <= 3; attempt++) {
@@ -158,10 +158,18 @@ async function xquikFetch(path, options = {}) {
 
 Events, draws, extractions, and extraction results use cursor-based pagination.
 When more results exist, the response includes `hasMore: true` and a
-`nextCursor` string. Pass it as `cursor`. Radar alone uses `after`.
+`nextCursor` string. Events and draws accept it as `cursor`. Radar and
+extractions accept it as `after`.
 
 ```javascript
-async function fetchAllPages(path, dataKey, maxResults, identityForItem, maxPages = 100) {
+async function fetchAllPages(
+  path,
+  dataKey,
+  maxResults,
+  identityForItem,
+  maxPages = 100,
+  cursorParameter = "cursor",
+) {
   if (!Number.isInteger(maxResults) || maxResults < 1) {
     throw new Error("maxResults must be a finite positive integer.");
   }
@@ -170,6 +178,9 @@ async function fetchAllPages(path, dataKey, maxResults, identityForItem, maxPage
   }
   if (typeof identityForItem !== "function") {
     throw new Error("identityForItem must select a stable endpoint-specific ID.");
+  }
+  if (!new Set(["cursor", "after"]).has(cursorParameter)) {
+    throw new Error("cursorParameter must be cursor or after.");
   }
 
   const results = [];
@@ -186,7 +197,7 @@ async function fetchAllPages(path, dataKey, maxResults, identityForItem, maxPage
     pageCount++;
     const remaining = maxResults - results.length;
     const params = new URLSearchParams({ limit: String(Math.min(100, remaining)) });
-    if (cursor) params.set("cursor", cursor);
+    if (cursor) params.set(cursorParameter, cursor);
 
     let data;
     try {

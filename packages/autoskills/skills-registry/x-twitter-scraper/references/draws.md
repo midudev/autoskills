@@ -50,6 +50,14 @@ const approvalProvider = globalThis.xquikApprovalProvider;
 if (typeof approvalProvider !== "function") {
   throw new Error("Configure xquikApprovalProvider before running a draw.");
 }
+const drawAttemptStore = globalThis.xquikDrawAttemptStore;
+if (
+  typeof drawAttemptStore?.load !== "function" ||
+  typeof drawAttemptStore?.save !== "function" ||
+  typeof drawAttemptStore?.markCompleted !== "function"
+) {
+  throw new Error("Configure a durable xquikDrawAttemptStore before running a draw.");
+}
 
 async function requireExplicitApproval(proposal) {
   const approvalScope = structuredClone(proposal);
@@ -88,10 +96,26 @@ if (JSON.stringify(approval) !== JSON.stringify(drawProposal)) {
   throw new Error("Approved draw request changed. Request approval again.");
 }
 
-const drawIdempotencyKey = crypto.randomUUID();
+const drawAttemptId = "giveaway-2026-08-23";
+let drawAttempt = await drawAttemptStore.load(drawAttemptId);
+if (drawAttempt === null) {
+  drawAttempt = {
+    approvedProposal: structuredClone(approval),
+    idempotencyKey: crypto.randomUUID(),
+  };
+  await drawAttemptStore.save(drawAttemptId, drawAttempt);
+}
+if (
+  JSON.stringify(drawAttempt.approvedProposal) !== JSON.stringify(approval) ||
+  typeof drawAttempt.idempotencyKey !== "string" ||
+  !drawAttempt.idempotencyKey
+) {
+  throw new Error("Stored draw attempt does not match the approved proposal.");
+}
+
 const draw = await xquikFetch("/draws", {
   method: "POST",
-  headers: { "Idempotency-Key": drawIdempotencyKey },
+  headers: { "Idempotency-Key": drawAttempt.idempotencyKey },
   body: JSON.stringify(drawRequest),
 });
 if (
@@ -102,6 +126,7 @@ if (
 ) {
   throw new Error("Invalid draw response.");
 }
+await drawAttemptStore.markCompleted(drawAttemptId, { drawId: draw.id });
 
 // Get the winners and draw details.
 const details = await xquikFetch(`/draws/${draw.id}`);
@@ -126,10 +151,11 @@ if (JSON.stringify(approvedExport) !== JSON.stringify(exportProposal)) {
 const exportUrl = `${BASE}/draws/${draw.id}/export?format=csv&type=winners`;
 ```
 
-Persist `drawIdempotencyKey` with the approved proposal before submission.
-Never retry `POST /draws` automatically. If its response is lost, preserve the
-key and inspect `statusUrl`. Start a new attempt only when `safeToRetry` is true.
-Require new approval and a new key for that attempt.
+Use a stable `drawAttemptId` from the surrounding workflow. The durable store
+must retain the approved proposal and idempotency key before submission. After
+a lost response, load the same attempt and reuse both values. Never retry
+`POST /draws` automatically. Start a new attempt only when `safeToRetry` is
+true. Require new approval, a new attempt ID, and a new key for that attempt.
 
 ## Twitter giveaway draw usage
 

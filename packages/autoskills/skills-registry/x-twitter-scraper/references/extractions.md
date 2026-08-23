@@ -278,12 +278,13 @@ The status is `pending`, `running`, `completed`, or `failed`.
 
 ## Retrieving results
 
-```http
-GET /extractions/{id}?limit=1000&cursor=<nextCursor>
+```javascript
+const params = new URLSearchParams({ limit: "1000", after: nextCursor });
+const page = await xquikFetch(`/extractions/${extractionId}?${params}`);
 ```
 
 The endpoint returns up to 1,000 results per page. When `hasMore` is true, send
-the returned `nextCursor` unchanged as the next request's `cursor`. Each result
+the returned `nextCursor` unchanged as the next request's `after` value. Each result
 includes:
 
 - `xUserId`, `xUsername`, `xDisplayName`

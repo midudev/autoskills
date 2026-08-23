@@ -78,7 +78,7 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
 
     base_delay = 1.0
     method = method.upper()
-    retry_safe = method in {"GET", "HEAD", "OPTIONS"}
+    retry_safe = method == "GET"
     retried_coverage_cursor = False
 
     for attempt in range(max_retries + 1):
@@ -284,7 +284,7 @@ results = []
 while True:
     path = f"/extractions/{job['id']}"
     if cursor:
-        path += "?" + urllib.parse.urlencode({"limit": 1000, "cursor": cursor})
+        path += "?" + urllib.parse.urlencode({"limit": 1000, "after": cursor})
     else:
         path += "?limit=1000"
     page = xquik_fetch(path)
