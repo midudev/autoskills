@@ -334,6 +334,10 @@ const approvedExport = await requireExplicitApproval(exportProposal);
 if (JSON.stringify(approvedExport) !== JSON.stringify(exportProposal)) {
   throw new Error("Approved export changed. Request approval again.");
 }
+const approvedExportWriter = globalThis.xquikApprovedExportWriter;
+if (typeof approvedExportWriter !== "function") {
+  throw new Error("Configure the approved xquikApprovedExportWriter first.");
+}
 const exportUrl = `${BASE}/extractions/${encodeURIComponent(approvedExport.jobId)}/export?format=${encodeURIComponent(approvedExport.format)}`;
 const { response: csvResponse, body: csvData } = await fetchTextWithTimeout(
   exportUrl,
@@ -342,6 +346,13 @@ const { response: csvResponse, body: csvData } = await fetchTextWithTimeout(
 if (!csvResponse.ok) {
   throw new Error(`Xquik export failed with HTTP ${csvResponse.status}.`);
 }
+await approvedExportWriter({
+  destination: approvedExport.storage,
+  jobId: approvedExport.jobId,
+  format: approvedExport.format,
+  contentType: csvResponse.headers.get("Content-Type") || "text/csv",
+  data: csvData,
+});
 ```
 
 ## Real-time monitoring setup

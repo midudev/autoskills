@@ -260,37 +260,42 @@ export function verifyRegistryEntry(
   const manifestIssue = registryEntryIssue(entry);
   if (manifestIssue) return { ok: false, reason: `invalid manifest: ${manifestIssue}` };
 
-  const skillDir = join(registryDir, skillName);
-  if (!existsSync(skillDir)) {
-    return { ok: false, reason: `missing directory ${skillDir}` };
-  }
-  if (!lstatSync(skillDir).isDirectory()) {
-    return { ok: false, reason: `invalid directory ${skillDir}` };
-  }
-  const declaredFiles = new Set(entry.files.map(normalizeRegistryRelPath));
-  const unexpectedFile = listSkillFiles(skillDir).find((rel) => !declaredFiles.has(rel));
-  if (unexpectedFile) {
-    return { ok: false, reason: `unexpected file ${unexpectedFile}` };
-  }
-  for (const rel of entry.files) {
-    const normalizedRel = normalizeRegistryRelPath(rel);
-    const abs = join(skillDir, ...normalizedRel.split("/"));
-    if (!existsSync(abs)) {
-      return { ok: false, reason: `missing file ${normalizedRel}` };
+  try {
+    const skillDir = join(registryDir, skillName);
+    if (!existsSync(skillDir)) {
+      return { ok: false, reason: `missing directory ${skillDir}` };
     }
-    if (!lstatSync(abs).isFile()) {
-      return { ok: false, reason: `invalid file ${normalizedRel}` };
+    if (!lstatSync(skillDir).isDirectory()) {
+      return { ok: false, reason: `invalid directory ${skillDir}` };
     }
-    const expected = entry.sha256[rel] || entry.sha256[normalizedRel];
-    if (!expected) {
-      return { ok: false, reason: `no recorded hash for ${normalizedRel}` };
+    const declaredFiles = new Set(entry.files.map(normalizeRegistryRelPath));
+    const unexpectedFile = listSkillFiles(skillDir).find((rel) => !declaredFiles.has(rel));
+    if (unexpectedFile) {
+      return { ok: false, reason: `unexpected file ${unexpectedFile}` };
     }
-    const actual = sha256File(abs);
-    if (actual !== expected) {
-      return { ok: false, reason: `hash mismatch for ${normalizedRel}` };
+    for (const rel of entry.files) {
+      const normalizedRel = normalizeRegistryRelPath(rel);
+      const abs = join(skillDir, ...normalizedRel.split("/"));
+      if (!existsSync(abs)) {
+        return { ok: false, reason: `missing file ${normalizedRel}` };
+      }
+      if (!lstatSync(abs).isFile()) {
+        return { ok: false, reason: `invalid file ${normalizedRel}` };
+      }
+      const expected = entry.sha256[rel] || entry.sha256[normalizedRel];
+      if (!expected) {
+        return { ok: false, reason: `no recorded hash for ${normalizedRel}` };
+      }
+      const actual = sha256File(abs);
+      if (actual !== expected) {
+        return { ok: false, reason: `hash mismatch for ${normalizedRel}` };
+      }
     }
+    return { ok: true };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason: `verification failed: ${detail}` };
   }
-  return { ok: true };
 }
 
 // ── Install ──────────────────────────────────────────────────

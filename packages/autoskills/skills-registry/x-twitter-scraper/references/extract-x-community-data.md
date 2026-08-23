@@ -65,7 +65,8 @@ Common member fields can include stable user ID, username, display name, profile
 image, follower count, and verification state. Optional profile fields depend
 on source availability.
 
-Deduplicate by user ID. Do not treat a username change as a new member.
+Deduplicate by snapshot ID and user ID within each snapshot. Preserve the same
+user across snapshots. Do not treat a username change as a new member.
 
 ### How do I export community tweets?
 

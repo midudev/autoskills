@@ -1,6 +1,14 @@
 import { describe, it } from "node:test";
 import { ok, equal, deepEqual } from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 
@@ -171,6 +179,26 @@ describe("verifyRegistryEntry", () => {
 
     equal(verdict.ok, false);
     equal(verdict.reason, "unexpected file unlisted.txt");
+  });
+
+  it("returns a failed verdict when registry traversal fails", () => {
+    const regDir = join(tmp.path, "registry");
+    buildRegistry(regDir, [
+      { name: "my-skill", source: "owner/repo", files: { "SKILL.md": "# hi" } },
+    ]);
+    const unreadableDir = join(regDir, "my-skill", "unreadable");
+    mkdirSync(unreadableDir);
+    chmodSync(unreadableDir, 0o000);
+    const manifest = JSON.parse(readFileSync(join(regDir, "index.json"), "utf-8"));
+
+    try {
+      const verdict = verifyRegistryEntry("my-skill", manifest.skills["my-skill"], regDir);
+
+      equal(verdict.ok, false);
+      ok(verdict.reason?.startsWith("verification failed:"));
+    } finally {
+      chmodSync(unreadableDir, 0o700);
+    }
   });
 
   it("rejects unsafe registry paths before installation", async () => {

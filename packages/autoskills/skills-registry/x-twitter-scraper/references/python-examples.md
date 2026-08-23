@@ -112,19 +112,22 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
         except urllib.error.HTTPError as error:
             status = error.code
             try:
-                error_body = (
-                    read_response_with_deadline(
-                        error.fp, attempt_deadline, MAX_JSON_RESPONSE_BYTES
+                try:
+                    error_body = (
+                        read_response_with_deadline(
+                            error.fp, attempt_deadline, MAX_JSON_RESPONSE_BYTES
+                        )
+                        if error.fp is not None
+                        else b""
                     )
-                    if error.fp is not None
-                    else b""
-                )
-                payload = json.loads(error_body or b"{}")
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                payload = {"error": "request failed"}
-            if not isinstance(payload, dict):
-                payload = {}
-            retry_after = error.headers.get("Retry-After")
+                    payload = json.loads(error_body or b"{}")
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    payload = {"error": "request failed"}
+                if not isinstance(payload, dict):
+                    payload = {}
+                retry_after = error.headers.get("Retry-After")
+            finally:
+                error.close()
         except urllib.error.URLError:
             if not retry_safe or attempt == max_retries:
                 raise
