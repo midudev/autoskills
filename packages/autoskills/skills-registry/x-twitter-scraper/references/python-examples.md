@@ -120,7 +120,7 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
                     else b""
                 )
                 payload = json.loads(error_body or b"{}")
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 payload = {"error": "request failed"}
             if not isinstance(payload, dict):
                 payload = {}

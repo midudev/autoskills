@@ -52,8 +52,7 @@ if (typeof approvalProvider !== "function") {
 }
 const drawAttemptStore = globalThis.xquikDrawAttemptStore;
 if (
-  typeof drawAttemptStore?.load !== "function" ||
-  typeof drawAttemptStore?.save !== "function" ||
+  typeof drawAttemptStore?.getOrCreate !== "function" ||
   typeof drawAttemptStore?.markCompleted !== "function"
 ) {
   throw new Error("Configure a durable xquikDrawAttemptStore before running a draw.");
@@ -96,15 +95,17 @@ if (JSON.stringify(approval) !== JSON.stringify(drawProposal)) {
   throw new Error("Approved draw request changed. Request approval again.");
 }
 
-const drawAttemptId = "giveaway-2026-08-23";
-let drawAttempt = await drawAttemptStore.load(drawAttemptId);
-if (drawAttempt === null) {
-  drawAttempt = {
+const drawAttemptId = globalThis.xquikDrawAttemptId;
+if (typeof drawAttemptId !== "string" || !drawAttemptId) {
+  throw new Error("Supply a unique xquikDrawAttemptId from the draw-starting workflow.");
+}
+const drawAttempt = await drawAttemptStore.getOrCreate(
+  drawAttemptId,
+  {
     approvedProposal: structuredClone(approval),
     idempotencyKey: crypto.randomUUID(),
-  };
-  await drawAttemptStore.save(drawAttemptId, drawAttempt);
-}
+  },
+);
 if (
   JSON.stringify(drawAttempt.approvedProposal) !== JSON.stringify(approval) ||
   typeof drawAttempt.idempotencyKey !== "string" ||
@@ -151,9 +152,10 @@ if (JSON.stringify(approvedExport) !== JSON.stringify(exportProposal)) {
 const exportUrl = `${BASE}/draws/${draw.id}/export?format=csv&type=winners`;
 ```
 
-Use a stable `drawAttemptId` from the surrounding workflow. The durable store
-must retain the approved proposal and idempotency key before submission. After
-a lost response, load the same attempt and reuse both values. Never retry
+Use a unique, stable `drawAttemptId` from the draw-starting workflow. The
+durable store must enforce a unique constraint and atomically return the
+existing attempt or create the proposed one before submission. After a lost
+response, load the same attempt and reuse both values. Never retry
 `POST /draws` automatically. Start a new attempt only when `safeToRetry` is
 true. Require new approval, a new attempt ID, and a new key for that attempt.
 

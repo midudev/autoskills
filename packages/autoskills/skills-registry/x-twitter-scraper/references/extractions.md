@@ -279,8 +279,37 @@ The status is `pending`, `running`, `completed`, or `failed`.
 ## Retrieving results
 
 ```javascript
-const params = new URLSearchParams({ limit: "1000", after: nextCursor });
-const page = await xquikFetch(`/extractions/${extractionId}?${params}`);
+const xquikFetch = globalThis.xquikFetch;
+if (typeof xquikFetch !== "function") {
+  throw new Error("Configure the authenticated xquikFetch client first.");
+}
+const extractionId = globalThis.xquikExtractionId;
+if (typeof extractionId !== "string" || !extractionId) {
+  throw new Error("Supply the approved xquikExtractionId first.");
+}
+const approvedMaxPages = globalThis.xquikApprovedMaxPages;
+if (!Number.isInteger(approvedMaxPages) || approvedMaxPages < 1) {
+  throw new Error("Supply the approved positive xquikApprovedMaxPages first.");
+}
+
+const results = [];
+let nextCursor;
+for (let pageNumber = 0; pageNumber < approvedMaxPages; pageNumber++) {
+  const params = new URLSearchParams({ limit: "1000" });
+  if (nextCursor) params.set("after", nextCursor);
+  const page = await xquikFetch(`/extractions/${extractionId}?${params}`);
+  if (!Array.isArray(page.results)) throw new Error("Invalid extraction page.");
+  results.push(...page.results);
+  if (!page.hasMore) {
+    nextCursor = undefined;
+    break;
+  }
+  if (typeof page.nextCursor !== "string" || !page.nextCursor) {
+    throw new Error("Missing extraction cursor.");
+  }
+  nextCursor = page.nextCursor;
+}
+if (nextCursor) throw new Error("Approved extraction page limit reached.");
 ```
 
 The endpoint returns up to 1,000 results per page. When `hasMore` is true, send

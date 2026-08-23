@@ -25,7 +25,7 @@ research results.
 | --- | --- | --- |
 | `communities` | Community ID | Name, description, rules, collected time |
 | `community_members` | Community ID, user ID, snapshot ID | Role and membership observation |
-| `community_posts` | Community ID, tweet ID | Author, text, media, engagement, source time |
+| `community_posts` | Community ID, tweet ID, snapshot ID | Author, text, media, engagement, source time, collection time |
 | `community_queries` | Community ID, query version | Search terms, filters, and collection window |
 
 For membership change, compare complete timestamped snapshots by stable user

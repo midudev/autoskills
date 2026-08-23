@@ -319,11 +319,13 @@ server.listen(3000, "127.0.0.1");
 ### Python standard library
 
 ```python
+from concurrent.futures import ThreadPoolExecutor
 import hmac
 import hashlib
 import json
 import re
 import socket
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -336,19 +338,22 @@ WEBHOOK_SECRET = load_secret("XQUIK_WEBHOOK_SECRET")
 MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
 STORE_OPERATION_MAX_SECONDS = 2.0
 RECENT_NONCES: dict[str, int] = {}
+NONCE_LOCK = threading.Lock()
 
 def claim_nonce(nonce: str) -> bool:
     now = int(time.time() * 1000)
-    for value, expires_at in list(RECENT_NONCES.items()):
-        if expires_at <= now:
-            RECENT_NONCES.pop(value, None)
-    if nonce in RECENT_NONCES:
-        return False
-    RECENT_NONCES[nonce] = now + 5 * 60 * 1000
-    return True
+    with NONCE_LOCK:
+        for value, expires_at in list(RECENT_NONCES.items()):
+            if expires_at <= now:
+                RECENT_NONCES.pop(value, None)
+        if nonce in RECENT_NONCES:
+            return False
+        RECENT_NONCES[nonce] = now + 5 * 60 * 1000
+        return True
 
 def release_nonce(nonce: str) -> None:
-    RECENT_NONCES.pop(nonce, None)
+    with NONCE_LOCK:
+        RECENT_NONCES.pop(nonce, None)
 
 def store_timeout_seconds(handler_deadline: float) -> float:
     remaining = min(STORE_OPERATION_MAX_SECONDS, handler_deadline - time.monotonic())
@@ -357,7 +362,7 @@ def store_timeout_seconds(handler_deadline: float) -> float:
     return remaining
 
 def claim_event(key: str, handler_deadline: float) -> str:
-    """Use store_timeout_seconds in the driver. Return claimed, pending, or processed."""
+    """Use a concurrency-safe atomic store. Return claimed, pending, or processed."""
     store_timeout_seconds(handler_deadline)
     raise RuntimeError("Configure a durable webhook event store.")
 
@@ -428,11 +433,49 @@ def read_body_with_deadline(stream, connection, length: int, timeout_seconds: fl
         remaining_bytes -= len(chunk)
     return b"".join(chunks)
 
-class TimeoutHTTPServer(HTTPServer):
+class BoundedHTTPServer(HTTPServer):
+    def __init__(self, server_address, handler_class, max_workers: int = 16):
+        super().__init__(server_address, handler_class)
+        self._slots = threading.BoundedSemaphore(max_workers)
+        self._executor = ThreadPoolExecutor(
+            max_workers=max_workers,
+            thread_name_prefix="xquik-webhook",
+        )
+
     def get_request(self):
         connection, client_address = super().get_request()
         connection.settimeout(10.0)
         return connection, client_address
+
+    def process_request(self, request, client_address):
+        if not self._slots.acquire(blocking=False):
+            try:
+                request.sendall(
+                    b"HTTP/1.1 503 Service Unavailable\r\n"
+                    b"Connection: close\r\nContent-Length: 4\r\n\r\nBusy"
+                )
+            finally:
+                self.shutdown_request(request)
+            return
+        try:
+            self._executor.submit(self._finish_request, request, client_address)
+        except Exception:
+            self._slots.release()
+            self.shutdown_request(request)
+            raise
+
+    def _finish_request(self, request, client_address):
+        try:
+            self.finish_request(request, client_address)
+        except Exception:
+            self.handle_error(request, client_address)
+        finally:
+            self.shutdown_request(request)
+            self._slots.release()
+
+    def server_close(self):
+        super().server_close()
+        self._executor.shutdown(wait=True, cancel_futures=True)
 
 class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -578,7 +621,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"OK")
 
-TimeoutHTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
+BoundedHTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
 ```
 
 ### Go

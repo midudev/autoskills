@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-23T01:08:57.644Z",
+  "generatedAt": "2026-08-23T01:25:30.192Z",
   "reviewer": {
     "model": "gpt-5.4",
     "promptVersion": "1.0.0"
@@ -13010,7 +13010,7 @@
     "x-twitter-scraper": {
       "source": "Xquik-dev/x-twitter-scraper",
       "skillPath": "Xquik-dev/x-twitter-scraper/x-twitter-scraper",
-      "commitSha": "732dcc5d7d140d54da35fa4a8c5cfb598073e706",
+      "commitSha": "c61d04aaf8de4098756bfdba13a58735edff294a",
       "files": [
         "LICENSE",
         "SKILL.md",
@@ -13110,14 +13110,14 @@
         "references/automate-twitter-giveaways.md": "aa94369746e60ef7cbe77f10f6020fb3a651875f8e138c452f7a3caf6d0a25fb",
         "references/best-x-api-alternative.md": "e9f13386f99f666270fb29e1604e82a38ff10b5fedbbb52c3e2560d3031f1d85",
         "references/compare-twitter-apis.md": "50d5b26b4a1de5386a7952473c59fe07606a29a4545a7341558f09cb9fa40dba",
-        "references/draws.md": "2dba0ae110f4c1c38060acc95ad912f87bc0588cf11908a7a4baf2f4ac345bbe",
+        "references/draws.md": "a41f6039df913d9fb5f37a3d949fb2722d2937b1f2b5fe5768eb714b81215583",
         "references/export-twitter-followers.md": "b158dafeb80b2991be44e8bce6aed66b662ec699602617daa87ec833f40fcce5",
-        "references/extract-x-community-data.md": "3c341afb04ff0802906fe5ff1802fed881dc55b49f72ed88a73446df2c1c8214",
-        "references/extractions.md": "3153ddef9624f935004b05482dce3191886c95752ec7c5fe137a22e18e6d2bc9",
+        "references/extract-x-community-data.md": "76d81b87c6f3918ffa4f6af11015034a96d274d861fcd93622f50703e30c8717",
+        "references/extractions.md": "f63cfef2f97bec7013a063ccefce493bcc375bc4282044e2e64cf92e15a5b049",
         "references/mcp-setup.md": "e1aa54fb88368248f629201e38190415f027d9a64e8fe21e2ea8067b5d4adb5a",
         "references/mcp-tools.md": "96642646b0df9793d16912e9531b76867d16ed00ab21cb1849a8d89b5b035350",
         "references/monitor-twitter-webhooks.md": "14da94ac9413f265fa1944ecc2d044d9a4f0ee61be6133f83161df687ef0062d",
-        "references/python-examples.md": "c6a1497d3ea4a9c6c0f5e0f1315e7c5fa0b28675c200bdd15b155a8dc33ee178",
+        "references/python-examples.md": "bf1ec4f3d608c9c000c5c582518f5e91714fccb30645f203608d13cc44cdf475",
         "references/reliable-twitter-data-api-2026.md": "2f89b3b3d6de7b526693445a4f6bf791314f4d2c09d7ebf34dd872de5b0c0cf4",
         "references/scrape-export-twitter-data.md": "1db3d206a2f63748cf6896060a3b8bb7ca8c1370a422e3f0a928e903ceece32e",
         "references/security.md": "9b024a4b59fe26c7525cf097f13d26bb3b8065a9cea27e5114d8ec38286455fc",
@@ -13125,7 +13125,7 @@
         "references/twitter-api-alternative-faq.md": "b7c46201f2f0f16795ad30e8233e5631e7312292ba3eaa47e2557003bc94f9f8",
         "references/twitter-api-without-x-account.md": "b50ec49d263c341279aebc208e1c3d93c725ddb9cf857516c0269253c0a1d3f6",
         "references/twitter-data-pipeline.md": "a04c51941382a8305585355a8a5ac5f26bce6f5c27e6d1081be3eb47bf2b9fa4",
-        "references/twitter-scraper-api-guide.md": "2f6f30441e7e05f0af3ac16dcf9b4d40a91a55bac587c31a1a6a4d865998bc20",
+        "references/twitter-scraper-api-guide.md": "d5bc303fa58656895a1ab7b08d6f6cb1454fef5d2bb9c7e8eea5ecdcc36c32a7",
         "references/types-account-identity.md": "41e5871674a97a9beecd50ef91d2649daa09b354b04d8ccd89acdbc90173327f",
         "references/types-account.md": "a1fb88434775c8bad700e741760691c6b1eb7f2f3cdd2d588f95cdf695418d65",
         "references/types-bookmarks-and-timeline.md": "f1d1b41d977be7b6385a375133988f59fafd830672be1e64eeac189e0aac2607",
@@ -13152,19 +13152,20 @@
         "references/types-x-write.md": "3346c4334ec91b06430a4302f23d12d49018e7ea13e8e65856ce8262c68361d6",
         "references/types.md": "8de147ac05b91f035fc0af6ef998cf68a1a35fbe5b7bc75a533f14c13cfc05eb",
         "references/usage.md": "3f838b777ee1c00b3802ea78b0bcf9a0bcdfe0ad2c4098f4fa88b64c6421f6a1",
-        "references/webhooks.md": "1af93c17558eabb4c10915b877b8621582c80fd63d1c3878083d375d65c96518",
-        "references/workflows.md": "5a433783f5e86a10e5c537272f9b25503fd1605436edb1c7b990e24401c78471",
+        "references/webhooks.md": "f70439c01795cf4c1cdd2ca845a490d1b552811d19d92ffb2df4aa2bf9bf0136",
+        "references/workflows.md": "91305998468c2cda991920223a35fe951df68033f7fa90f41e3a4719b914d305",
         "skill-card.md": "487b8f888af093c9ceb4b6a10e19878cf8a05699f4a333cd59ed5fb91b34a469",
         "skillspector-report.md": "2c62d9727e5dd8889f323cfde9c31c7444da9c5d6667e279b83e779779960300"
       },
-      "bundleHash": "3a44bf401eeed11db5fb6addb3081c044aa81259896a251daa2f551caf8b7bb2",
+      "bundleHash": "2da7c4a96ed5389d402503123d8bff118ce3d842c6c9c40b9cdce16f86986b08",
       "review": {
         "status": "skipped",
+        "audit": "skipped",
         "flags": [],
         "summary": "review skipped (--no-review)",
         "model": "gpt-5.4",
         "promptVersion": "1.0.0",
-        "reviewedAt": "2026-08-23T01:08:57.637Z"
+        "reviewedAt": "2026-08-23T01:25:30.185Z"
       }
     }
   }

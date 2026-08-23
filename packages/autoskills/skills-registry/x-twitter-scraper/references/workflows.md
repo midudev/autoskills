@@ -124,7 +124,7 @@ async function xquikFetch(path, options = {}) {
       retrySafe &&
       (response.status === 408 ||
         response.status === 429 ||
-        response.status >= 500 ||
+        (response.status >= 500 && code !== "x_api_unauthorized") ||
         coverageRetry ||
         (response.status === 424 && error.safeToRetry === true));
     if (!retryable || attempt === 3) {
@@ -257,33 +257,47 @@ stable identity.
 ## Complete extraction workflow
 
 ```javascript
-function requireExplicitApproval(scope) {
-  throw new Error(`Approval required for ${scope}. Implement the approval gate first.`);
+async function requireExplicitApproval(proposal) {
+  throw new Error(`Approval required for ${JSON.stringify(proposal)}. Implement the approval gate first.`);
 }
+
+const extractionRequest = {
+  toolType: "follower_explorer",
+  targetUsername: "elonmusk",
+  resultsLimit: 1000,
+};
 
 // Estimate usage before creating the job.
 const estimate = await xquikFetch("/extractions/estimate", {
   method: "POST",
-  body: JSON.stringify({
-    toolType: "follower_explorer",
-    targetUsername: "elonmusk",
-    resultsLimit: 1000,
-  }),
+  body: JSON.stringify(extractionRequest),
 });
 
 if (!estimate.allowed) {
   throw new Error(`Extraction requires ${estimate.creditsRequired} credits. Balance: ${estimate.creditsAvailable}.`);
 }
 
-// Create the bounded job only after approval.
-requireExplicitApproval("the bounded extraction job, usage, recipients, and retention");
+const extractionProposal = {
+  request: extractionRequest,
+  filters: "No additional filters.",
+  estimatedUsage: {
+    creditsRequired: estimate.creditsRequired,
+    creditsAvailable: estimate.creditsAvailable,
+  },
+  purpose: "Build a bounded follower dataset.",
+  recipients: ["Research team"],
+  destination: "Encrypted project dataset",
+  retention: "Delete after 30 days.",
+  dataHandling: "Restrict access and delete derived exports with the dataset.",
+};
+const approvedExtraction = await requireExplicitApproval(extractionProposal);
+if (JSON.stringify(approvedExtraction) !== JSON.stringify(extractionProposal)) {
+  throw new Error("Approved extraction changed. Request approval again.");
+}
+
 let job = await xquikFetch("/extractions", {
   method: "POST",
-  body: JSON.stringify({
-    toolType: "follower_explorer",
-    targetUsername: "elonmusk",
-    resultsLimit: 1000,
-  }),
+  body: JSON.stringify(approvedExtraction.request),
 });
 
 // Poll for at most 5 minutes, including waits, retries, and network time.
@@ -309,9 +323,21 @@ const allResults = await fetchAllPages(
   (item) => typeof item?.xUserId === "string" ? `user:${item.xUserId}` : null,
 );
 
-// Review a bounded preview and approve the export first.
-requireExplicitApproval("the fixed export scope, audience, storage, and retention");
-const exportUrl = `${BASE}/extractions/${job.id}/export?format=csv`;
+const exportProposal = {
+  jobId: job.id,
+  filters: "No additional export filters.",
+  format: "csv",
+  rowCount: allResults.length,
+  schema: "Documented API fields plus export enrichment columns.",
+  audience: ["Research team"],
+  storage: "Encrypted project dataset",
+  retention: "Delete after 30 days.",
+};
+const approvedExport = await requireExplicitApproval(exportProposal);
+if (JSON.stringify(approvedExport) !== JSON.stringify(exportProposal)) {
+  throw new Error("Approved export changed. Request approval again.");
+}
+const exportUrl = `${BASE}/extractions/${encodeURIComponent(approvedExport.jobId)}/export?format=${encodeURIComponent(approvedExport.format)}`;
 const { response: csvResponse, body: csvData } = await fetchTextWithTimeout(
   exportUrl,
   { headers },
@@ -326,13 +352,9 @@ if (!csvResponse.ok) {
 Create a monitor, register a webhook, then handle events. Get explicit approval for the target, event types, destination URL, and ongoing usage first.
 
 ```javascript
-function requireExplicitApproval(scope) {
-  throw new Error(`Approval required for ${scope}. Implement the approval gate first.`);
+async function requireExplicitApproval(proposal) {
+  throw new Error(`Approval required for ${JSON.stringify(proposal)}. Implement the approval gate first.`);
 }
-
-requireExplicitApproval(
-  "the monitor target, event types, destination URL, preflight webhook list, ongoing usage, and disable path",
-);
 
 const eventTypes = ["tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"];
 const monitorConfig = {
@@ -343,13 +365,30 @@ const webhookConfig = {
   url: "https://your-server.com/webhook",
   eventTypes,
 };
+const deliveryProposal = {
+  monitor: monitorConfig,
+  webhook: webhookConfig,
+  hmacVerificationPlan: {
+    signatureHeader: "X-Xquik-Signature",
+    timestampHeader: "X-Xquik-Timestamp",
+    nonceHeader: "X-Xquik-Nonce",
+    replayWindow: "5 minutes",
+  },
+  preflight: "List existing webhooks and reject an unexpected matching destination.",
+  ongoingUsage: "Active monitors are metered hourly.",
+  disablePath: "Delete the monitor and webhook when delivery is no longer needed.",
+};
+const approvedDelivery = await requireExplicitApproval(deliveryProposal);
+if (JSON.stringify(approvedDelivery) !== JSON.stringify(deliveryProposal)) {
+  throw new Error("Approved monitoring setup changed. Request approval again.");
+}
 
 // Create a persistent monitor. Active monitors are metered hourly.
 let monitor;
 try {
   monitor = await xquikFetch("/monitors", {
     method: "POST",
-    body: JSON.stringify(monitorConfig),
+    body: JSON.stringify(approvedDelivery.monitor),
   });
 } catch (monitorCreationError) {
   if (isDefinitiveWriteRejection(monitorCreationError)) {
@@ -367,7 +406,7 @@ let webhook;
 try {
   webhook = await xquikFetch("/webhooks", {
     method: "POST",
-    body: JSON.stringify(webhookConfig),
+    body: JSON.stringify(approvedDelivery.webhook),
   });
 } catch (creationError) {
   if (isDefinitiveWriteRejection(creationError)) {

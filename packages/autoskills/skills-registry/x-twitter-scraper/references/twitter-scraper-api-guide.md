@@ -100,11 +100,14 @@ Use this first integration sequence:
 
 1. Store `XQUIK_API_KEY` in a server-side secret manager.
 2. Define a precise query and small result limit.
-3. Call `GET /x/tweets/search` and validate the response fields.
-4. Follow opaque cursors without decoding or constructing them.
-5. Retry only `GET` requests after connection failures, `408`, `429`, and `5xx`.
-6. Move complete work to an estimated extraction job.
-7. Persist tweet IDs, collection time, query, and source job ID.
+3. Approve the exact request, intended use, destination, and retention.
+4. Call `GET /x/tweets/search` and validate the response fields.
+5. Follow opaque cursors without decoding or constructing them.
+6. Retry only `GET` requests after connection failures, `408`, `429`, and `5xx`.
+7. Move complete work to an estimated extraction job.
+8. Persist tweet IDs, collection time, query, and source job ID.
+
+Skip the approval gate only for unmetered public reads. Tweet search is metered.
 
 Direct reads return JSON. Extractions add durable states:
 `pending`, `running`, `completed`, and `failed`. Completed jobs can return up to

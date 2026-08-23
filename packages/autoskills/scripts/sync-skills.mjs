@@ -587,6 +587,7 @@ function writeSkillToRegistry(manifest, skill) {
     bundleHash: skill.bundleHash,
     review: {
       status: skill.review.status,
+      audit: skill.review.status === "skipped" ? "skipped" : "openai",
       flags: skill.review.flags,
       summary: skill.review.summary,
       model: REVIEW_MODEL,
@@ -767,7 +768,7 @@ async function main() {
 
       const manifestSha = getManifestRepoSha(manifest, repo, skills);
       const repoReviewsReusable = skills.every(({ skillName }) =>
-        isReviewReusable(manifest.skills[skillName]?.review?.status, FLAGS.noReview),
+        isReviewReusable(manifest.skills[skillName]?.review, FLAGS.noReview),
       );
       if (manifestSha === sha && repoReviewsReusable) {
         for (const { skillName } of skills) {
@@ -848,11 +849,7 @@ async function main() {
       );
 
       const prev = manifest.skills[skillName];
-      if (
-        prev &&
-        prev.bundleHash === bundleHash &&
-        isReviewReusable(prev.review?.status, FLAGS.noReview)
-      ) {
+      if (prev && prev.bundleHash === bundleHash && isReviewReusable(prev.review, FLAGS.noReview)) {
         log(dim(`   · ${skillName} — unchanged`));
         report.totals.unchanged++;
         continue;
