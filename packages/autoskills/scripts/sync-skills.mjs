@@ -28,6 +28,7 @@ import { pipeline } from "node:stream/promises";
 import { SKILLS_MAP, COMBO_SKILLS_MAP, FRONTEND_BONUS_SKILLS } from "../skills-map.ts";
 import { parseSkillPath } from "../lib.ts";
 import { bold, cyan, dim, green, log, red, yellow } from "../colors.ts";
+import { isReviewReusable } from "../review-cache.ts";
 
 process.loadEnvFile();
 
@@ -485,7 +486,11 @@ Be concise in summary (one sentence).`;
 
 async function reviewWithOpenAI(skillName, files) {
   if (FLAGS.noReview) {
-    return { status: "approved", flags: [], summary: "review skipped (--no-review)" };
+    return {
+      status: "skipped",
+      flags: [],
+      summary: "review skipped (--no-review)",
+    };
   }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -582,22 +587,27 @@ function writeSkillToRegistry(manifest, skill) {
     bundleHash: skill.bundleHash,
     review: {
       status: skill.review.status,
+      audit: skill.review.status === "skipped" ? "skipped" : "openai",
       flags: skill.review.flags,
       summary: skill.review.summary,
       model: REVIEW_MODEL,
       promptVersion: REVIEW_PROMPT_VERSION,
       reviewedAt: new Date().toISOString(),
     },
-    securityCheck: {
-      status: skill.review.status === "flagged" ? "warning" : "ok",
-      findings: skill.review.flags,
-      summary:
-        skill.review.summary ||
-        (skill.review.status === "flagged"
-          ? "The sync review found issues that should be checked."
-          : "The sync review did not find security issues."),
-      checkedAt: new Date().toISOString(),
-    },
+    ...(skill.review.status === "skipped"
+      ? {}
+      : {
+          securityCheck: {
+            status: skill.review.status === "flagged" ? "warning" : "ok",
+            findings: skill.review.flags,
+            summary:
+              skill.review.summary ||
+              (skill.review.status === "flagged"
+                ? "The sync review found issues that should be checked."
+                : "The sync review did not find security issues."),
+            checkedAt: new Date().toISOString(),
+          },
+        }),
   };
 }
 
@@ -731,6 +741,7 @@ async function main() {
       repos: byRepo.size,
       skills: 0,
       approved: 0,
+      skipped: 0,
       flagged: 0,
       rejected: 0,
       unchanged: 0,
@@ -756,7 +767,10 @@ async function main() {
       sha = head.sha;
 
       const manifestSha = getManifestRepoSha(manifest, repo, skills);
-      if (manifestSha === sha) {
+      const repoReviewsReusable = skills.every(({ skillName }) =>
+        isReviewReusable(manifest.skills[skillName]?.review, FLAGS.noReview),
+      );
+      if (manifestSha === sha && repoReviewsReusable) {
         for (const { skillName } of skills) {
           log(dim(`   · ${skillName} — unchanged`));
           report.totals.skills++;
@@ -835,7 +849,7 @@ async function main() {
       );
 
       const prev = manifest.skills[skillName];
-      if (prev && prev.bundleHash === bundleHash) {
+      if (prev && prev.bundleHash === bundleHash && isReviewReusable(prev.review, FLAGS.noReview)) {
         log(dim(`   · ${skillName} — unchanged`));
         report.totals.unchanged++;
         continue;
@@ -882,6 +896,7 @@ async function main() {
       if (FLAGS.dryRun) {
         log(green(`   ✔ ${skillName}`) + dim(" — would write"));
         if (review.status === "flagged") report.totals.flagged++;
+        else if (review.status === "skipped") report.totals.skipped++;
         else report.totals.approved++;
         continue;
       }
@@ -890,6 +905,7 @@ async function main() {
 
       log(green(`   ✔ ${skillName}`) + dim(` — ${review.status}, ${relFiles.length} file(s)`));
       if (review.status === "flagged") report.totals.flagged++;
+      else if (review.status === "skipped") report.totals.skipped++;
       else report.totals.approved++;
     }
 
@@ -909,6 +925,7 @@ async function main() {
   log(bold("Summary"));
   log(
     `   ${green(`${report.totals.approved} approved`)}` +
+      `  ${dim(`${report.totals.skipped} skipped`)}` +
       `  ${yellow(`${report.totals.flagged} flagged`)}` +
       `  ${red(`${report.totals.rejected} rejected`)}` +
       `  ${dim(`${report.totals.unchanged} unchanged`)}` +

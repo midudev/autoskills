@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { useTmpDir, writePackageJson, writeFile, writeJson, addWorkspace } from "./helpers.ts";
+import { SKILLS_MAP } from "../skills-map.ts";
 
 const CLI_PATH = resolve(import.meta.dirname!, "..", "index.mjs");
 
@@ -118,6 +119,17 @@ describe("CLI", () => {
 
       ok(output.includes("InstantDB"));
       ok(output.includes("instantdb"));
+    });
+
+    it("detects Xquik and suggests its official skill", () => {
+      writePackageJson(tmp.path, { dependencies: { "x-twitter-scraper": "0.12.4" } });
+
+      const output = run(["--dry-run"], tmp.path);
+      const xquik = SKILLS_MAP.find((technology) => technology.id === "xquik");
+
+      ok(output.includes("Xquik"));
+      ok(output.includes("Xquik-dev › x-twitter-scraper"));
+      ok(xquik?.skills.includes("Xquik-dev/x-twitter-scraper/x-twitter-scraper"));
     });
 
     it("detects Astro from package.json", () => {
@@ -475,5 +487,17 @@ describe("CLI", () => {
       ok(output.includes("Agents: cursor"));
       ok(!output.includes("universal"));
     });
+  });
+
+  it("installs the Xquik skill from the audited registry", () => {
+    writePackageJson(tmp.path, { dependencies: { "x-twitter-scraper": "0.12.4" } });
+
+    const output = run(["--yes", "--agent", "universal"], tmp.path);
+
+    ok(output.includes("1 skill installed"));
+    ok(output.includes("Security review skipped"));
+    ok(output.includes("x-twitter-scraper"));
+    ok(existsSync(join(tmp.path, ".agents/skills/x-twitter-scraper/SKILL.md")));
+    ok(existsSync(join(tmp.path, ".agents/skills/x-twitter-scraper/LICENSE")));
   });
 });

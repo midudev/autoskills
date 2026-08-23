@@ -605,6 +605,26 @@ plugins {
     ok(detected.some((t) => t.id === "stripe"));
   });
 
+  it("detects Xquik from the x-twitter-scraper package", () => {
+    writePackageJson(tmp.path, { dependencies: { "x-twitter-scraper": "0.12.4" } });
+    const { detected } = detectTechnologies(tmp.path);
+    const xquik = detected.find((t) => t.id === "xquik");
+    ok(xquik);
+    ok(xquik.skills.includes("Xquik-dev/x-twitter-scraper/x-twitter-scraper"));
+  });
+
+  it("does not detect Xquik from an unrelated Twitter package", () => {
+    writePackageJson(tmp.path, { dependencies: { twitter: "1.7.1" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "xquik"));
+  });
+
+  it("does not detect Xquik from a similar package name", () => {
+    writePackageJson(tmp.path, { dependencies: { "x-twitter-scraper-extra": "1.0.0" } });
+    const { detected } = detectTechnologies(tmp.path);
+    ok(!detected.some((t) => t.id === "xquik"));
+  });
+
   it("detects Hono from package.json", () => {
     writePackageJson(tmp.path, { dependencies: { hono: "^4.0.0" } });
     const { detected } = detectTechnologies(tmp.path);

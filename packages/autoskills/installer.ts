@@ -1,6 +1,7 @@
 import {
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -32,7 +33,7 @@ export interface RegistryEntry {
   sha256: Record<string, string>;
   bundleHash: string;
   review: {
-    status: "approved" | "flagged";
+    status: "approved" | "flagged" | "skipped";
     flags: string[];
     summary: string;
     model: string;
@@ -57,8 +58,126 @@ export interface Registry {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let _cachedRegistry: Registry | null | undefined;
+let _cachedRegistryIssue: string | null = null;
 let _cachedRegistryDir: string | null = null;
 let _cachedPackageVersion: string | null | undefined;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function registryPathIssue(path: string): string | null {
+  const normalized = normalizeRegistryRelPath(path);
+  const segments = normalized.split("/");
+  return normalized.startsWith("/") ||
+    /^[a-z]:/i.test(normalized) ||
+    normalized.includes("\0") ||
+    segments.some((segment) => segment === "" || segment === "." || segment === "..")
+    ? `unsafe path ${path}`
+    : null;
+}
+
+function registryEntryIssue(entry: unknown): string | null {
+  if (!isRecord(entry)) return "entry must be an object";
+  for (const field of ["source", "skillPath", "commitSha", "bundleHash"] as const) {
+    if (typeof entry[field] !== "string" || entry[field].length === 0) {
+      return `${field} must be a nonempty string`;
+    }
+  }
+  if (!/^[a-f0-9]{64}$/.test(entry.bundleHash as string)) {
+    return "bundleHash must be a SHA-256 hash";
+  }
+  if (!isStringArray(entry.files) || entry.files.length === 0) {
+    return "files must contain nonempty strings";
+  }
+  if (!isRecord(entry.sha256)) return "sha256 must be an object";
+  if (Object.values(entry.sha256).some((hash) => typeof hash !== "string")) {
+    return "sha256 values must be strings";
+  }
+  const normalizedFiles = new Set<string>();
+  for (const rel of entry.files) {
+    const normalizedRel = normalizeRegistryRelPath(rel);
+    const pathIssue = registryPathIssue(rel);
+    if (pathIssue) return `files contains ${pathIssue}`;
+    if (normalizedFiles.has(normalizedRel)) {
+      return `files contains duplicate path ${normalizedRel}`;
+    }
+    normalizedFiles.add(normalizedRel);
+    const hash = entry.sha256[rel] ?? entry.sha256[normalizedRel];
+    if (typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash)) {
+      return `sha256 must contain a SHA-256 hash for ${normalizedRel}`;
+    }
+  }
+
+  const review = entry.review;
+  if (!isRecord(review)) return "review must be an object";
+  if (!isStringArray(review.flags)) return "review.flags must contain only strings";
+  if (
+    typeof review.status !== "string" ||
+    !["approved", "flagged", "skipped"].includes(review.status)
+  ) {
+    return "review.status is invalid";
+  }
+  for (const field of ["summary", "model", "promptVersion", "reviewedAt"] as const) {
+    if (typeof review[field] !== "string") return `review.${field} must be a string`;
+  }
+
+  const securityCheck = entry.securityCheck;
+  if (review.status === "skipped" && securityCheck !== undefined) {
+    return "securityCheck must be omitted when review.status is skipped";
+  }
+  if (securityCheck === undefined) return null;
+  if (!isRecord(securityCheck)) return "securityCheck must be an object";
+  if (!isStringArray(securityCheck.findings)) {
+    return "securityCheck.findings must contain only strings";
+  }
+  if (
+    typeof securityCheck.status !== "string" ||
+    !["ok", "warning"].includes(securityCheck.status)
+  ) {
+    return "securityCheck.status is invalid";
+  }
+  for (const field of ["summary", "checkedAt"] as const) {
+    if (typeof securityCheck[field] !== "string") {
+      return `securityCheck.${field} must be a string`;
+    }
+  }
+  return null;
+}
+
+function registryIssue(registry: unknown): string | null {
+  if (!isRecord(registry)) return "registry must be an object";
+  if (!Number.isInteger(registry.version) || Number(registry.version) < 1) {
+    return "version must be a positive integer";
+  }
+  if (typeof registry.generatedAt !== "string" || registry.generatedAt.length === 0) {
+    return "generatedAt must be a nonempty string";
+  }
+  if (!isRecord(registry.reviewer)) return "reviewer must be an object";
+  for (const field of ["model", "promptVersion"] as const) {
+    if (typeof registry.reviewer[field] !== "string" || registry.reviewer[field].length === 0) {
+      return `reviewer.${field} must be a nonempty string`;
+    }
+  }
+  if (!isRecord(registry.skills)) return "skills must be an object";
+  const normalizedSkillNames = new Set<string>();
+  for (const skillName of Object.keys(registry.skills)) {
+    const pathIssue = registryPathIssue(skillName);
+    if (pathIssue) return `skills contains ${pathIssue}`;
+    const normalizedSkillName = normalizeRegistryRelPath(skillName);
+    if (normalizedSkillNames.has(normalizedSkillName)) {
+      return `skills contains duplicate path ${normalizedSkillName}`;
+    }
+    normalizedSkillNames.add(normalizedSkillName);
+    const entryIssue = registryEntryIssue(registry.skills[skillName]);
+    if (entryIssue) return `skills.${skillName} is invalid: ${entryIssue}`;
+  }
+  return null;
+}
 
 function getPackageVersion(): string | null {
   if (_cachedPackageVersion !== undefined) return _cachedPackageVersion;
@@ -95,10 +214,19 @@ export function loadRegistry(): Registry | null {
   if (_cachedRegistry !== undefined) return _cachedRegistry;
   const manifestPath = join(getRegistryDir(), "index.json");
   try {
-    const body = JSON.parse(readFileSync(manifestPath, "utf-8")) as Registry;
+    const parsed: unknown = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    const issue = registryIssue(parsed);
+    if (issue) {
+      _cachedRegistryIssue = issue;
+      _cachedRegistry = null;
+      return null;
+    }
+    _cachedRegistryIssue = null;
+    const body = parsed as unknown as Registry;
     _cachedRegistry = body;
     return body;
   } catch {
+    _cachedRegistryIssue = null;
     _cachedRegistry = null;
     return null;
   }
@@ -108,6 +236,7 @@ export function loadRegistry(): Registry | null {
 export function _setRegistryDir(dir: string | null): void {
   _cachedRegistryDir = dir;
   _cachedRegistry = undefined;
+  _cachedRegistryIssue = null;
 }
 
 // ── Integrity ────────────────────────────────────────────────
@@ -116,31 +245,58 @@ function sha256File(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function listSkillFiles(dir: string, prefix = ""): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    return entry.isDirectory() ? listSkillFiles(join(dir, entry.name), rel) : [rel];
+  });
+}
+
 export function verifyRegistryEntry(
   skillName: string,
   entry: RegistryEntry,
   registryDir: string = getRegistryDir(),
+  listFiles: (dir: string) => string[] = listSkillFiles,
 ): { ok: boolean; reason?: string } {
-  const skillDir = join(registryDir, skillName);
-  if (!existsSync(skillDir)) {
-    return { ok: false, reason: `missing directory ${skillDir}` };
+  const manifestIssue = registryEntryIssue(entry);
+  if (manifestIssue) return { ok: false, reason: `invalid manifest: ${manifestIssue}` };
+
+  try {
+    const skillDir = join(registryDir, skillName);
+    if (!existsSync(skillDir)) {
+      return { ok: false, reason: `missing directory ${skillDir}` };
+    }
+    if (!lstatSync(skillDir).isDirectory()) {
+      return { ok: false, reason: `invalid directory ${skillDir}` };
+    }
+    const declaredFiles = new Set(entry.files.map(normalizeRegistryRelPath));
+    const unexpectedFile = listFiles(skillDir).find((rel) => !declaredFiles.has(rel));
+    if (unexpectedFile) {
+      return { ok: false, reason: `unexpected file ${unexpectedFile}` };
+    }
+    for (const rel of entry.files) {
+      const normalizedRel = normalizeRegistryRelPath(rel);
+      const abs = join(skillDir, ...normalizedRel.split("/"));
+      if (!existsSync(abs)) {
+        return { ok: false, reason: `missing file ${normalizedRel}` };
+      }
+      if (!lstatSync(abs).isFile()) {
+        return { ok: false, reason: `invalid file ${normalizedRel}` };
+      }
+      const expected = entry.sha256[rel] || entry.sha256[normalizedRel];
+      if (!expected) {
+        return { ok: false, reason: `no recorded hash for ${normalizedRel}` };
+      }
+      const actual = sha256File(abs);
+      if (actual !== expected) {
+        return { ok: false, reason: `hash mismatch for ${normalizedRel}` };
+      }
+    }
+    return { ok: true };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason: `verification failed: ${detail}` };
   }
-  for (const rel of entry.files) {
-    const normalizedRel = normalizeRegistryRelPath(rel);
-    const abs = join(skillDir, ...normalizedRel.split("/"));
-    if (!existsSync(abs)) {
-      return { ok: false, reason: `missing file ${normalizedRel}` };
-    }
-    const expected = entry.sha256[rel] || entry.sha256[normalizedRel];
-    if (!expected) {
-      return { ok: false, reason: `no recorded hash for ${normalizedRel}` };
-    }
-    const actual = sha256File(abs);
-    if (actual !== expected) {
-      return { ok: false, reason: `hash mismatch for ${normalizedRel}` };
-    }
-  }
-  return { ok: true };
 }
 
 // ── Install ──────────────────────────────────────────────────
@@ -152,6 +308,7 @@ export interface InstallResult {
   exitCode: number | null;
   command: string;
   securityCheck?: InstallSecurityCheck;
+  reviewSkipped?: boolean;
 }
 
 export interface InstallSecurityCheck {
@@ -219,7 +376,12 @@ function getCacheRegistryDir(entry: RegistryEntry): string {
   return join(getAutoskillsCacheDir(), entry.bundleHash);
 }
 
-function securityCheckForEntry(skillName: string, entry: RegistryEntry): InstallSecurityCheck {
+function securityCheckForEntry(
+  skillName: string,
+  entry: RegistryEntry,
+): InstallSecurityCheck | null {
+  if (entry.review.status === "skipped") return null;
+
   if (entry.securityCheck) {
     return {
       name: skillName,
@@ -248,6 +410,7 @@ export function securityCheckForSkillPath(skillPath: string): InstallSecurityChe
   const registry = loadRegistry();
   const entry = registry?.skills[skillName];
   if (!entry) return null;
+  if (registryEntryIssue(entry)) return null;
 
   return securityCheckForEntry(skillName, entry);
 }
@@ -371,7 +534,7 @@ function copyRegistryEntryFromLocal(
   }
 
   rmSync(destDir, { recursive: true, force: true });
-  copyDir(join(registryDir, skillName), destDir);
+  copyRegistryFiles(join(registryDir, skillName), destDir, entry.files);
   opts.onTrace?.(`copied from local registry: ${join(registryDir, skillName)}`);
   return true;
 }
@@ -391,7 +554,7 @@ function copyRegistryEntryFromCache(
   }
 
   rmSync(destDir, { recursive: true, force: true });
-  copyDir(join(registryDir, skillName), destDir);
+  copyRegistryFiles(join(registryDir, skillName), destDir, entry.files);
   opts.onTrace?.(`copied from download cache: ${join(registryDir, skillName)}`);
   return true;
 }
@@ -432,6 +595,16 @@ function copyDir(src: string, dest: string): void {
     } else if (e.isFile()) {
       copyFileSync(s, d);
     }
+  }
+}
+
+function copyRegistryFiles(srcDir: string, destDir: string, files: string[]): void {
+  for (const rel of files) {
+    const normalizedRel = normalizeRegistryRelPath(rel);
+    const src = join(srcDir, ...normalizedRel.split("/"));
+    const dest = join(destDir, ...normalizedRel.split("/"));
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(src, dest);
   }
 }
 
@@ -488,14 +661,25 @@ export async function installSkill(
 
   const registry = loadRegistry();
   if (!registry) {
+    const targetPrefix = `skills.${skillName} is invalid: `;
+    if (_cachedRegistryIssue?.startsWith(targetPrefix)) {
+      return fail(
+        `skill '${skillName}' has invalid registry metadata: ${_cachedRegistryIssue.slice(targetPrefix.length)}.`,
+      );
+    }
+    const detail = _cachedRegistryIssue ? ` Invalid registry: ${_cachedRegistryIssue}.` : "";
     return fail(
-      `skills-registry index not found. Run 'pnpm sync:skills' in the autoskills package.`,
+      `skills-registry index not found. Run 'pnpm sync:skills' in the autoskills package.${detail}`,
     );
   }
 
   const entry = registry.skills[skillName];
   if (!entry) {
     return fail(`skill '${skillName}' not found in registry (unaudited).`);
+  }
+  const manifestIssue = registryEntryIssue(entry);
+  if (manifestIssue) {
+    return fail(`skill '${skillName}' has invalid registry metadata: ${manifestIssue}.`);
   }
   const securityCheck = securityCheckForEntry(skillName, entry);
   opts.onTrace?.(`registry source: ${entry.source} @ ${entry.commitSha}`);
@@ -519,7 +703,7 @@ export async function installSkill(
     ) {
       const cachedSkillDir = await downloadRegistryEntryToCache(skillName, entry, opts);
       rmSync(canonicalDir, { recursive: true, force: true });
-      copyDir(cachedSkillDir, canonicalDir);
+      copyRegistryFiles(cachedSkillDir, canonicalDir, entry.files);
       opts.onTrace?.(`copied downloaded bundle into ${canonicalDir}`);
     }
   } catch (err) {
@@ -567,7 +751,8 @@ export async function installSkill(
     stderr: "",
     exitCode: 0,
     command,
-    securityCheck,
+    ...(securityCheck ? { securityCheck } : {}),
+    ...(entry.review.status === "skipped" ? { reviewSkipped: true } : {}),
   };
 }
 
@@ -585,6 +770,7 @@ interface InstallAllResult {
   installed: number;
   failed: number;
   securityChecks: InstallSecurityCheck[];
+  skippedReviews: string[];
   errors: {
     name: string;
     output: string;
@@ -653,6 +839,7 @@ export async function installAll(
   let failed = 0;
   const errors: InstallAllResult["errors"] = [];
   const securityChecks: InstallSecurityCheck[] = [];
+  const skippedReviews: string[] = [];
   let nextIdx = 0;
 
   async function worker(): Promise<void> {
@@ -670,6 +857,7 @@ export async function installAll(
         state.status = "success";
         installed++;
         if (result.securityCheck) securityChecks.push(result.securityCheck);
+        if (result.reviewSkipped) skippedReviews.push(parseSkillPath(state.skill).skillName);
       } else {
         state.status = "failed";
         state.output = result.output;
@@ -693,7 +881,7 @@ export async function installAll(
   render();
   write(SHOW_CURSOR);
 
-  return { installed, failed, errors, securityChecks };
+  return { installed, failed, errors, securityChecks, skippedReviews };
 }
 
 async function installAllVerbose(
@@ -706,6 +894,7 @@ async function installAllVerbose(
   let failed = 0;
   const errors: InstallAllResult["errors"] = [];
   const securityChecks: InstallSecurityCheck[] = [];
+  const skippedReviews: string[] = [];
 
   for (const { skill } of sorted) {
     log(cyan(`   ◆ ${skill}`));
@@ -718,6 +907,7 @@ async function installAllVerbose(
       log(green(`     ✔ installed`));
       installed++;
       if (result.securityCheck) securityChecks.push(result.securityCheck);
+      if (result.reviewSkipped) skippedReviews.push(parseSkillPath(skill).skillName);
     } else {
       log(red(`     ✘ failed`) + dim(` — ${result.output}`));
       errors.push({
@@ -732,7 +922,7 @@ async function installAllVerbose(
     log();
   }
 
-  return { installed, failed, errors, securityChecks };
+  return { installed, failed, errors, securityChecks, skippedReviews };
 }
 
 async function installAllSimple(
@@ -746,6 +936,7 @@ async function installAllSimple(
   let failed = 0;
   const errors: InstallAllResult["errors"] = [];
   const securityChecks: InstallSecurityCheck[] = [];
+  const skippedReviews: string[] = [];
   let nextIdx = 0;
 
   async function worker(): Promise<void> {
@@ -758,6 +949,7 @@ async function installAllSimple(
         log(green(`   ✔ ${skill}`));
         installed++;
         if (result.securityCheck) securityChecks.push(result.securityCheck);
+        if (result.reviewSkipped) skippedReviews.push(parseSkillPath(skill).skillName);
       } else {
         log(red(`   ✘ ${skill}`) + dim(" — failed"));
         errors.push({
@@ -775,7 +967,7 @@ async function installAllSimple(
   const workers = Array.from({ length: Math.min(CONCURRENCY, sorted.length) }, () => worker());
   await Promise.all(workers);
 
-  return { installed, failed, errors, securityChecks };
+  return { installed, failed, errors, securityChecks, skippedReviews };
 }
 
 // ── Deprecated shim ──────────────────────────────────────────
