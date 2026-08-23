@@ -46,8 +46,10 @@ For a 201 response, the API returns:
 
 List saved tweet drafts with cursor pagination.
 
-This is a private read. Show the requested page size and account scope. List drafts
-only after explicit approval for that exact read.
+This is a private read. Show the account scope, page size, starting `afterCursor`
+or lack of one, and maximum page count. List drafts only after explicit approval
+for that exact scope. Stop at the approved page limit. Obtain new approval before
+following any `nextCursor` beyond it.
 
 Use these query parameters:
 

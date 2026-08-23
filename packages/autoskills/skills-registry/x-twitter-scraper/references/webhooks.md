@@ -311,6 +311,8 @@ const server = createServer((req, res) => {
   req.on("error", finishBodyRead);
 });
 
+server.headersTimeout = 10_000;
+server.requestTimeout = 10_000;
 server.listen(3000, "127.0.0.1");
 ```
 
@@ -426,8 +428,19 @@ def read_body_with_deadline(stream, connection, length: int, timeout_seconds: fl
         remaining_bytes -= len(chunk)
     return b"".join(chunks)
 
+class TimeoutHTTPServer(HTTPServer):
+    def get_request(self):
+        connection, client_address = super().get_request()
+        connection.settimeout(10.0)
+        return connection, client_address
+
 class WebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if self.path != "/webhook":
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"Not found")
+            return
         handler_deadline = time.monotonic() + 10.0
         signature = self.headers.get("X-Xquik-Signature", "")
         timestamp = self.headers.get("X-Xquik-Timestamp", "")
@@ -565,7 +578,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"OK")
 
-HTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
+TimeoutHTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
 ```
 
 ### Go
@@ -651,6 +664,11 @@ func verifySignature(payload []byte, signature, timestamp, nonce, secret string)
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        w.Header().Set("Allow", http.MethodPost)
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
     ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
     defer cancel()
     r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
