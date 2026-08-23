@@ -22,10 +22,15 @@ Use these query parameters:
 Pass `nextCursor` as `after` for the next page:
 
 ```javascript
-const query = new URLSearchParams({
+const originalQuery = new URLSearchParams({
+  source: "hacker_news",
+  category: "tech",
   limit: "50",
-  after: nextCursor,
+  hours: "6",
+  region: "global",
 });
+const query = new URLSearchParams(originalQuery);
+query.set("after", nextCursor);
 const nextPath = `/radar?${query}`;
 ```
 

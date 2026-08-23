@@ -376,17 +376,17 @@ def load_secret(name: str) -> str:
 WEBHOOK_SECRET = load_secret("XQUIK_WEBHOOK_SECRET")
 MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
 
-def claim_nonce(nonce: str, ttl_seconds: int) -> bool:
-    """Atomically create a pending nonce claim unless one already exists."""
+def consume_test_nonce(nonce: str, ttl_seconds: int) -> bool:
+    """Atomically consume a test nonce unless it already exists."""
     raise RuntimeError("Configure a shared durable webhook nonce store.")
 
-def consume_nonce(nonce: str) -> None:
-    """Atomically commit a pending nonce for its full replay window."""
-    raise RuntimeError("Configure a shared durable webhook nonce store.")
+def admit_delivery(event: dict, nonce: str, ttl_seconds: int) -> str:
+    """Atomically consume the nonce, claim the delivery, and enqueue it.
 
-def release_nonce(nonce: str) -> None:
-    """Release only a pending nonce claim after failed admission."""
-    raise RuntimeError("Configure a shared durable webhook nonce store.")
+    Return queued, already_queued, processed, nonce_used, or conflict.
+    A repeated delivery with the same payload returns already_queued.
+    """
+    raise RuntimeError("Configure one transactional delivery store and queue.")
 
 def claim_event(key: str) -> str:
     """Atomically create an expiring claim or return pending or processed."""
@@ -399,10 +399,6 @@ def mark_event_processed(key: str) -> None:
 def release_event(key: str) -> None:
     """Release a failed pending claim so Xquik can retry it."""
     raise RuntimeError("Configure a durable webhook event store.")
-
-def enqueue_delivery_and_consume_nonce(event: dict, nonce: str) -> None:
-    """Atomically enqueue the event and commit its pending nonce."""
-    raise RuntimeError("Configure a durable webhook queue.")
 
 def apply_effect_and_mark_processed(key: str, event: dict) -> None:
     """Atomically persist one effect or outbox row and mark the stream processed."""
@@ -563,75 +559,55 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Handler unavailable")
             return
 
-        try:
-            nonce_claimed = claim_nonce(nonce, 5 * 60)
-        except Exception:
-            self.send_response(503)
-            self.end_headers()
-            self.wfile.write(b"Nonce store unavailable")
-            return
-        if not nonce_claimed:
-            self.send_response(409)
-            self.end_headers()
-            self.wfile.write(b"Nonce already used")
-            return
-
         if event_type == "webhook.test":
             try:
-                consume_nonce(nonce)
+                nonce_consumed = consume_test_nonce(nonce, 5 * 60)
             except Exception:
-                release_nonce(nonce)
                 self.send_response(503)
                 self.end_headers()
                 self.wfile.write(b"Nonce store unavailable")
+                return
+            if not nonce_consumed:
+                self.send_response(409)
+                self.end_headers()
+                self.wfile.write(b"Nonce already used")
                 return
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"Test accepted")
             return
 
-        delivery_key = f"delivery:{event['deliveryId']}"
         try:
-            claim = claim_event(delivery_key)
+            admission = admit_delivery(event, nonce, 5 * 60)
         except Exception:
-            release_nonce(nonce)
             self.send_response(503)
             self.end_headers()
-            self.wfile.write(b"Event store unavailable")
+            self.wfile.write(b"Delivery store unavailable")
             return
-        if claim == "processed":
-            try:
-                consume_nonce(nonce)
-            except Exception:
-                release_nonce(nonce)
-                self.send_response(503)
-                self.end_headers()
-                self.wfile.write(b"Nonce store unavailable")
-                return
+        if admission == "processed":
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"Already processed")
             return
-        if claim != "claimed":
-            release_nonce(nonce)
+        if admission in {"queued", "already_queued"}:
+            self.send_response(202)
+            self.end_headers()
+            self.wfile.write(b"Queued")
+            return
+        if admission == "nonce_used":
             self.send_response(409)
             self.end_headers()
-            self.wfile.write(b"Delivery already pending")
+            self.wfile.write(b"Nonce already used")
             return
-
-        try:
-            enqueue_delivery_and_consume_nonce(event, nonce)
-        except Exception:
-            release_event(delivery_key)
-            release_nonce(nonce)
-            self.send_response(503)
+        if admission == "conflict":
+            self.send_response(409)
             self.end_headers()
-            self.wfile.write(b"Queue unavailable")
+            self.wfile.write(b"Delivery conflict")
             return
 
-        self.send_response(202)
+        self.send_response(503)
         self.end_headers()
-        self.wfile.write(b"Queued")
+        self.wfile.write(b"Delivery store unavailable")
 
 ThreadingHTTPServer(("127.0.0.1", 3000), WebhookHandler).serve_forever()
 ```

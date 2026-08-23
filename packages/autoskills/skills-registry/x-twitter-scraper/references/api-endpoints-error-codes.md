@@ -39,8 +39,8 @@ and `code`. OpenAPI enumerates 112 codes, including `closed`, `expired`,
 | 410 | `coverage_cursor_gone` | No `Retry-After`. Restart without a cursor and deduplicate by ID |
 | 422 | `login_failed` | Account connection failed; use dashboard re-auth flow |
 | 424 | `x_api_unavailable` | With `xquik-api-contract: 2026-04-29`, an upstream dependency failed. Apply the endpoint's documented fallback |
-| 429 | - | Rate limited. Retry only safe reads with bounded backoff |
-| 429 | `x_api_rate_limited` | X data source rate limited. Retry only safe reads |
+| 429 | - | Rate limited. Honor `Retry-After` when present. Otherwise retry only `GET` with bounded backoff |
+| 429 | `x_api_rate_limited` | X data source rate limited. Honor `Retry-After` when present. Otherwise retry only `GET` with bounded backoff |
 | 500 | `internal_error` | Server error. Retry only safe reads |
 | 502 | `x_api_unavailable` | X data source temporarily unavailable. Retry only safe reads |
 | 502 | `x_api_unauthorized` | Stop. Do not retry automatically. Review X source authentication |
