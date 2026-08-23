@@ -1,7 +1,9 @@
 # Twitter monitor API: keywords, mentions, hashtags, and sentiment
 
-Use a bounded search to validate a query. Use a keyword or account monitor for
-ongoing detection. Deliver events by polling or through HMAC-signed webhooks.
+After approving its exact query, bound, purpose, usage, recipients, destination,
+and retention, use a bounded search to validate a query. Use a keyword or
+account monitor for ongoing detection. Deliver events by polling or through
+HMAC-signed webhooks.
 
 > Xquik is an independent third-party service. Not affiliated with X Corp.
 > "Twitter" and "X" are trademarks of X Corp.
@@ -43,17 +45,20 @@ engagement controls. Check monitoring, event replay, signed delivery, and the
 documented stop path.
 
 Xquik combines tweet search, keyword monitors, events, and HMAC webhooks. Start
-with a direct search. Create a persistent monitor only after the query and
-expected noise are understood.
+with a direct search after approving its exact query, bound, purpose, usage,
+recipients, destination, and retention. Create a persistent monitor only after
+the query and expected noise are understood.
 
 Measure precision with a reviewed sample. Record relevant results, irrelevant
 results, missed known examples, duplicates, and detection delay.
 
 ### How do I monitor a keyword on Twitter in real time?
 
-Define an exact keyword query and exclusions. Validate it with a bounded search.
-Then create a keyword monitor after approving its target, filters, expected
-usage, event delivery, and deletion path.
+Define an exact keyword query and exclusions. Approve its query, bound, purpose,
+usage, recipients, destination, and retention. Then validate it with that
+unchanged bounded search. Create a keyword monitor only after separately
+approving its target, filters, expected usage, event delivery, and deletion
+path.
 
 Poll monitor events. Before registering an HTTPS webhook, obtain explicit
 approval for the event scope, exact destination URL, HMAC verification method,
@@ -67,7 +72,8 @@ retries, deduplication, latency measurement, and outage recovery.
 
 ### How do I track keywords with a Twitter API?
 
-Use `GET /x/tweets/search` for a current snapshot. Use
+After approving the exact query, bound, purpose, usage, recipients, destination,
+and retention, use `GET /x/tweets/search` for a current snapshot. Use
 `POST /monitors/keywords` for ongoing keyword tracking. Add exact phrases,
 excluded terms, language, author, media, reply, repost, and minimum-engagement
 rules where supported.

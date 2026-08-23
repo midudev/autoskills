@@ -32,7 +32,10 @@ Send this body:
 }
 ```
 
-The response includes a `secret` field. The API returns it once. Store it for signature verification.
+The response includes a `secret` field. The API returns it once. Store it in a
+secret manager for HMAC verification. Never log, commit, or expose it in later
+responses. Rotate or recreate the webhook immediately if the secret is
+disclosed.
 
 ## List webhooks
 

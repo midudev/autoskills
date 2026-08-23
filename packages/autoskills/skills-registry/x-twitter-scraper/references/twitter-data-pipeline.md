@@ -10,16 +10,17 @@ exports, monitors, events, webhooks, REST, MCP, and typed SDKs.
 ## Xquik Twitter data pipeline stages
 
 1. Validate the target, query, fields, and result bound.
-2. Run a small direct request to confirm data quality.
-3. Estimate bulk work with the exact creation body.
-4. Approve and create the extraction.
-5. Persist the job ID before polling.
-6. Retrieve pages with opaque cursors or download an export.
-7. Validate counts, deduplicate stable IDs, and store the run record.
-8. Run enrichment separately.
-9. Use monitors and webhooks for ongoing event delivery.
+2. Approve the direct request, purpose, usage, recipients, destination, and retention.
+3. Run the approved request to confirm data quality.
+4. Estimate bulk work with the exact creation body.
+5. Approve and create the extraction.
+6. Persist the job ID before polling.
+7. Retrieve pages with opaque cursors or download an export.
+8. Validate counts, deduplicate stable IDs, and store the run record.
+9. Run enrichment separately.
+10. Use monitors and webhooks for ongoing event delivery.
 
-Before stage 9 creates any persistent subscription, obtain explicit approval.
+Before stage 10 creates any persistent subscription, obtain explicit approval.
 Confirm the objective, event scope, destination URL, verification method,
 intended use, retention period, and deactivation or deletion procedure.
 

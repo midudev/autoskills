@@ -241,9 +241,9 @@ GET /x/bookmarks/folders
 ```
 
 Get bookmark folders for the authenticated caller's active connected account.
-The endpoint has no account parameter. If multiple accounts are connected,
-identify the dashboard-selected active account. Confirm that exact account.
-Block the read when account selection remains ambiguous.
+The endpoint has no account parameter. Require exactly 1 active connected
+account. Identify and confirm the dashboard-selected account. Block the read
+when account selection is missing or ambiguous.
 
 This is a private read. Returns private account-specific bookmark organization data.
 Confirm the exact account and purpose before calling. Do not forward folder

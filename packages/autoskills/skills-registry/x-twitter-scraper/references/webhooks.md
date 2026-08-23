@@ -9,6 +9,11 @@ Receive event notifications at an HTTPS endpoint. Verify every request with its 
 3. Save the response `secret`. The API returns it once.
 4. Verify each signature before processing the event.
 
+The receivers below support `tweet.new`, `tweet.reply`, `tweet.quote`, and
+`tweet.retweet`. Before every monitor or webhook create or update request, pass
+the requested `eventTypes` through the matching language validator. Add a
+handler before registering another published event type.
+
 ## Webhook payload
 
 Every delivery is a `POST` request to your URL with a JSON body:
@@ -73,6 +78,25 @@ if (!WEBHOOK_SECRET) throw new Error("Set XQUIK_WEBHOOK_SECRET first.");
 const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024;
 const STORE_OPERATION_MAX_MS = 2_000;
 const recentNonces = new Map();
+const SUPPORTED_EVENT_TYPES = new Set([
+  "tweet.new",
+  "tweet.reply",
+  "tweet.quote",
+  "tweet.retweet",
+]);
+
+function validateSubscriptionEventTypes(eventTypes) {
+  if (!Array.isArray(eventTypes) || eventTypes.some((eventType) => typeof eventType !== "string")) {
+    throw new Error("eventTypes must contain only strings.");
+  }
+  const unsupported = eventTypes.filter((eventType) => !SUPPORTED_EVENT_TYPES.has(eventType));
+  if (unsupported.length > 0) {
+    throw new Error(`Add handlers before subscribing: ${unsupported.join(", ")}`);
+  }
+}
+
+// Call validateSubscriptionEventTypes before every monitor or webhook create
+// or update request.
 
 // Replace these fail-closed methods with one shared durable store.
 const eventStore = {
@@ -236,7 +260,7 @@ const server = createServer((req, res) => {
       res.writeHead(400).end("Invalid event envelope");
       return;
     }
-    if (!["webhook.test", "tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"].includes(event.eventType)) {
+    if (event.eventType !== "webhook.test" && !SUPPORTED_EVENT_TYPES.has(event.eventType)) {
       res.writeHead(503).end("Handler unavailable");
       return;
     }
@@ -339,6 +363,17 @@ MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
 STORE_OPERATION_MAX_SECONDS = 2.0
 RECENT_NONCES: dict[str, int] = {}
 NONCE_LOCK = threading.Lock()
+SUPPORTED_EVENT_TYPES = {"tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"}
+
+def validate_subscription_event_types(event_types: list[str]) -> None:
+    if any(not isinstance(event_type, str) for event_type in event_types):
+        raise ValueError("eventTypes must contain only strings")
+    unsupported = sorted(set(event_types) - SUPPORTED_EVENT_TYPES)
+    if unsupported:
+        raise ValueError(f"Add handlers before subscribing: {', '.join(unsupported)}")
+
+# Call validate_subscription_event_types before every monitor or webhook create
+# or update request.
 
 def claim_nonce(nonce: str) -> bool:
     now = int(time.time() * 1000)
@@ -542,7 +577,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Invalid event envelope")
             return
         event_type = event["eventType"]
-        if event_type not in {"webhook.test", "tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet"}:
+        if event_type != "webhook.test" and event_type not in SUPPORTED_EVENT_TYPES:
             self.send_response(503)
             self.end_headers()
             self.wfile.write(b"Handler unavailable")
@@ -660,6 +695,24 @@ const maxWebhookBodyBytes int64 = 1024 * 1024
 
 var webhookSecret = requireWebhookSecret()
 var recentNonces sync.Map
+var supportedEventTypes = map[string]bool{
+    "tweet.new": true,
+    "tweet.reply": true,
+    "tweet.quote": true,
+    "tweet.retweet": true,
+}
+
+func validateSubscriptionEventTypes(eventTypes []string) error {
+    for _, eventType := range eventTypes {
+        if !supportedEventTypes[eventType] {
+            return fmt.Errorf("add a handler before subscribing to %s", eventType)
+        }
+    }
+    return nil
+}
+
+// Call validateSubscriptionEventTypes before every monitor or webhook create
+// or update request.
 
 type EventStore interface {
     ClaimPending(ctx context.Context, key string) (string, error)
@@ -769,10 +822,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    switch event.EventType {
-    case "tweet.new", "tweet.reply", "tweet.quote", "tweet.retweet":
-        // Continue with durable delivery and stream-event deduplication.
-    default:
+    if !supportedEventTypes[event.EventType] {
         http.Error(w, "Handler unavailable", http.StatusServiceUnavailable)
         return
     }

@@ -256,6 +256,7 @@ export function verifyRegistryEntry(
   skillName: string,
   entry: RegistryEntry,
   registryDir: string = getRegistryDir(),
+  listFiles: (dir: string) => string[] = listSkillFiles,
 ): { ok: boolean; reason?: string } {
   const manifestIssue = registryEntryIssue(entry);
   if (manifestIssue) return { ok: false, reason: `invalid manifest: ${manifestIssue}` };
@@ -269,7 +270,7 @@ export function verifyRegistryEntry(
       return { ok: false, reason: `invalid directory ${skillDir}` };
     }
     const declaredFiles = new Set(entry.files.map(normalizeRegistryRelPath));
-    const unexpectedFile = listSkillFiles(skillDir).find((rel) => !declaredFiles.has(rel));
+    const unexpectedFile = listFiles(skillDir).find((rel) => !declaredFiles.has(rel));
     if (unexpectedFile) {
       return { ok: false, reason: `unexpected file ${unexpectedFile}` };
     }

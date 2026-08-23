@@ -1,14 +1,6 @@
 import { describe, it } from "node:test";
 import { ok, equal, deepEqual } from "node:assert/strict";
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readlinkSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 
@@ -186,19 +178,14 @@ describe("verifyRegistryEntry", () => {
     buildRegistry(regDir, [
       { name: "my-skill", source: "owner/repo", files: { "SKILL.md": "# hi" } },
     ]);
-    const unreadableDir = join(regDir, "my-skill", "unreadable");
-    mkdirSync(unreadableDir);
-    chmodSync(unreadableDir, 0o000);
     const manifest = JSON.parse(readFileSync(join(regDir, "index.json"), "utf-8"));
 
-    try {
-      const verdict = verifyRegistryEntry("my-skill", manifest.skills["my-skill"], regDir);
+    const verdict = verifyRegistryEntry("my-skill", manifest.skills["my-skill"], regDir, () => {
+      throw new Error("blocked traversal");
+    });
 
-      equal(verdict.ok, false);
-      ok(verdict.reason?.startsWith("verification failed:"));
-    } finally {
-      chmodSync(unreadableDir, 0o700);
-    }
+    equal(verdict.ok, false);
+    equal(verdict.reason, "verification failed: blocked traversal");
   });
 
   it("rejects unsafe registry paths before installation", async () => {

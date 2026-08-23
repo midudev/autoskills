@@ -318,6 +318,8 @@ const allResults = await fetchAllPages(
   "results",
   1000,
   (item) => typeof item?.xUserId === "string" ? `user:${item.xUserId}` : null,
+  100,
+  "after",
 );
 
 const exportProposal = {

@@ -30,6 +30,7 @@ HEADERS = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 ```python
 import random
 import re
+import socket
 import time
 
 MAX_RETRY_DELAY_SECONDS = 30.0
@@ -128,7 +129,7 @@ def xquik_fetch(path, method="GET", json_body=None, max_retries=3, deadline=None
                 retry_after = error.headers.get("Retry-After")
             finally:
                 error.close()
-        except urllib.error.URLError:
+        except (urllib.error.URLError, socket.timeout, TimeoutError):
             if not retry_safe or attempt == max_retries:
                 raise
             delay = min(
@@ -494,6 +495,8 @@ def process_delivery(event: dict) -> None:
 
 def validate_subscription_event_types(event_types: list[str]) -> None:
     """Reject subscriptions until this receiver implements every event type."""
+    if any(not isinstance(event_type, str) for event_type in event_types):
+        raise ValueError("eventTypes must contain only strings")
     unsupported = sorted(set(event_types) - SUPPORTED_EVENT_TYPES)
     if unsupported:
         raise ValueError(f"Add handlers before subscribing: {', '.join(unsupported)}")

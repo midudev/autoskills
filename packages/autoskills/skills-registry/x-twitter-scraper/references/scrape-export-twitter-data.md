@@ -11,7 +11,7 @@ when the task needs a complete or reusable dataset.
 
 | Need | Route | Required control | Result |
 | --- | --- | --- | --- |
-| Search recent posts | `GET /x/tweets/search` | Query and bounded limit | JSON page |
+| Search recent posts | `GET /x/tweets/search` | Approved query, usage, destination, retention, and bounded limit | JSON page |
 | Read a known post | `GET /x/tweets/{id}` | Stable tweet ID | Tweet, author, metrics, media |
 | Read up to 100 known posts | `GET /x/tweets?ids=...` | Up to 100 numeric IDs | Batch JSON |
 | Export search results | `tweet_search_extractor` | Estimate, filters, `resultsLimit` | Job, pages, or file |
@@ -23,6 +23,9 @@ when the task needs a complete or reusable dataset.
 Use `GET /x/tweets/search` for bounded Twitter advanced search results. Use
 `tweet_search_extractor` for a durable search dataset. Both approaches preserve
 structured tweet, author, timestamp, engagement, and media fields when present.
+The direct search is metered. Before calling it, show the exact query, bound,
+published usage limitation, purpose, recipients, destination, and retention.
+Require approval for that unchanged request and scope.
 
 | Search need | Xquik control | Example decision |
 | --- | --- | --- |
@@ -132,11 +135,26 @@ estimated extraction for a complete export.
 import requests
 
 
+def require_explicit_approval(proposal: dict[str, object]) -> dict[str, object]:
+    raise RuntimeError(f"Approval required for {proposal!r}.")
+
+
 def search_tweets(api_key: str) -> dict[str, object]:
+    query = {"q": '"machine learning" -job', "limit": 25}
+    proposal = {
+        "request": {"method": "GET", "path": "/x/tweets/search", "query": query},
+        "usageLimitation": "Metered per returned result.",
+        "purpose": "Review a bounded public search sample.",
+        "recipients": ["Requesting analyst"],
+        "destination": "Approved analysis workspace",
+        "retention": "Delete after 30 days.",
+    }
+    if require_explicit_approval(proposal) != proposal:
+        raise RuntimeError("Approved search changed. Request approval again.")
     response = requests.get(
         "https://xquik.com/api/v1/x/tweets/search",
         headers={"x-api-key": api_key},
-        params={"q": '"machine learning" -job', "limit": 25},
+        params=query,
         timeout=30,
     )
     response.raise_for_status()
