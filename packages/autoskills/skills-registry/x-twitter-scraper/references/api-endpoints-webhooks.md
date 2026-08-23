@@ -99,8 +99,8 @@ Claim each nonce with one atomic insert-if-absent operation. Keep the claim for
 the full 5-minute validity window. Use a shared store when receivers run in
 multiple processes or instances. Reject the request when the claim already
 exists. After signature and nonce validation, claim a production
-`deliveryId` separately before processing it. Keep delivery deduplication even
-when nonce validation succeeds.
+`deliveryId` and `streamEventId` separately before processing it. Keep both
+claims even when nonce validation succeeds.
 
 Testing does not change the webhook state. Use `POST /webhooks/{id}/resume` to
 test and resume a paused endpoint.

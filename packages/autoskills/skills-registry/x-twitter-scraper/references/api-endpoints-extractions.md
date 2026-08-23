@@ -80,7 +80,10 @@ Pass each `nextCursor` unchanged as the next request's `after` value while
 `hasMore` is true.
 
 ```javascript
-const params = new URLSearchParams({ limit: "100", after: nextCursor });
+const params = new URLSearchParams({ limit: "100" });
+if (typeof nextCursor === "string" && nextCursor) {
+  params.set("after", nextCursor);
+}
 const page = await xquikFetch(`/extractions?${params}`);
 ```
 
@@ -101,7 +104,10 @@ for the next page. Optional result-shaping parameters are `outputMode`,
 `outputPreset`, and `fieldStyle`. `includeRaw` is deprecated.
 
 ```javascript
-const params = new URLSearchParams({ limit: "1000", after: nextCursor });
+const params = new URLSearchParams({ limit: "1000" });
+if (typeof nextCursor === "string" && nextCursor) {
+  params.set("after", nextCursor);
+}
 const page = await xquikFetch(`/extractions/${extractionId}?${params}`);
 ```
 

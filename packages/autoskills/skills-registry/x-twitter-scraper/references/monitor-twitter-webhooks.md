@@ -95,7 +95,7 @@ Run webhook tests after deployment changes. Keep test events out of analytics.
 1. Read the raw request body.
 2. Compute and compare the expected HMAC signature safely.
 3. Reject invalid or missing signatures.
-4. Deduplicate webhook attempts by `deliveryId`.
+4. Claim each `deliveryId` and `streamEventId` in durable storage.
 5. Acknowledge valid delivery quickly.
 6. Process asynchronously with bounded retries.
 7. Record attempt, status, and failure reason.
@@ -110,7 +110,7 @@ plan changes, credit changes, or tool changes.
 2. Check monitor status and delivery history.
 3. Restore the receiver before resuming delivery.
 4. Repoll events from the last stored cursor when recovery needs them.
-5. Deduplicate event IDs and webhook `deliveryId` values.
+5. Deduplicate event IDs. Claim webhook `deliveryId` and `streamEventId` values.
 6. Compare source and stored timestamps.
 7. Document gaps and permanent failures.
 

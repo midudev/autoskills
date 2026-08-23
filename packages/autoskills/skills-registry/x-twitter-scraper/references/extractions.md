@@ -298,7 +298,15 @@ for (let pageNumber = 0; pageNumber < approvedMaxPages; pageNumber++) {
   const params = new URLSearchParams({ limit: "1000" });
   if (nextCursor) params.set("after", nextCursor);
   const page = await xquikFetch(`/extractions/${extractionId}?${params}`);
-  if (!Array.isArray(page.results)) throw new Error("Invalid extraction page.");
+  if (
+    page === null ||
+    typeof page !== "object" ||
+    Array.isArray(page) ||
+    !Array.isArray(page.results) ||
+    typeof page.hasMore !== "boolean"
+  ) {
+    throw new Error("Invalid extraction page.");
+  }
   results.push(...page.results);
   if (!page.hasMore) {
     nextCursor = undefined;

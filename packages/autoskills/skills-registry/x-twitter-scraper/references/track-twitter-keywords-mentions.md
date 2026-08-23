@@ -107,7 +107,8 @@ the monitor or authorize an account action.
 1. Verify the HMAC signature against the raw request body.
 2. Reject invalid signatures before parsing business fields.
 3. Return success quickly and queue slower processing.
-4. Deduplicate polled events by event ID. Deduplicate webhooks by `deliveryId`.
+4. Deduplicate polled events by event ID. Claim webhook `deliveryId` and
+   `streamEventId` values in durable storage.
 5. Record attempt count and processing state.
 6. Test delivery before enabling automation.
 7. Preserve a documented disable and delete path.

@@ -142,12 +142,9 @@ async function xquikFetch(path, options = {}) {
       throw new Error("Xquik API 409: missing Retry-After");
     }
     if (coverageRetry) retriedCoverageCursor = true;
-    const delay = Math.min(
-      maxRetryDelay,
-      retryAfterMs !== null
-        ? retryAfterMs
-        : baseDelay * 2 ** attempt + Math.random() * 1000,
-    );
+    const delay = retryAfterMs !== null
+      ? retryAfterMs
+      : Math.min(maxRetryDelay, baseDelay * 2 ** attempt + Math.random() * 1000);
 
     await waitBeforeRetry(delay);
   }

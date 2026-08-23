@@ -535,7 +535,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
         try:
             event = json.loads(payload)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             self.send_response(400)
             self.end_headers()
             self.wfile.write(b"Invalid JSON")
