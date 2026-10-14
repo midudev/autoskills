@@ -13018,6 +13018,44 @@
         "summary": "Official ElysiaJS skill with standard documentation",
         "checkedAt": "2026-05-13T21:40:00.000Z"
       }
+    },
+    "fastapi": {
+      "source": "fastapi/fastapi",
+      "skillPath": "fastapi/fastapi/fastapi",
+      "commitSha": "f5c6e9b4f9cadc1bf0f9a1fd672e621206b63007",
+      "files": [
+        "SKILL.md",
+        "references/dependencies.md",
+        "references/other-tools.md",
+        "references/path-operations.md",
+        "references/pydantic.md",
+        "references/responses.md",
+        "references/streaming.md"
+      ],
+      "sha256": {
+        "SKILL.md": "353cf43e70602453ba902a800f3c03f0b6c2e71130cfc0da0f1f60764d47defe",
+        "references/dependencies.md": "9907b669ba930cb060608807fa0f23e03e8548adc68eab8c54d455587977f2fe",
+        "references/other-tools.md": "2daf0c09ec6f77d90d9c0dcfec448b4133b05302dc3a574dafce0216bf4d6339",
+        "references/path-operations.md": "ed8d2a21123bcf63dd1e9aa61cc8e4e33a878cbbf1d09498a556a420302995ca",
+        "references/pydantic.md": "840ab962739861aed2ea77805dc46979c9a96abd8fc0043f197b3bd5d638e84b",
+        "references/responses.md": "7c921508bbd093697301ca9612038976cfb5b65bdc2dc42a0c02e2809d3652a7",
+        "references/streaming.md": "3ff148c6d153affa960f421d13d27eb8225b70e579ed833c61c6b1a9ff17fa87"
+      },
+      "bundleHash": "d1fed430cc3ebe2aa91cb1652d559faa9dc8f2971caaaf4ddd78032881f96cb7",
+      "review": {
+        "status": "approved",
+        "flags": [],
+        "summary": "The fastapi skill contains only on-topic FastAPI best-practice guidance and code examples, with no prompt injection, embedded secrets, suspicious URLs (the sole link is the official FastAPI docs), destructive commands, or hidden content.",
+        "model": "claude-haiku-5-5",
+        "promptVersion": "1.0.0",
+        "reviewedAt": "2026-10-14T12:07:27.867Z"
+      },
+      "securityCheck": {
+        "status": "ok",
+        "findings": [],
+        "summary": "The fastapi skill contains only on-topic FastAPI best-practice guidance and code examples, with no prompt injection, embedded secrets, suspicious URLs (the sole link is the official FastAPI docs), destructive commands, or hidden content.",
+        "checkedAt": "2026-10-14T12:07:27.867Z"
+      }
     }
   }
 }

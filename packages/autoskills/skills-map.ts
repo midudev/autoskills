@@ -924,14 +924,6 @@ export const SKILLS_MAP: Technology[] = [
     skills: [],
   },
   {
-    id: "python",
-    name: "Python",
-    detect: {
-      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
-    },
-    skills: [],
-  },
-  {
     id: "sorbet",
     name: "Sorbet",
     detect: {
@@ -948,18 +940,6 @@ export const SKILLS_MAP: Technology[] = [
     name: "ActiveAdmin",
     detect: {
       gems: ["activeadmin"],
-    },
-    skills: [],
-  },
-  {
-    id: "django",
-    name: "Django",
-    detect: {
-      configFiles: ["manage.py"],
-      configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
-        patterns: ["django", "Django"],
-      },
     },
     skills: [],
   },
@@ -1028,7 +1008,7 @@ export const SKILLS_MAP: Technology[] = [
     id: "python",
     name: "Python",
     detect: {
-      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+      configFiles: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
     },
     skills: ["inferen-sh/skills/python-executor", "wshobson/agents/python-testing-patterns"],
   },
@@ -1037,11 +1017,15 @@ export const SKILLS_MAP: Technology[] = [
     name: "FastAPI",
     detect: {
       configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
         patterns: ["fastapi", "FastAPI"],
       },
     },
-    skills: ["wshobson/agents/fastapi-templates", "fastapi/fastapi/fastapi","mindrally/skills/fastapi-python"],
+    skills: [
+      "fastapi/fastapi/fastapi",
+      "wshobson/agents/fastapi-templates",
+      "mindrally/skills/fastapi-python",
+    ],
   },
   {
     id: "fastmcp",
@@ -1058,8 +1042,9 @@ export const SKILLS_MAP: Technology[] = [
     id: "django",
     name: "Django",
     detect: {
+      configFiles: ["manage.py"],
       configFileContent: {
-        files: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"],
+        files: ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "Pipfile"],
         patterns: ["django", "Django"],
       },
     },

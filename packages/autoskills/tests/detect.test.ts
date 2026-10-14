@@ -9,8 +9,21 @@ import {
   detectTechnologies,
   detectCombos,
   parseSettingsGradleModules,
+  SKILLS_MAP,
 } from "../lib.ts";
 import { useTmpDir, writePackageJson, writeJson, writeFile, addWorkspace } from "./helpers.ts";
+
+// ── SKILLS_MAP ─────────────────────────────────────────────────
+
+describe("SKILLS_MAP", () => {
+  it("declares each technology id once", () => {
+    const ids = SKILLS_MAP.map((t) => t.id);
+    deepStrictEqual(
+      ids.filter((id, i) => ids.indexOf(id) !== i),
+      [],
+    );
+  });
+});
 
 // ── getAllPackageNames ─────────────────────────────────────────
 
@@ -769,6 +782,20 @@ plugins {
     const { detected } = detectTechnologies(tmp.path);
     ok(detected.some((t) => t.id === "fastapi"));
     ok(detected.some((t) => t.id === "pydantic"));
+  });
+
+  it("includes the official FastAPI skill", () => {
+    writeFile(tmp.path, "requirements.txt", "fastapi==0.100.0");
+    const { detected } = detectTechnologies(tmp.path);
+    const fastapi = detected.find((t) => t.id === "fastapi");
+    ok(fastapi?.skills.includes("fastapi/fastapi/fastapi"));
+  });
+
+  it("detects Django with its skills from manage.py alone", () => {
+    writeFile(tmp.path, "manage.py", "import django");
+    const { detected } = detectTechnologies(tmp.path);
+    const django = detected.find((t) => t.id === "django");
+    ok(django && django.skills.length > 0);
   });
 
   it("detects Django from pyproject.toml", () => {
