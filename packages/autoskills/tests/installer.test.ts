@@ -285,6 +285,26 @@ describe("installSkill", () => {
     });
   });
 
+  it("keeps the info severity of security notes from the registry", () => {
+    const regDir = join(tmp.path, "registry");
+    buildRegistry(regDir, [
+      {
+        name: "noted-skill",
+        source: "owner/repo",
+        files: { "SKILL.md": "# noted" },
+        securityCheck: {
+          status: "info",
+          findings: ["Optional feedback command runs a vendor npm package"],
+          summary: "Standard vendor documentation.",
+          checkedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    _setRegistryDir(regDir);
+
+    equal(securityCheckForSkillPath("owner/repo/noted-skill")?.status, "info");
+  });
+
   it("collects security checks when installing multiple skills", async () => {
     const regDir = join(tmp.path, "registry");
     const projectDir = join(tmp.path, "project");

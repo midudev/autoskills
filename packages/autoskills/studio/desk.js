@@ -118,6 +118,7 @@ function cardHtml(item, index) {
         <div class="stamps">
           ${item.installed ? `<span class="stamp">installed</span>` : `<span class="stamp project">suggested</span>`}
           ${item.security?.status === "warning" ? `<span class="stamp warn">security</span>` : ""}
+          ${item.security?.status === "info" ? `<span class="stamp">security note</span>` : ""}
         </div>
         ${item.installed ? "" : `<button type="button" class="btn primary" data-install="${escapeHtml(item.skill)}">Install</button>`}
       </article>

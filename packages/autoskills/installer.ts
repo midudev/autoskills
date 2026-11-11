@@ -40,7 +40,7 @@ export interface RegistryEntry {
     reviewedAt: string;
   };
   securityCheck?: {
-    status: "ok" | "warning";
+    status: "ok" | "info" | "warning";
     findings: string[];
     summary: string;
     checkedAt: string;
@@ -156,7 +156,7 @@ export interface InstallResult {
 
 export interface InstallSecurityCheck {
   name: string;
-  status: "ok" | "warning";
+  status: "ok" | "info" | "warning";
   summary: string;
   findings: string[];
 }

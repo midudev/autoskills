@@ -184,7 +184,7 @@ When multiple technologies are used together, `autoskills` detects **technology 
 
 ## How It Works
 
-Skills are markdown files that teach AI assistants how to work with specific technologies, following best practices and patterns from the official maintainers. `autoskills` installs them from its own curated registry: maintainers sync them from their upstream repositories (the ones listed on [skills.sh](https://skills.sh)), an AI security review blocks anything that attacks the user or plants a serious vulnerability, and every file is recorded with a SHA-256 hash that the CLI verifies before writing it.
+Skills are markdown files that teach AI assistants how to work with specific technologies, following best practices and patterns from the official maintainers. `autoskills` installs them from its own curated registry: maintainers sync them from their upstream repositories (the ones listed on [skills.sh](https://skills.sh)), an AI security review blocks anything that attacks the user or plants a serious vulnerability, and every file is recorded with a SHA-256 hash that the CLI verifies before writing it. Skills the review allows can still carry a **security note** (normal practice worth knowing, such as an optional vendor feedback command) or a **security check ⚠** warning (something to look at before installing, such as an insecure example the agent might copy). The CLI shows the reasons before you confirm: move the cursor onto a skill in the selector, or run `--dry-run`.
 
 The detection runs entirely locally with zero network requests until installation begins.
 

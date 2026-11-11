@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 //    attack the user or plant a serious vulnerability. Anything it allows is
 //    installed, with short warnings when there is something worth knowing.
 
-export const REVIEW_PROMPT_VERSION = "2.0.0";
+export const REVIEW_PROMPT_VERSION = "2.1.0";
 
 // Read lazily: callers load .env after their imports are evaluated.
 export function reviewModels() {
@@ -48,6 +48,11 @@ Allow everything that is normal in developer documentation, even when it deserve
 
 When you allow a skill, list in "warnings" only facts a developer should know before installing it (for example "Runs remote npm packages with --yes"), at most three, short and without speculation. Leave the list empty when nothing stands out. Give the reason for your verdict in one sentence.
 
+Then set "severity" for what you listed:
+- "none" when the list is empty.
+- "info" when everything listed is normal, clearly described practice the developer only needs to be aware of: optional vendor feedback or telemetry commands, well-known CLIs, paid services or accounts the workflow needs, routine commands scoped to the project.
+- "warning" when at least one item deserves a closer look before installing: tools or remote code from unknown third parties, data sent outside the vendor's own services, destructive commands beyond the project, or insecure patterns the skill teaches that the agent would likely copy into the user's code (such as wildcard CORS, unvalidated input in URLs, queries or shell commands, or disabled TLS checks).
+
 ${UNTRUSTED_NOTE}`;
 
 const TRIAGE_SCHEMA = {
@@ -67,10 +72,18 @@ const ADJUDICATOR_SCHEMA = {
     verdict: { type: "string", enum: ["allow", "block"] },
     reason: { type: "string" },
     warnings: { type: "array", items: { type: "string" } },
+    severity: { type: "string", enum: ["none", "info", "warning"] },
   },
-  required: ["verdict", "reason", "warnings"],
+  required: ["verdict", "reason", "warnings", "severity"],
   additionalProperties: false,
 };
+
+// Maps the adjudicator's severity to the registry's securityCheck.status. It never
+// downgrades: listed findings are at least "info", and "warning" always sticks.
+export function securityStatus(severity, warnings) {
+  if (severity === "warning") return "warning";
+  return warnings.length > 0 ? "info" : "ok";
+}
 
 // Reviews read every text file in full instead of truncating: a payload could hide
 // past any cut-off. Bundles beyond this are reported instead of half-reviewed.
@@ -151,6 +164,7 @@ export async function reviewSkill(skillPath, files, { skip = false } = {}) {
       warnings: [],
       summary: "review skipped (--no-review)",
       model: "none",
+      securityStatus: "ok",
     };
   }
   // Reads ANTHROPIC_API_KEY from .env (or an `ant auth login` profile).
@@ -170,7 +184,13 @@ export async function reviewSkill(skillPath, files, { skip = false } = {}) {
     effort: "medium",
   });
   if (triage.data?.status === "approved") {
-    return { decision: "allow", warnings: [], summary: triage.data.summary, model: triage.model };
+    return {
+      decision: "allow",
+      warnings: [],
+      summary: triage.data.summary,
+      model: triage.model,
+      securityStatus: "ok",
+    };
   }
 
   const concerns = triage.refusal
@@ -193,11 +213,13 @@ export async function reviewSkill(skillPath, files, { skip = false } = {}) {
       escalated: true,
     };
   }
+  const warnings = verdict.data.warnings.slice(0, 3);
   return {
     decision: verdict.data.verdict,
-    warnings: verdict.data.warnings.slice(0, 3),
+    warnings,
     summary: verdict.data.reason,
     model: verdict.model,
     escalated: true,
+    securityStatus: securityStatus(verdict.data.severity, warnings),
   };
 }

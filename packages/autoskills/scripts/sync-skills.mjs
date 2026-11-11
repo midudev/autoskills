@@ -52,6 +52,7 @@ const FLAGS = {
   dryRun: args.includes("--dry-run"),
   noReview: args.includes("--no-review"),
   retryFailed: args.includes("--retry-failed"),
+  rereview: args.includes("--rereview"),
   only: (() => {
     const i = args.indexOf("--only");
     if (i === -1 || !args[i + 1]) return null;
@@ -82,6 +83,8 @@ if (args.includes("-h") || args.includes("--help")) {
     --no-review     Skip the Claude review (dev only)
     --only <names>  Sync only these skills (comma-separated names)
     --retry-failed  Sync only skills from the last report that failed or were blocked
+    --rereview      Review the files already in the registry again, without fetching
+                    upstream (e.g. after a review prompt change; combine with --only)
     -v, --verbose   Show per-file details
     -h, --help      Show this help
 `);
@@ -542,11 +545,37 @@ function writeSkillToRegistry(manifest, skill) {
       reviewedAt: new Date().toISOString(),
     },
     securityCheck: {
-      status: skill.review.warnings.length > 0 ? "warning" : "ok",
+      status: skill.review.securityStatus,
       findings: skill.review.warnings,
       summary: skill.review.summary || "The sync review did not find security issues.",
       checkedAt: new Date().toISOString(),
     },
+  };
+}
+
+// Scripts are reviewed too: an attack can live in any file the agent may run.
+function filesForReview(relFiles) {
+  return relFiles
+    .filter((f) => isTextFile(f.buf))
+    .map((f) => ({ rel: f.rel, content: f.buf.toString("utf-8") }));
+}
+
+// Loads a skill as stored in the registry, checking every file against its hash
+// so a re-review never runs on files that differ from what users install.
+function readRegistrySkill(skillName, entry) {
+  const relFiles = entry.files.map((rel) => {
+    const buf = readFileSync(join(REGISTRY_DIR, skillName, rel));
+    if (sha256Hex(buf) !== entry.sha256[rel]) throw new Error(`hash mismatch for ${rel}`);
+    return { rel, buf };
+  });
+  return {
+    repo: entry.source,
+    full: entry.skillPath,
+    skillName,
+    sha: entry.commitSha,
+    relFiles,
+    shaMap: entry.sha256,
+    bundleHash: entry.bundleHash,
   };
 }
 
@@ -576,12 +605,19 @@ async function reviewAndStore(skill, files, manifest, report) {
 
   if (!FLAGS.dryRun) writeSkillToRegistry(manifest, { ...skill, review });
   const written = FLAGS.dryRun ? "would write" : `${skill.relFiles.length} file(s)`;
-  if (review.warnings.length > 0) {
+  if (review.securityStatus === "warning") {
     report.totals.warned++;
     report.warned.push({ skill: skill.full, warnings: review.warnings, summary: review.summary });
     log(
       yellow(`   ⚠ ${skill.full}`) +
         dim(` — allowed with warnings, ${written}: ${review.warnings.join("; ")}`),
+    );
+  } else if (review.securityStatus === "info") {
+    report.totals.noted++;
+    report.noted.push({ skill: skill.full, notes: review.warnings, summary: review.summary });
+    log(
+      cyan(`   ℹ ${skill.full}`) +
+        dim(` — allowed with notes, ${written}: ${review.warnings.join("; ")}`),
     );
   } else {
     report.totals.approved++;
@@ -615,6 +651,7 @@ async function main() {
   );
   if (FLAGS.dryRun) log(dim("   --dry-run: no files will be written"));
   if (FLAGS.noReview) log(yellow("   --no-review: skipping Claude audit"));
+  if (FLAGS.rereview) log(dim("   --rereview: reviewing registry files, upstream is not fetched"));
   log();
 
   const allSkills = collectAllSkillPaths();
@@ -647,12 +684,14 @@ async function main() {
       repos: byRepo.size,
       skills: 0,
       approved: 0,
+      noted: 0,
       warned: 0,
       rejected: 0,
       unchanged: 0,
       missing: 0,
     },
     rejected: [],
+    noted: [],
     warned: [],
     missing: [],
     errors: [],
@@ -661,10 +700,39 @@ async function main() {
   const reviewLimit = createLimiter(REVIEW_CONCURRENCY);
   const reviews = [];
   let fatalError = null;
+  const queueReview = (skill) => {
+    reviews.push(
+      reviewLimit(() =>
+        reviewAndStore(skill, filesForReview(skill.relFiles), manifest, report),
+      ).catch((err) => {
+        fatalError ??= err;
+      }),
+    );
+  };
 
   for (const [repo, skills] of byRepo) {
     if (fatalError) break;
     log(bold(repo) + dim(` (${skills.length} skill${skills.length === 1 ? "" : "s"})`));
+
+    if (FLAGS.rereview) {
+      for (const { full, skillName } of skills) {
+        report.totals.skills++;
+        const entry = manifest.skills[skillName];
+        if (!entry) {
+          log(red(`   ✘ ${skillName}`) + dim(" — not in the registry yet"));
+          report.totals.missing++;
+          report.missing.push(full);
+          continue;
+        }
+        try {
+          queueReview(readRegistrySkill(skillName, entry));
+        } catch (err) {
+          log(red(`   ✘ ${skillName}`) + dim(` — ${err.message}`));
+          report.errors.push({ skill: full, reason: err.message });
+        }
+      }
+      continue;
+    }
 
     let sha;
     let repoRoot;
@@ -757,16 +825,7 @@ async function main() {
         continue;
       }
 
-      // Scripts are reviewed too: an attack can live in any file the agent may run.
-      const filesForReview = relFiles
-        .filter((f) => isTextFile(f.buf))
-        .map((f) => ({ rel: f.rel, content: f.buf.toString("utf-8") }));
-      const skill = { repo, full, skillName, sha, relFiles, shaMap, bundleHash };
-      reviews.push(
-        reviewLimit(() => reviewAndStore(skill, filesForReview, manifest, report)).catch((err) => {
-          fatalError ??= err;
-        }),
-      );
+      queueReview({ repo, full, skillName, sha, relFiles, shaMap, bundleHash });
     }
 
     rmSync(tmpDir, { recursive: true, force: true });
@@ -790,6 +849,7 @@ async function main() {
   log(bold("Summary"));
   log(
     `   ${green(`${report.totals.approved} approved`)}` +
+      `  ${cyan(`${report.totals.noted} with notes`)}` +
       `  ${yellow(`${report.totals.warned} with warnings`)}` +
       `  ${red(`${report.totals.rejected} blocked`)}` +
       `  ${dim(`${report.totals.unchanged} unchanged`)}` +

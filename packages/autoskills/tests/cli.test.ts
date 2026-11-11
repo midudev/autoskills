@@ -471,15 +471,20 @@ describe("CLI", () => {
       ok(!output.includes("universal"));
     });
 
-    it("shows why flagged skills have security check warnings", () => {
+    it("shows why flagged skills have security warnings or notes", () => {
       writePackageJson(tmp.path, { dependencies: { expo: "^54", "react-native": "^0.81" } });
       const output = run(["--dry-run"], tmp.path);
 
-      const flagged = [...output.matchAll(/›\s+(\S+) \(security check ⚠\)/g)].map((m) => m[1]);
+      const flagged = [...output.matchAll(/›\s+(\S+) \(security (?:check ⚠|note)\)/g)].map(
+        (m) => m[1],
+      );
       ok(flagged.length > 0);
       ok(output.includes("Security checks"));
       for (const skill of flagged) {
-        ok(new RegExp(`\\| ${skill}\\s+\\| warning \\|`).test(output), `missing row for ${skill}`);
+        ok(
+          new RegExp(`\\| ${skill}\\s+\\| (?:warning|info)\\s+\\|`).test(output),
+          `missing row for ${skill}`,
+        );
       }
     });
   });
