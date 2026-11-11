@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T12:36:37.860Z",
+  "generatedAt": "2026-11-11T16:26:21.669Z",
   "reviewer": {
     "model": "claude-haiku-5-5",
     "adjudicator": "claude-opus-5-5",
-    "promptVersion": "2.0.0"
+    "promptVersion": "2.1.0"
   },
   "skills": {
     "bun": {
@@ -1205,24 +1205,22 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "Optional feedback command runs the remote npm package submit-expo-feedback@latest with --yes",
-          "Feedback asks for 'as much relevant context as possible'; review what the agent sends to Expo",
-          "EAS cloud builds and TestFlight submission use paid build minutes and an Apple Developer account"
+          "Optional feedback step runs `npx --yes submit-expo-feedback@latest` to send agent-written feedback text to Expo",
+          "EAS cloud builds and TestFlight distribution require paid EAS and Apple Developer accounts"
         ],
-        "summary": "This is standard Expo/EAS development-client documentation, and its feedback command is optional, clearly described and goes to the vendor's own feedback package, which is a normal pattern rather than hidden exfiltration.",
+        "summary": "This is standard Expo/EAS dev-client documentation using well-known CLIs, and its feedback command is an optional, clearly described vendor feedback channel rather than hidden exfiltration.",
         "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:34:01.668Z"
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:25:57.132Z"
       },
       "securityCheck": {
-        "status": "warning",
+        "status": "info",
         "findings": [
-          "Optional feedback command runs the remote npm package submit-expo-feedback@latest with --yes",
-          "Feedback asks for 'as much relevant context as possible'; review what the agent sends to Expo",
-          "EAS cloud builds and TestFlight submission use paid build minutes and an Apple Developer account"
+          "Optional feedback step runs `npx --yes submit-expo-feedback@latest` to send agent-written feedback text to Expo",
+          "EAS cloud builds and TestFlight distribution require paid EAS and Apple Developer accounts"
         ],
-        "summary": "This is standard Expo/EAS development-client documentation, and its feedback command is optional, clearly described and goes to the vendor's own feedback package, which is a normal pattern rather than hidden exfiltration.",
-        "checkedAt": "2026-10-14T12:34:01.668Z"
+        "summary": "This is standard Expo/EAS dev-client documentation using well-known CLIs, and its feedback command is an optional, clearly described vendor feedback channel rather than hidden exfiltration.",
+        "checkedAt": "2026-11-11T16:25:57.132Z"
       }
     },
     "flutter-expert": {
@@ -1451,24 +1449,18 @@
       },
       "bundleHash": "9de813d81db8ad38630a28b893494c1ebfe5def0e5d47cfb46c632ea7d2d92e5",
       "review": {
-        "status": "flagged",
-        "flags": [
-          "Broad shell commands and script execution should be human-reviewed (`bash flutter-testing/scripts/verify-examples.sh`, `./gradlew`, `xcodebuild`, `flutter drive`).",
-          "Contains some outdated/inconsistent guidance within references (e.g. `tester.takeScreenshot` is forbidden in SKILL.md but screenshots are shown via integration binding methods elsewhere), which merits review for correctness."
-        ],
-        "summary": "The skill is on-topic and contains no clear injection or secrets, but it includes executable commands and a few inconsistent testing instructions that should be double-checked.",
-        "model": "gpt-5.4",
-        "promptVersion": "1.0.0",
-        "reviewedAt": "2026-05-03T15:50:31.522Z"
+        "status": "approved",
+        "flags": [],
+        "summary": "The flutter-testing skill is ordinary Flutter testing documentation with a benign validation script and no hidden instructions, exfiltration, or security-disabling commands.",
+        "model": "claude-haiku-5-5",
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:25:53.357Z"
       },
       "securityCheck": {
-        "status": "warning",
-        "findings": [
-          "Broad shell commands and script execution should be human-reviewed (`bash flutter-testing/scripts/verify-examples.sh`, `./gradlew`, `xcodebuild`, `flutter drive`).",
-          "Contains some outdated/inconsistent guidance within references (e.g. `tester.takeScreenshot` is forbidden in SKILL.md but screenshots are shown via integration binding methods elsewhere), which merits review for correctness."
-        ],
-        "summary": "The skill is on-topic and contains no clear injection or secrets, but it includes executable commands and a few inconsistent testing instructions that should be double-checked.",
-        "checkedAt": "2026-05-03T15:50:31.522Z"
+        "status": "ok",
+        "findings": [],
+        "summary": "The flutter-testing skill is ordinary Flutter testing documentation with a benign validation script and no hidden instructions, exfiltration, or security-disabling commands.",
+        "checkedAt": "2026-11-11T16:25:53.357Z"
       }
     },
     "kotlin-tooling-cocoapods-spm-migration": {
@@ -1495,13 +1487,24 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "destructive_commands",
-          "embedded_secret_example"
+          "Disables Xcode User Script Sandboxing (ENABLE_USER_SCRIPT_SANDBOXING = NO) in the app project",
+          "Deletes Podfile, Pods/, the .xcworkspace and the podspec during CocoaPods deintegration",
+          "Rollback section uses broad 'git checkout --' that can discard uncommitted changes to Gradle and Kotlin files"
         ],
-        "summary": "The skill is on-topic and mostly procedural, but it includes unconditional file-deletion commands and placeholder API key usage that merit human review.",
-        "model": "gpt-5.4",
-        "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-24T21:31:55.747Z"
+        "summary": "This is a legitimate JetBrains KMP migration guide: the sandboxing change is the documented requirement for Kotlin's Gradle build phase, the file deletions are scoped to CocoaPods artifacts inside the project with a git-status check, and the rollback is explicitly a last resort, so nothing in it attacks the developer.",
+        "model": "claude-opus-5-5",
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:26:07.915Z"
+      },
+      "securityCheck": {
+        "status": "info",
+        "findings": [
+          "Disables Xcode User Script Sandboxing (ENABLE_USER_SCRIPT_SANDBOXING = NO) in the app project",
+          "Deletes Podfile, Pods/, the .xcworkspace and the podspec during CocoaPods deintegration",
+          "Rollback section uses broad 'git checkout --' that can discard uncommitted changes to Gradle and Kotlin files"
+        ],
+        "summary": "This is a legitimate JetBrains KMP migration guide: the sandboxing change is the documented requirement for Kotlin's Gradle build phase, the file deletions are scoped to CocoaPods artifacts inside the project with a git-status check, and the rollback is explicitly a last resort, so nothing in it attacks the developer.",
+        "checkedAt": "2026-11-11T16:26:07.915Z"
       }
     },
     "kotlin-tooling-agp9-migration": {
@@ -2418,14 +2421,24 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "Contains example curl command with placeholder secret authorization header",
-          "Suggests broad host permission pattern `<all_urls>` in content script manifest example",
-          "Includes instruction to disable bot protection/security feature in dashboard"
+          "The headless example posts every visited tab URL with the user's session token to the app's API, which amounts to browsing-history collection if copied as-is.",
+          "Content-script examples use `<all_urls>` host permissions and hand Clerk session tokens to content scripts running in arbitrary web pages.",
+          "Tells developers to disable Clerk bot protection for extension use."
         ],
-        "summary": "Mostly on-topic Clerk Chrome extension guidance, but it includes security-sensitive examples and broad permissions that warrant human review.",
-        "model": "gpt-5.4",
-        "promptVersion": "1.0.0",
-        "reviewedAt": "2026-04-30T08:55:13.097Z"
+        "summary": "This is standard Clerk Chrome extension documentation with no injection, exfiltration or hidden behavior; the token message passing and the page-visit example are illustrative patterns sending data only to the developer's own API.",
+        "model": "claude-opus-5-5",
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:26:21.669Z"
+      },
+      "securityCheck": {
+        "status": "warning",
+        "findings": [
+          "The headless example posts every visited tab URL with the user's session token to the app's API, which amounts to browsing-history collection if copied as-is.",
+          "Content-script examples use `<all_urls>` host permissions and hand Clerk session tokens to content scripts running in arbitrary web pages.",
+          "Tells developers to disable Clerk bot protection for extension use."
+        ],
+        "summary": "This is standard Clerk Chrome extension documentation with no injection, exfiltration or hidden behavior; the token message passing and the page-visit example are illustrative patterns sending data only to the developer's own API.",
+        "checkedAt": "2026-11-11T16:26:21.669Z"
       }
     },
     "clerk-swift": {
@@ -2788,26 +2801,18 @@
       },
       "bundleHash": "ea16549c1c4334a3fd5bce528882489d10c2026a708c5d3d7f85e5b3a09a4ebe",
       "review": {
-        "status": "flagged",
-        "flags": [
-          "Optional run-ig script starts privileged `kubectl debug --profile=sysadmin` pods on AKS nodes, gated on user approval.",
-          "VM recovery steps include credential resets (az vm user update/reset-ssh) and temporary security relaxations such as `setenforce 0` or firewall changes.",
-          "Instructs the agent to run bundled diagnostic scripts as a first action when an app name and resource group are known."
-        ],
-        "summary": "This is legitimate Microsoft Azure troubleshooting documentation: its scripts are transparent and read-only, and its privileged or security-relaxing steps are standard documented recovery actions gated behind explicit user approval and pre-flight checks, with no exfiltration, obfuscation or deception.",
-        "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:36:37.860Z"
+        "status": "approved",
+        "flags": [],
+        "summary": "Legitimate Azure and AKS troubleshooting documentation and read-only diagnostic scripts; privileged debug pods, node access, credential resets and firewall or SELinux changes are documented with approval or safety gates, so no hidden or malicious behavior was found.",
+        "model": "claude-haiku-5-5",
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:26:21.210Z"
       },
       "securityCheck": {
-        "status": "warning",
-        "findings": [
-          "Optional run-ig script starts privileged `kubectl debug --profile=sysadmin` pods on AKS nodes, gated on user approval.",
-          "VM recovery steps include credential resets (az vm user update/reset-ssh) and temporary security relaxations such as `setenforce 0` or firewall changes.",
-          "Instructs the agent to run bundled diagnostic scripts as a first action when an app name and resource group are known."
-        ],
-        "summary": "This is legitimate Microsoft Azure troubleshooting documentation: its scripts are transparent and read-only, and its privileged or security-relaxing steps are standard documented recovery actions gated behind explicit user approval and pre-flight checks, with no exfiltration, obfuscation or deception.",
-        "checkedAt": "2026-10-14T12:36:37.860Z"
+        "status": "ok",
+        "findings": [],
+        "summary": "Legitimate Azure and AKS troubleshooting documentation and read-only diagnostic scripts; privileged debug pods, node access, credential resets and firewall or SELinux changes are documented with approval or safety gates, so no hidden or malicious behavior was found.",
+        "checkedAt": "2026-11-11T16:26:21.210Z"
       }
     },
     "elevenlabs-tts": {
@@ -12802,24 +12807,24 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "Optional feedback command runs a remote npm package (submit-expo-feedback@latest) with --yes and sends free-text feedback to Expo",
-          "Runs npx eas-cli@latest deploy, which publishes the app to a paid EAS Hosting service",
-          "Example CORS config allows all origins (*) and the weather proxy example interpolates unsanitized query input into a URL"
+          "The CORS example uses a wildcard 'Access-Control-Allow-Origin: *' that the agent may copy into user code.",
+          "The weather proxy example puts the unencoded 'city' query parameter directly into an outbound URL.",
+          "An optional feedback command runs 'npx --yes submit-expo-feedback@latest', which sends agent-written text to Expo."
         ],
-        "summary": "This is standard Expo documentation for EAS Hosting and API routes; the feedback command is optional, clearly described and only for skill errors, and nothing in the skill hides actions, exfiltrates data or plants serious vulnerabilities.",
+        "summary": "This is standard Expo documentation for EAS Hosting and API routes, and its feedback command is optional and clearly described, with no exfiltration, injection or hidden payload.",
         "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:34:01.790Z"
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:25:59.852Z"
       },
       "securityCheck": {
         "status": "warning",
         "findings": [
-          "Optional feedback command runs a remote npm package (submit-expo-feedback@latest) with --yes and sends free-text feedback to Expo",
-          "Runs npx eas-cli@latest deploy, which publishes the app to a paid EAS Hosting service",
-          "Example CORS config allows all origins (*) and the weather proxy example interpolates unsanitized query input into a URL"
+          "The CORS example uses a wildcard 'Access-Control-Allow-Origin: *' that the agent may copy into user code.",
+          "The weather proxy example puts the unencoded 'city' query parameter directly into an outbound URL.",
+          "An optional feedback command runs 'npx --yes submit-expo-feedback@latest', which sends agent-written text to Expo."
         ],
-        "summary": "This is standard Expo documentation for EAS Hosting and API routes; the feedback command is optional, clearly described and only for skill errors, and nothing in the skill hides actions, exfiltrates data or plants serious vulnerabilities.",
-        "checkedAt": "2026-10-14T12:34:01.790Z"
+        "summary": "This is standard Expo documentation for EAS Hosting and API routes, and its feedback command is optional and clearly described, with no exfiltration, injection or hidden payload.",
+        "checkedAt": "2026-11-11T16:25:59.852Z"
       }
     },
     "expo-native-ui": {
@@ -12850,24 +12855,18 @@
       },
       "bundleHash": "5868bf65a4d432bd5282354d435c919233d25d77bff324f7ca52cf152b34a867",
       "review": {
-        "status": "flagged",
-        "flags": [
-          "Feedback command runs the remote npm package submit-expo-feedback@latest with --yes",
-          "Feedback text, which may include project context, is sent to Expo"
-        ],
-        "summary": "This is ordinary Expo UI documentation, and its only notable behavior is an optional, clearly described feedback command that the agent runs only when it has something specific to report.",
-        "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:34:01.857Z"
+        "status": "approved",
+        "flags": [],
+        "summary": "The skill is ordinary Expo UI documentation with no hidden content or instructions to override the agent, though its optional feedback command sends agent-written text to an external service via an unpinned npx package.",
+        "model": "claude-haiku-5-5",
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:25:54.579Z"
       },
       "securityCheck": {
-        "status": "warning",
-        "findings": [
-          "Feedback command runs the remote npm package submit-expo-feedback@latest with --yes",
-          "Feedback text, which may include project context, is sent to Expo"
-        ],
-        "summary": "This is ordinary Expo UI documentation, and its only notable behavior is an optional, clearly described feedback command that the agent runs only when it has something specific to report.",
-        "checkedAt": "2026-10-14T12:34:01.857Z"
+        "status": "ok",
+        "findings": [],
+        "summary": "The skill is ordinary Expo UI documentation with no hidden content or instructions to override the agent, though its optional feedback command sends agent-written text to an external service via an unpinned npx package.",
+        "checkedAt": "2026-11-11T16:25:54.579Z"
       }
     },
     "expo-dom": {
@@ -12886,22 +12885,22 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "Feedback section runs the remote npm package submit-expo-feedback@latest via npx --yes",
-          "Feedback text the agent submits may include project context sent to Expo"
+          "Includes an optional feedback command that runs `npx --yes submit-expo-feedback@latest` and sends agent-written text to Expo",
+          "Feedback text may include project context if the agent adds it"
         ],
-        "summary": "This is standard Expo DOM components documentation; the only notable item is a clearly labeled, optional feedback command, which is normal vendor tooling rather than hidden exfiltration.",
+        "summary": "This is standard Expo DOM components documentation, and its only notable element is an optional, clearly described vendor feedback command, with no injection, exfiltration or hidden behavior.",
         "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:34:06.467Z"
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:25:58.503Z"
       },
       "securityCheck": {
-        "status": "warning",
+        "status": "info",
         "findings": [
-          "Feedback section runs the remote npm package submit-expo-feedback@latest via npx --yes",
-          "Feedback text the agent submits may include project context sent to Expo"
+          "Includes an optional feedback command that runs `npx --yes submit-expo-feedback@latest` and sends agent-written text to Expo",
+          "Feedback text may include project context if the agent adds it"
         ],
-        "summary": "This is standard Expo DOM components documentation; the only notable item is a clearly labeled, optional feedback command, which is normal vendor tooling rather than hidden exfiltration.",
-        "checkedAt": "2026-10-14T12:34:06.467Z"
+        "summary": "This is standard Expo DOM components documentation, and its only notable element is an optional, clearly described vendor feedback command, with no injection, exfiltration or hidden behavior.",
+        "checkedAt": "2026-11-11T16:25:58.503Z"
       }
     },
     "expo-upgrade": {
@@ -12934,24 +12933,24 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "Optional feedback command runs `npx --yes submit-expo-feedback@latest`, which sends agent-written text to Expo",
-          "Suggests `bunx xcobra`, a third-party tool, to evaluate expressions in the running app",
-          "Includes cleanup commands (`rm -rf node_modules .expo`, `npx expo prebuild --clean`) that regenerate project files"
+          "Optional feedback command runs `npx --yes submit-expo-feedback@latest`, sending agent-written feedback to Expo",
+          "References `bunx xcobra expo eval`, a less widely known package, to inspect the running app",
+          "Includes cache-clearing and `npx expo prebuild --clean`, which delete node_modules and regenerate native directories"
         ],
-        "summary": "This is standard Expo SDK upgrade documentation from the expo/skills repo. The feedback command is optional and clearly described, the cache clearing and prebuild steps are routine and scoped to the project, and nothing hides actions from the user or exfiltrates data.",
+        "summary": "This is ordinary Expo SDK upgrade documentation using well-known Expo CLIs, and its feedback command is optional and clearly described, with no exfiltration, hidden behavior or deceptive instructions.",
         "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:34:07.933Z"
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:25:58.761Z"
       },
       "securityCheck": {
-        "status": "warning",
+        "status": "info",
         "findings": [
-          "Optional feedback command runs `npx --yes submit-expo-feedback@latest`, which sends agent-written text to Expo",
-          "Suggests `bunx xcobra`, a third-party tool, to evaluate expressions in the running app",
-          "Includes cleanup commands (`rm -rf node_modules .expo`, `npx expo prebuild --clean`) that regenerate project files"
+          "Optional feedback command runs `npx --yes submit-expo-feedback@latest`, sending agent-written feedback to Expo",
+          "References `bunx xcobra expo eval`, a less widely known package, to inspect the running app",
+          "Includes cache-clearing and `npx expo prebuild --clean`, which delete node_modules and regenerate native directories"
         ],
-        "summary": "This is standard Expo SDK upgrade documentation from the expo/skills repo. The feedback command is optional and clearly described, the cache clearing and prebuild steps are routine and scoped to the project, and nothing hides actions from the user or exfiltrates data.",
-        "checkedAt": "2026-10-14T12:34:07.933Z"
+        "summary": "This is ordinary Expo SDK upgrade documentation using well-known Expo CLIs, and its feedback command is optional and clearly described, with no exfiltration, hidden behavior or deceptive instructions.",
+        "checkedAt": "2026-11-11T16:25:58.761Z"
       }
     },
     "remotion-best-practices": {
@@ -13248,24 +13247,24 @@
       "review": {
         "status": "flagged",
         "flags": [
-          "Runs remote npm packages with --yes (e.g. npx create-video@latest, npx skills update) and starts a long-running Remotion Studio server that opens a browser.",
-          "Map components load CesiumJS and the MapLibre worker from public CDNs at runtime and recommend unrestricted MapTiler keys.",
-          "Docs search sends queries to Remotion's Algolia index using an embedded public search key."
+          "Runs remote npm packages with --yes (npx create-video@latest, npx skills update) and starts a long-running Studio server",
+          "Map examples embed MapTiler/Google/Mapbox API keys from env vars into bundled browser code and load scripts from CDNs (cesium.com, unpkg.com)",
+          "Docs search uses a public Algolia search key embedded in the skill"
         ],
-        "summary": "The skill is ordinary official Remotion documentation: well-known CLIs, vendor APIs, public docs-search keys and example code, with no prompt injection, exfiltration, hidden payloads or destructive actions (the claimed reviewer-addressing text does not appear in the files).",
+        "summary": "This is official Remotion developer documentation whose commands (create-video, remotion studio/render/upgrade, skills update), remote fetches and API-key usage are normal, clearly described vendor workflows with no exfiltration, hidden behavior or deception.",
         "model": "claude-opus-5-5",
-        "promptVersion": "2.0.0",
-        "reviewedAt": "2026-10-14T12:34:44.667Z"
+        "promptVersion": "2.1.0",
+        "reviewedAt": "2026-11-11T16:26:00.150Z"
       },
       "securityCheck": {
-        "status": "warning",
+        "status": "info",
         "findings": [
-          "Runs remote npm packages with --yes (e.g. npx create-video@latest, npx skills update) and starts a long-running Remotion Studio server that opens a browser.",
-          "Map components load CesiumJS and the MapLibre worker from public CDNs at runtime and recommend unrestricted MapTiler keys.",
-          "Docs search sends queries to Remotion's Algolia index using an embedded public search key."
+          "Runs remote npm packages with --yes (npx create-video@latest, npx skills update) and starts a long-running Studio server",
+          "Map examples embed MapTiler/Google/Mapbox API keys from env vars into bundled browser code and load scripts from CDNs (cesium.com, unpkg.com)",
+          "Docs search uses a public Algolia search key embedded in the skill"
         ],
-        "summary": "The skill is ordinary official Remotion documentation: well-known CLIs, vendor APIs, public docs-search keys and example code, with no prompt injection, exfiltration, hidden payloads or destructive actions (the claimed reviewer-addressing text does not appear in the files).",
-        "checkedAt": "2026-10-14T12:34:44.667Z"
+        "summary": "This is official Remotion developer documentation whose commands (create-video, remotion studio/render/upgrade, skills update), remote fetches and API-key usage are normal, clearly described vendor workflows with no exfiltration, hidden behavior or deception.",
+        "checkedAt": "2026-11-11T16:26:00.150Z"
       }
     },
     "elysia": {
