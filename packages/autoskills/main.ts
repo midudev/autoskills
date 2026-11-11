@@ -179,13 +179,28 @@ function formatSkillLabel(skill: string, { styled = false }: { styled?: boolean 
   return `${muted(author)} ${gray("›")} ${cyan(bold(skillName))}`;
 }
 
-function securityWarningForSkill(skill: string): string | null {
+function securityWarningForSkill(skill: string): InstallSecurityCheck | null {
   const check = securityCheckForSkillPath(skill);
-  if (check?.status !== "warning") return null;
+  return check?.status === "warning" ? check : null;
+}
 
-  const findings = check.findings.map((finding) => finding.trim()).filter(Boolean);
-  const detail = [check.summary.trim(), findings.join("; ")].filter(Boolean).join(" ");
-  return detail || "The sync review found issues that should be checked.";
+function formatSecurityDetail(check: InstallSecurityCheck, width: number): string[] {
+  const indent = "       ";
+  const textWidth = Math.max(20, width - indent.length - 2);
+  const lines = [yellow(`     ⚠ Security check for ${check.name}:`)];
+
+  for (const finding of check.findings.map((f) => f.trim()).filter(Boolean)) {
+    const [first, ...rest] = wrapText(finding, textWidth);
+    lines.push(`${indent}• ${first}`);
+    for (const line of rest) lines.push(`${indent}  ${line}`);
+  }
+
+  const summary = check.summary.trim();
+  if (summary) {
+    for (const line of wrapText(summary, textWidth + 2)) lines.push(dim(`${indent}${line}`));
+  }
+  lines.push("");
+  return lines;
 }
 
 function printSkillsList(skills: SkillEntry[]): void {
@@ -443,15 +458,23 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
   const SECURITY_TAG = " (security check ⚠)";
   const labelCache = new Map<
     string,
-    { label: string; styledLabel: string; hasSecurityWarning: boolean }
+    {
+      label: string;
+      styledLabel: string;
+      hasSecurityWarning: boolean;
+      securityWarning: InstallSecurityCheck | null;
+    }
   >();
   for (const s of skills) {
+    const securityWarning = securityWarningForSkill(s.skill);
     labelCache.set(s.skill, {
       label: formatSkillLabel(s.skill),
       styledLabel: formatSkillLabel(s.skill, { styled: true }),
-      hasSecurityWarning: Boolean(securityWarningForSkill(s.skill)),
+      hasSecurityWarning: Boolean(securityWarning),
+      securityWarning,
     });
   }
+  const warnedCount = skills.filter((s) => labelCache.get(s.skill)!.hasSecurityWarning).length;
   const maxEffective = Math.max(
     ...skills.map((s) => {
       const cached = labelCache.get(s.skill)!;
@@ -470,6 +493,14 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
       ? `${skills.length} found, ${installedCount} already installed`
       : `${skills.length} found`;
   log(cyan("   ◆ ") + bold(`Select skills to install `) + dim(`(${countLabel})`));
+  if (warnedCount > 0) {
+    log(
+      yellow("   ⚠ ") +
+        dim(
+          `${warnedCount} skill${warnedCount !== 1 ? "s have" : " has"} security check warnings. Move the cursor onto one to see why.`,
+        ),
+    );
+  }
   log();
 
   const selected = await multiSelect(skills, {
@@ -488,6 +519,10 @@ async function selectSkills(skills: SkillEntry[], autoYes: boolean): Promise<Ski
       return techSources.length > 1 ? `← ${techSources.join(", ")}` : "";
     },
     groupFn: (s) => s.sources[0],
+    detailFn: (s, _i, width) => {
+      const { securityWarning } = labelCache.get(s.skill)!;
+      return securityWarning ? formatSecurityDetail(securityWarning, width) : [];
+    },
     initialSelected: skills.map((s) => !s.installed),
     shortcuts:
       installedCount > 0
@@ -583,6 +618,13 @@ async function main(): Promise<void> {
 
   if (dryRun) {
     printSkillsList(skills);
+    const warnings = skills
+      .map((s) => securityWarningForSkill(s.skill))
+      .filter((check): check is InstallSecurityCheck => check !== null);
+    if (warnings.length > 0) {
+      printSecurityChecks(warnings);
+      log();
+    }
     log(dim(`   Agents: ${resolvedAgents.join(", ")}`));
     log(dim("   --dry-run: nothing was installed."));
     log();

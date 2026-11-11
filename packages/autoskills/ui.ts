@@ -122,13 +122,16 @@ interface MultiSelectOptions<T> {
   labelFn: (item: T, i: number) => string;
   hintFn?: (item: T, i: number) => string;
   groupFn?: (item: T) => string;
+  // Extra lines shown under the list for the item under the cursor. Each line
+  // must already fit in `width` visible chars.
+  detailFn?: (item: T, i: number, width: number) => string[];
   initialSelected?: boolean[];
   shortcuts?: { key: string; label: string; fn: (items: T[]) => boolean[] }[];
 }
 
 export function multiSelect<T>(
   items: T[],
-  { labelFn, hintFn, groupFn, initialSelected, shortcuts = [] }: MultiSelectOptions<T>,
+  { labelFn, hintFn, groupFn, detailFn, initialSelected, shortcuts = [] }: MultiSelectOptions<T>,
 ): Promise<T[]> {
   if (initialSelected && initialSelected.length !== items.length) {
     throw new Error(
@@ -235,7 +238,12 @@ export function multiSelect<T>(
       }
 
       const footer = buildFooter(width);
-      const maxBody = Math.max(1, height - footer.length - 1);
+      // Leave room for at least one list line and the spacer.
+      const detail = (detailFn ? detailFn(items[cursor], cursor, width) : []).slice(
+        0,
+        Math.max(0, height - footer.length - 2),
+      );
+      const maxBody = Math.max(1, height - footer.length - detail.length - 1);
       let visible = body;
       let spacer = "";
 
@@ -254,7 +262,7 @@ export function multiSelect<T>(
         scrollTop = 0;
       }
 
-      return [...visible, spacer, ...footer].map((line) => truncateLine(line, width));
+      return [...visible, spacer, ...detail, ...footer].map((line) => truncateLine(line, width));
     }
 
     write(HIDE_CURSOR);
