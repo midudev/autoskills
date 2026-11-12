@@ -39,7 +39,7 @@
     "sync:skills": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/sync-skills.mjs"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "0.133.0",
+    "@anthropic-ai/sdk": "1.8.0",
     "@types/node": "22.20.5",
     "typescript": "7.0.2"
   },
