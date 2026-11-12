@@ -8,3 +8,24 @@ updates:
       prefix: "chore(deps)"
     labels:
       - "dependencies"
+    groups:
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      oxc:
+        patterns:
+          - "oxlint"
+          - "oxfmt"
+  - package-ecosystem: "npm"
+    directory: "/packages/autoskills"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+    ignore:
+      # Types must match the oldest supported Node.js (engines: >=22.6.0).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
