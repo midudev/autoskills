@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "autoskills",
+  "compatibility_date": "2026-11-13",
+  // Static site: no Worker script, Cloudflare serves the Astro build directly.
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+  },
+  "routes": [{ "pattern": "autoskills.sh", "custom_domain": true }],
+  // Only serve through the zone so WAF, rate limiting and redirect rules always apply.
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+}

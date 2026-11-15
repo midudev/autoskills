@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "deploy": "astro build && wrangler deploy",
     "astro": "astro",
     "og": "node scripts/generate-og.mjs",
     "lint": "oxlint",
@@ -22,7 +23,8 @@
   },
   "devDependencies": {
     "oxfmt": "0.78.0",
-    "oxlint": "1.93.0"
+    "oxlint": "1.93.0",
+    "wrangler": "4.162.0"
   },
   "engines": {
     "node": ">=22.12.0"
