@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "4.3.5",
-    "astro": "7.4.11",
+    "astro": "7.4.12",
     "tailwindcss": "4.3.5"
   },
   "devDependencies": {
