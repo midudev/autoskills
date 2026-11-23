@@ -24,7 +24,7 @@
   "devDependencies": {
     "oxfmt": "0.79.0",
     "oxlint": "1.94.0",
-    "wrangler": "4.162.0"
+    "wrangler": "4.165.0"
   },
   "engines": {
     "node": ">=22.12.0"
